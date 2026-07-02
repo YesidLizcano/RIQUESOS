@@ -6,6 +6,8 @@ import { authOptions } from '@/infrastructure/auth';
 import { redirect } from 'next/navigation';
 import { LotesClientPage } from './lotes-client-page';
 
+export const dynamic = 'force-dynamic';
+
 export default async function LotesPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect('/login');
