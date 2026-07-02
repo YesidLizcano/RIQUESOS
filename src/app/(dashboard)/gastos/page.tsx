@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { DataTable } from '@/components/data-table';
 import { ColumnDef } from '@tanstack/react-table';
 import type { GastoResponse } from '@/presentation/dtos';
+import { CrearGastoFijoDialog } from '@/components/forms/crear-gasto-fijo-dialog';
 
 const columns: ColumnDef<GastoResponse, unknown>[] = [
   {
@@ -35,9 +36,12 @@ export default async function GastosPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Gastos Fijos</h1>
-        <p className="text-muted-foreground">Gestión de gastos fijos mensuales</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Gastos Fijos</h1>
+          <p className="text-muted-foreground">Gestión de gastos fijos mensuales</p>
+        </div>
+        <CrearGastoFijoDialog />
       </div>
 
       <Card>

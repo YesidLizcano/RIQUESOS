@@ -8,6 +8,7 @@ import { PrismaVentaRepo } from '@/infrastructure/repositories/PrismaVentaRepo';
 import { PrismaLoteRepo } from '@/infrastructure/repositories/PrismaLoteRepo';
 import { PrismaClienteRepo } from '@/infrastructure/repositories/PrismaClienteRepo';
 import { RegistrarVenta } from '@/application/use-cases/RegistrarVenta';
+import { registrarVentaSchema } from '@/presentation/validations/venta.schema';
 import type { RegistrarVentaRequest, VentaResponse } from '../dtos';
 import { logger } from '@/infrastructure/pino-logger';
 
@@ -37,13 +38,18 @@ function ventaToResponse(venta: import('@/domain/entities/Venta').Venta): VentaR
 export async function registrarVenta(formData: FormData) {
   await requireSession();
 
+  const parsed = registrarVentaSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
   const request: RegistrarVentaRequest = {
-    clienteId: formData.get('clienteId') as string,
-    loteId: formData.get('loteId') as string,
-    cantidadVendidaKg: formData.get('cantidadVendidaKg') as string,
-    standardPricePerKg: formData.get('standardPricePerKg') as string,
-    valorDomicilio: (formData.get('valorDomicilio') as string) || undefined,
-    domiciliario: (formData.get('domiciliario') as string) || undefined,
+    clienteId: parsed.data.clienteId,
+    loteId: parsed.data.loteId,
+    cantidadVendidaKg: String(parsed.data.cantidadVendidaKg),
+    standardPricePerKg: String(parsed.data.standardPricePerKg),
+    valorDomicilio: parsed.data.valorDomicilio ? String(parsed.data.valorDomicilio) : undefined,
+    domiciliario: parsed.data.domiciliario || undefined,
   };
 
   try {

@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { requireSession } from './auth';
 import { PrismaGastoFijoRepo } from '@/infrastructure/repositories/PrismaGastoFijoRepo';
 import { GestionarGastos } from '@/application/use-cases/GestionarGastos';
+import { crearGastoFijoSchema } from '@/presentation/validations/gasto-fijo.schema';
 import type { CrearGastoRequest, ActualizarGastoRequest, GastoResponse, GastoMensualResumenResponse } from '../dtos';
 import { logger } from '@/infrastructure/pino-logger';
 
@@ -25,9 +26,14 @@ function gastoToResponse(gasto: import('@/domain/entities/GastoFijo').GastoFijo)
 export async function crearGasto(formData: FormData) {
   await requireSession();
 
+  const parsed = crearGastoFijoSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
   const request: CrearGastoRequest = {
-    concepto: formData.get('concepto') as string,
-    valor: formData.get('valor') as string,
+    concepto: parsed.data.concepto,
+    valor: String(parsed.data.valor),
   };
 
   try {

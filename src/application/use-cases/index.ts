@@ -14,6 +14,10 @@ export {
   type GastoMensualResumen,
 } from './GestionarGastos';
 export {
+  GestionarProveedores,
+  type CrearProveedorInput,
+} from './GestionarProveedores';
+export {
   ObtenerMetricas,
   type MetricasPeriodo,
   type InventarioPorProducto,

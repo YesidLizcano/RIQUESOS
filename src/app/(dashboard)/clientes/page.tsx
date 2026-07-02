@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { DataTable } from '@/components/data-table';
 import { ColumnDef } from '@tanstack/react-table';
 import type { ClienteResponse } from '@/presentation/dtos';
+import { CrearClienteDialog } from '@/components/forms/crear-cliente-dialog';
 
 const columns: ColumnDef<ClienteResponse, unknown>[] = [
   {
@@ -52,9 +53,12 @@ export default async function ClientesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Clientes</h1>
-        <p className="text-muted-foreground">Gestión de clientes</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Clientes</h1>
+          <p className="text-muted-foreground">Gestión de clientes</p>
+        </div>
+        <CrearClienteDialog />
       </div>
 
       <Card>

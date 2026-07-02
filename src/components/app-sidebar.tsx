@@ -8,6 +8,7 @@ import {
   ShoppingCart,
   Users,
   Receipt,
+  Truck,
   LogOut,
 } from 'lucide-react';
 import {
@@ -30,6 +31,7 @@ const navItems = [
   { label: 'Lotes', href: '/lotes', icon: Package },
   { label: 'Ventas', href: '/ventas', icon: ShoppingCart },
   { label: 'Clientes', href: '/clientes', icon: Users },
+  { label: 'Proveedores', href: '/proveedores', icon: Truck },
   { label: 'Gastos Fijos', href: '/gastos', icon: Receipt },
 ];
 

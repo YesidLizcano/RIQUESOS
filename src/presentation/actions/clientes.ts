@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { requireSession } from './auth';
 import { PrismaClienteRepo } from '@/infrastructure/repositories/PrismaClienteRepo';
 import { GestionarClientes } from '@/application/use-cases/GestionarClientes';
-import { TipoCliente } from '@/domain/enums';
+import { crearClienteSchema } from '@/presentation/validations/cliente.schema';
 import type { CrearClienteRequest, ActualizarClienteRequest, ClienteResponse } from '../dtos';
 import { logger } from '@/infrastructure/pino-logger';
 
@@ -27,11 +27,16 @@ function clienteToResponse(cliente: import('@/domain/entities/Cliente').Cliente)
 export async function crearCliente(formData: FormData) {
   await requireSession();
 
+  const parsed = crearClienteSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
   const request: CrearClienteRequest = {
-    nombre: formData.get('nombre') as string,
-    tipo: formData.get('tipo') as TipoCliente,
-    precioDobleCrema: (formData.get('precioDobleCrema') as string) || undefined,
-    precioSemisalado: (formData.get('precioSemisalado') as string) || undefined,
+    nombre: parsed.data.nombre,
+    tipo: parsed.data.tipo,
+    precioDobleCrema: parsed.data.precioDobleCrema || undefined,
+    precioSemisalado: parsed.data.precioSemisalado || undefined,
   };
 
   try {

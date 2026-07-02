@@ -6,7 +6,7 @@ import { requireSession } from './auth';
 import { PrismaProveedorRepo } from '@/infrastructure/repositories/PrismaProveedorRepo';
 import { PrismaLoteRepo } from '@/infrastructure/repositories/PrismaLoteRepo';
 import { CrearLote } from '@/application/use-cases/CrearLote';
-import { TipoProducto } from '@/domain/enums';
+import { crearLoteSchema } from '@/presentation/validations/lote.schema';
 import type { CrearLoteRequest, LoteResponse } from '../dtos';
 import { logger } from '@/infrastructure/pino-logger';
 
@@ -37,14 +37,19 @@ function loteToResponse(lote: import('@/domain/entities/Lote').Lote): LoteRespon
 export async function crearLote(formData: FormData) {
   await requireSession();
 
+  const parsed = crearLoteSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
   const request: CrearLoteRequest = {
-    producto: formData.get('producto') as TipoProducto,
-    proveedorId: formData.get('proveedorId') as string,
-    cantidadCompradaKg: formData.get('cantidadCompradaKg') as string,
-    precioCompraBaseKg: formData.get('precioCompraBaseKg') as string,
-    costoFlete: (formData.get('costoFlete') as string) || undefined,
-    costoTajado: (formData.get('costoTajado') as string) || undefined,
-    costoEmpaques: (formData.get('costoEmpaques') as string) || undefined,
+    producto: parsed.data.producto,
+    proveedorId: parsed.data.proveedorId,
+    cantidadCompradaKg: String(parsed.data.cantidadCompradaKg),
+    precioCompraBaseKg: String(parsed.data.precioCompraBaseKg),
+    costoFlete: parsed.data.costoFlete ? String(parsed.data.costoFlete) : undefined,
+    costoTajado: parsed.data.costoTajado ? String(parsed.data.costoTajado) : undefined,
+    costoEmpaques: parsed.data.costoEmpaques ? String(parsed.data.costoEmpaques) : undefined,
   };
 
   try {

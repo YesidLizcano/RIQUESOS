@@ -1,12 +1,14 @@
 import { getLotes } from '@/presentation/actions/lotes';
+import { getProveedores } from '@/presentation/actions/proveedores';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/infrastructure/auth';
 import { redirect } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { DataTable } from '@/components/data-table';
 import { ColumnDef } from '@tanstack/react-table';
 import type { LoteResponse } from '@/presentation/dtos';
+import { CrearLoteDialog } from '@/components/forms/crear-lote-dialog';
 
 const columns: ColumnDef<LoteResponse, unknown>[] = [
   {
@@ -55,14 +57,21 @@ export default async function LotesPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect('/login');
 
-  const result = await getLotes();
-  const lotes = result.success && result.lotes ? result.lotes : [];
+  const [lotesResult, proveedoresResult] = await Promise.all([
+    getLotes(),
+    getProveedores(),
+  ]);
+  const lotes = lotesResult.success && lotesResult.lotes ? lotesResult.lotes : [];
+  const proveedores = proveedoresResult.success && proveedoresResult.proveedores ? proveedoresResult.proveedores : [];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Lotes</h1>
-        <p className="text-muted-foreground">Gestión de lotes de queso</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Lotes</h1>
+          <p className="text-muted-foreground">Gestión de lotes de queso</p>
+        </div>
+        <CrearLoteDialog proveedores={proveedores} />
       </div>
 
       <Card>

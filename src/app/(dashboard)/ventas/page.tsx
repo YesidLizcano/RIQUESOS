@@ -1,4 +1,6 @@
 import { getVentas } from '@/presentation/actions/ventas';
+import { getClientes } from '@/presentation/actions/clientes';
+import { getLotes } from '@/presentation/actions/lotes';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/infrastructure/auth';
 import { redirect } from 'next/navigation';
@@ -6,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { DataTable } from '@/components/data-table';
 import { ColumnDef } from '@tanstack/react-table';
 import type { VentaResponse } from '@/presentation/dtos';
+import { RegistrarVentaDialog } from '@/components/forms/registrar-venta-dialog';
 
 const columns: ColumnDef<VentaResponse, unknown>[] = [
   {
@@ -54,14 +57,23 @@ export default async function VentasPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect('/login');
 
-  const result = await getVentas();
-  const ventas = result.success && result.ventas ? result.ventas : [];
+  const [ventasResult, clientesResult, lotesResult] = await Promise.all([
+    getVentas(),
+    getClientes(),
+    getLotes(),
+  ]);
+  const ventas = ventasResult.success && ventasResult.ventas ? ventasResult.ventas : [];
+  const clientes = clientesResult.success && clientesResult.clientes ? clientesResult.clientes : [];
+  const lotes = lotesResult.success && lotesResult.lotes ? lotesResult.lotes : [];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Ventas</h1>
-        <p className="text-muted-foreground">Registro de ventas del período actual</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Ventas</h1>
+          <p className="text-muted-foreground">Registro de ventas del período actual</p>
+        </div>
+        <RegistrarVentaDialog clientes={clientes} lotes={lotes} />
       </div>
 
       <Card>
