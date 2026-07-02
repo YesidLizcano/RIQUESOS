@@ -126,7 +126,7 @@ export default async function DashboardPage() {
                 {metricas.inventario.length === 0 ? (
                   <p className="text-muted-foreground text-center py-4">No hay inventario activo</p>
                 ) : (
-                  <DataTable columns={inventoryColumns} data={metricas.inventario} />
+                  <DataTable columns={inventoryColumns} data={metricas.inventario} pagination={false} />
                 )}
               </CardContent>
             </Card>
@@ -139,7 +139,7 @@ export default async function DashboardPage() {
                 {metricas.topClientes.length === 0 ? (
                   <p className="text-muted-foreground text-center py-4">No hay ventas en el período</p>
                 ) : (
-                  <DataTable columns={topClientsColumns} data={metricas.topClientes} />
+                  <DataTable columns={topClientsColumns} data={metricas.topClientes} pagination={false} />
                 )}
               </CardContent>
             </Card>
@@ -160,7 +160,7 @@ export default async function DashboardPage() {
           {lotes.length === 0 ? (
             <p className="text-muted-foreground text-center py-4">No hay lotes activos</p>
           ) : (
-            <DataTable columns={lotesColumns} data={lotes} />
+            <DataTable columns={lotesColumns} data={lotes} pagination={false} />
           )}
         </CardContent>
       </Card>
