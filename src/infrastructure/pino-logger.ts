@@ -1,22 +1,22 @@
-// Pino logger setup — writes to logs/app.log, auto-creates logs/ directory
+// Pino logger setup — rotates logs via pino-roll (10 MB, daily, 10 files)
 import pino from 'pino';
-import fs from 'fs';
 import path from 'path';
 
-const LOG_DIR = path.resolve(process.cwd(), 'logs');
-const LOG_FILE = path.join(LOG_DIR, 'app.log');
+const LOG_FILE = path.resolve(process.cwd(), 'logs', 'app');
 
-// Ensure logs directory exists
-if (!fs.existsSync(LOG_DIR)) {
-  fs.mkdirSync(LOG_DIR, { recursive: true });
-}
-
-// Multi-channel: write to file at info level, console at debug level in dev
+// Multi-channel: write to rotated file at info level, console at debug level in dev
 const transport = pino.transport({
   targets: [
     {
-      target: 'pino/file',
-      options: { destination: LOG_FILE, mkdir: true },
+      target: 'pino-roll',
+      options: {
+        file: LOG_FILE,
+        size: 10,
+        frequency: 'daily',
+        extension: '.log',
+        limit: { count: 10 },
+        mkdir: true,
+      },
       level: 'info',
     },
     ...(process.env.NODE_ENV !== 'production'
