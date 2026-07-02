@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MetricCard } from '@/components/dashboard-metric-card';
 import { PeriodSelector } from '@/components/period-selector';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -128,6 +128,11 @@ export function DashboardClientPage({ initialMetricas, initialMonth, initialYear
   const [loading, setLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const isMobile = useIsMobile();
+
+  // Sync when server data changes (e.g. after router.refresh())
+  useEffect(() => {
+    setMetricas(initialMetricas);
+  }, [initialMetricas]);
 
   const handleExportDashboard = async () => {
     setIsExporting(true);

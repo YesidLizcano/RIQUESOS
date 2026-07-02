@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useReactTable, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel } from '@tanstack/react-table';
 import { Card, CardContent } from '@/components/ui/card';
 import { DataTable } from '@/components/data-table';
@@ -54,6 +54,11 @@ export function VentasClientPage({ initialVentas, clientes, lotes, initialMonth,
   const [month, setMonth] = useState(initialMonth);
   const [year, setYear] = useState(initialYear);
   const [loading, setLoading] = useState(false);
+
+  // Sync when server data changes (e.g. after router.refresh())
+  useEffect(() => {
+    setVentas(initialVentas);
+  }, [initialVentas]);
 
   const clienteMap = useMemo(
     () => new Map(clientes.map((c) => [c.id, c.nombre])),

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useReactTable, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel } from '@tanstack/react-table';
 import { Card, CardContent } from '@/components/ui/card';
 import { DataTable } from '@/components/data-table';
@@ -23,6 +23,11 @@ interface ProveedoresClientPageProps {
 export function ProveedoresClientPage({ proveedores }: ProveedoresClientPageProps) {
   const [showDeleted, setShowDeleted] = useState(false);
   const [data, setData] = useState<ProveedorResponse[]>(proveedores);
+
+  // Sync when server data changes (e.g. after router.refresh())
+  useEffect(() => {
+    setData(proveedores);
+  }, [proveedores]);
 
   const handleShowDeletedChange = useCallback(async (checked: boolean) => {
     setShowDeleted(checked);

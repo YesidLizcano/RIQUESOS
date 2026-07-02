@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useReactTable, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel } from '@tanstack/react-table';
 import { Card, CardContent } from '@/components/ui/card';
 import { DataTable } from '@/components/data-table';
@@ -53,6 +53,11 @@ const estadoFilterOptions = [
 export function LotesClientPage({ lotes, proveedores, alertas }: LotesClientPageProps) {
   const [showDeleted, setShowDeleted] = useState(false);
   const [data, setData] = useState<LoteResponse[]>(lotes);
+
+  // Sync when server data changes (e.g. after router.refresh())
+  useEffect(() => {
+    setData(lotes);
+  }, [lotes]);
 
   const proveedorMap = useMemo(
     () => new Map(proveedores.map((p) => [p.id, p.nombre])),
