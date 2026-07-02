@@ -12,7 +12,7 @@ import path from 'path';
  * - @prisma/client
  * - next
  * - next-auth
- * - bcrypt
+ * - bcrypt / bcryptjs
  * - pino
  */
 describe('Dependency rule — domain layer isolation', () => {
@@ -25,6 +25,7 @@ describe('Dependency rule — domain layer isolation', () => {
     'next',
     'next-auth',
     'bcrypt',
+    'bcryptjs',
     'pino',
   ];
 

@@ -1,7 +1,7 @@
 // Idempotent seed: upsert admin user + two base products
 // Run with: npx prisma db seed
 import { PrismaClient, RolUsuario, TipoProducto } from '@prisma/client';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 

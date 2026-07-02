@@ -66,9 +66,10 @@ describe('Backup script', () => {
     it('should use idempotent file copy (no append)', () => {
       const backupScriptPath = path.resolve(process.cwd(), 'scripts', 'backup.ts');
       const scriptContent = fs.readFileSync(backupScriptPath, 'utf-8');
-      // copyFileSync replaces the target, it doesn't append
+      // The script uses copyFileSync for the primary copy (idempotent).
+      // createWriteStream is used for gzip compression only, not for the copy itself.
+      expect(scriptContent).toContain('copyFileSync');
       expect(scriptContent).not.toContain('appendFile');
-      expect(scriptContent).not.toContain('createWriteStream');
     });
   });
 
