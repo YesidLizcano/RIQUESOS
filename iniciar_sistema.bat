@@ -44,20 +44,16 @@ if "!errorlevel!" neq "0" (
 )
 echo [OK] Migraciones aplicadas
 
-:: Step 4: Build if needed
-if not exist ".next\" (
-    echo.
-    echo Compilando la aplicacion - puede tardar unos minutos...
-    call npx next build
-    if "!errorlevel!" neq "0" (
-        echo [ERROR] Fallo la compilacion.
-        pause
-        exit /b 1
-    )
-    echo [OK] Aplicacion compilada
-) else (
-    echo [OK] Aplicacion ya compilada
+:: Step 4: Always build (ensures latest code after git pull)
+echo.
+echo Compilando la aplicacion - puede tardar unos minutos...
+call npx next build
+if "!errorlevel!" neq "0" (
+    echo [ERROR] Fallo la compilacion.
+    pause
+    exit /b 1
 )
+echo [OK] Aplicacion compilada
 
 :: Step 5: Start server
 echo.
