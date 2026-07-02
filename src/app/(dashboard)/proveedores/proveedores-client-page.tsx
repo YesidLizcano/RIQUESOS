@@ -8,7 +8,13 @@ import { DataTableToolbar } from '@/components/data-table-toolbar';
 import { createProveedorColumns } from '@/components/columns/proveedor-columns';
 import { CrearProveedorDialog } from '@/components/forms/crear-proveedor-dialog';
 import { getProveedoresIncludeDeleted } from '@/presentation/actions/proveedores';
+import { useExportExcel } from '@/hooks/use-export-excel';
 import type { ProveedorResponse } from '@/presentation/dtos';
+
+const proveedorExportMap = [
+  { key: 'nombre', header: 'Nombre' },
+  { key: 'telefono', header: 'Teléfono' },
+];
 
 interface ProveedoresClientPageProps {
   proveedores: ProveedorResponse[];
@@ -43,6 +49,8 @@ export function ProveedoresClientPage({ proveedores }: ProveedoresClientPageProp
     globalFilterFn: 'includesString',
   });
 
+  const { exportExcel, isExporting } = useExportExcel(table, proveedorExportMap, 'Proveedores');
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -64,6 +72,8 @@ export function ProveedoresClientPage({ proveedores }: ProveedoresClientPageProp
                 searchPlaceholder="Buscar proveedores..."
                 showDeleted={showDeleted}
                 onShowDeletedChange={handleShowDeletedChange}
+                onExportExcel={exportExcel}
+                isExporting={isExporting}
               />
               <DataTable table={table} />
             </>

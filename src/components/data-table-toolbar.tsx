@@ -1,8 +1,9 @@
 'use client';
 
 import { Table } from '@tanstack/react-table';
-import { Search, X } from 'lucide-react';
+import { Download, Loader2, Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -24,6 +25,8 @@ interface DataTableToolbarProps<TData> {
   filters?: FilterConfig[];
   showDeleted?: boolean;
   onShowDeletedChange?: (show: boolean) => void;
+  onExportExcel?: () => Promise<void>;
+  isExporting?: boolean;
 }
 
 export function DataTableToolbar<TData>({
@@ -32,6 +35,8 @@ export function DataTableToolbar<TData>({
   filters = [],
   showDeleted,
   onShowDeletedChange,
+  onExportExcel,
+  isExporting,
 }: DataTableToolbarProps<TData>) {
   const globalFilter = table.getState().globalFilter as string | undefined;
 
@@ -89,6 +94,22 @@ export function DataTableToolbar<TData>({
           />
           Mostrar eliminados
         </label>
+      )}
+      {onExportExcel && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onExportExcel}
+          disabled={isExporting}
+          className="ml-auto"
+        >
+          {isExporting ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Download className="size-4" />
+          )}
+          Exportar Excel
+        </Button>
       )}
     </div>
   );

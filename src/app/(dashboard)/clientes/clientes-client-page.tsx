@@ -8,8 +8,16 @@ import { DataTableToolbar, FilterConfig } from '@/components/data-table-toolbar'
 import { createClienteColumns } from '@/components/columns/cliente-columns';
 import { CrearClienteDialog } from '@/components/forms/crear-cliente-dialog';
 import { getClientesIncludeDeleted } from '@/presentation/actions/clientes';
+import { useExportExcel } from '@/hooks/use-export-excel';
 import type { ClienteResponse } from '@/presentation/dtos';
 import { TipoCliente } from '@/domain/enums';
+
+const clienteExportMap = [
+  { key: 'nombre', header: 'Nombre' },
+  { key: 'tipo', header: 'Tipo' },
+  { key: 'precioDobleCrema', header: 'Precio Doble Crema', format: (v: unknown) => v !== null ? Number(v) : '' },
+  { key: 'precioSemisalado', header: 'Precio Semisalado', format: (v: unknown) => v !== null ? Number(v) : '' },
+];
 
 interface ClientesClientPageProps {
   clientes: ClienteResponse[];
@@ -55,6 +63,8 @@ export function ClientesClientPage({ clientes }: ClientesClientPageProps) {
     globalFilterFn: 'includesString',
   });
 
+  const { exportExcel, isExporting } = useExportExcel(table, clienteExportMap, 'Clientes');
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -77,6 +87,8 @@ export function ClientesClientPage({ clientes }: ClientesClientPageProps) {
                 filters={filters}
                 showDeleted={showDeleted}
                 onShowDeletedChange={handleShowDeletedChange}
+                onExportExcel={exportExcel}
+                isExporting={isExporting}
               />
               <DataTable table={table} />
             </>

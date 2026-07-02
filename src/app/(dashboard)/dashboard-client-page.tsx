@@ -5,9 +5,12 @@ import { MetricCard } from '@/components/dashboard-metric-card';
 import { PeriodSelector } from '@/components/period-selector';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/data-table';
 import { ColumnDef } from '@tanstack/react-table';
+import { Download, Loader2 } from 'lucide-react';
 import { getMetricas } from '@/presentation/actions/dashboard';
+import { exportDashboardExcel } from '@/hooks/export-dashboard';
 import type { InventarioPorProductoResponse, TopClienteResponse, DashboardMetricasResponse } from '@/presentation/dtos';
 import {
   ChartContainer,
@@ -122,6 +125,17 @@ export function DashboardClientPage({ initialMetricas, initialMonth, initialYear
   const [month, setMonth] = useState(initialMonth);
   const [year, setYear] = useState(initialYear);
   const [loading, setLoading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportDashboard = async () => {
+    setIsExporting(true);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      await exportDashboardExcel(metricas, `Dashboard_${today}.xlsx`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handlePeriodChange = async (newMonth: number, newYear: number) => {
     setMonth(newMonth);
@@ -195,11 +209,26 @@ export function DashboardClientPage({ initialMetricas, initialMonth, initialYear
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">Resumen de métricas del negocio</p>
         </div>
-        <PeriodSelector
-          month={month}
-          year={year}
-          onPeriodChange={handlePeriodChange}
-        />
+        <div className="flex items-center gap-3">
+          <PeriodSelector
+            month={month}
+            year={year}
+            onPeriodChange={handlePeriodChange}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportDashboard}
+            disabled={isExporting}
+          >
+            {isExporting ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Download className="size-4" />
+            )}
+            Exportar Excel
+          </Button>
+        </div>
       </div>
 
       {loading && (

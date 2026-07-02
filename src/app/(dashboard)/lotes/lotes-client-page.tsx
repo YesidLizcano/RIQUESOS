@@ -8,8 +8,30 @@ import { DataTableToolbar, FilterConfig } from '@/components/data-table-toolbar'
 import { createLoteColumns } from '@/components/columns/lote-columns';
 import { CrearLoteDialog } from '@/components/forms/crear-lote-dialog';
 import { getLotesIncludeDeleted } from '@/presentation/actions/lotes';
+import { useExportExcel } from '@/hooks/use-export-excel';
 import type { LoteResponse, ProveedorResponse } from '@/presentation/dtos';
 import { TipoProducto, EstadoLote } from '@/domain/enums';
+
+const ESTADO_LABELS: Record<string, string> = {
+  ACTIVO: 'Activo',
+  AGOTADO: 'Agotado',
+};
+
+const PRODUCTO_LABELS: Record<string, string> = {
+  DOBLE_CREMA: 'Doble Crema',
+  SEMISALADO: 'Semisalado',
+};
+
+const loteExportMap = [
+  { key: 'producto', header: 'Producto', format: (v: unknown) => PRODUCTO_LABELS[v as string] ?? v },
+  { key: 'proveedorNombre', header: 'Proveedor' },
+  { key: 'cantidadCompradaKg', header: 'Cant. Comprada (Kg)', format: (v: unknown) => Number(v) },
+  { key: 'precioCompraBaseKg', header: 'Precio Base/Kg', format: (v: unknown) => Number(v) },
+  { key: 'costoRealCalculadoKg', header: 'Costo Real/Kg', format: (v: unknown) => Number(v) },
+  { key: 'stockDisponibleKg', header: 'Stock Disp. (Kg)', format: (v: unknown) => Number(v) },
+  { key: 'estado', header: 'Estado', format: (v: unknown) => ESTADO_LABELS[v as string] ?? v },
+  { key: 'fechaIngreso', header: 'Fecha Ingreso' },
+];
 
 interface LotesClientPageProps {
   lotes: LoteResponse[];
@@ -76,6 +98,8 @@ export function LotesClientPage({ lotes, proveedores }: LotesClientPageProps) {
     globalFilterFn: 'includesString',
   });
 
+  const { exportExcel, isExporting } = useExportExcel(table, loteExportMap, 'Lotes');
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -98,6 +122,8 @@ export function LotesClientPage({ lotes, proveedores }: LotesClientPageProps) {
                 filters={filters}
                 showDeleted={showDeleted}
                 onShowDeletedChange={handleShowDeletedChange}
+                onExportExcel={exportExcel}
+                isExporting={isExporting}
               />
               <DataTable table={table} />
             </>

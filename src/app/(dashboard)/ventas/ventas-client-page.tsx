@@ -9,8 +9,25 @@ import { createVentaColumns } from '@/components/columns/venta-columns';
 import { RegistrarVentaDialog } from '@/components/forms/registrar-venta-dialog';
 import { PeriodSelector } from '@/components/period-selector';
 import { getVentasByDateRange } from '@/presentation/actions/ventas';
+import { useExportExcel } from '@/hooks/use-export-excel';
 import type { VentaResponse, ClienteResponse, LoteResponse } from '@/presentation/dtos';
 import { TipoProducto } from '@/domain/enums';
+
+const PRODUCTO_LABELS: Record<string, string> = {
+  DOBLE_CREMA: 'Doble Crema',
+  SEMISALADO: 'Semisalado',
+};
+
+const ventaExportMap = [
+  { key: 'fecha', header: 'Fecha' },
+  { key: 'clienteNombre', header: 'Cliente' },
+  { key: 'domiciliario', header: 'Domiciliario' },
+  { key: 'producto', header: 'Producto', format: (v: unknown) => PRODUCTO_LABELS[v as string] ?? v },
+  { key: 'cantidadVendidaKg', header: 'Cantidad (Kg)', format: (v: unknown) => Number(v) },
+  { key: 'precioVentaKg', header: 'Precio/Kg', format: (v: unknown) => Number(v) },
+  { key: 'ingresoTotal', header: 'Ingreso Total', format: (v: unknown) => Number(v) },
+  { key: 'gananciaBruta', header: 'Ganancia Bruta', format: (v: unknown) => Number(v) },
+];
 
 const MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -80,6 +97,8 @@ export function VentasClientPage({ initialVentas, clientes, lotes, initialMonth,
     globalFilterFn: 'includesString',
   });
 
+  const { exportExcel, isExporting } = useExportExcel(table, ventaExportMap, 'Ventas');
+
   const handlePeriodChange = async (newMonth: number, newYear: number) => {
     setMonth(newMonth);
     setYear(newYear);
@@ -128,6 +147,8 @@ export function VentasClientPage({ initialVentas, clientes, lotes, initialMonth,
                 table={table}
                 searchPlaceholder="Buscar ventas..."
                 filters={filters}
+                onExportExcel={exportExcel}
+                isExporting={isExporting}
               />
               <DataTable table={table} />
             </>

@@ -9,11 +9,18 @@ import { createGastoColumns } from '@/components/columns/gasto-columns';
 import { CrearGastoFijoDialog } from '@/components/forms/crear-gasto-fijo-dialog';
 import { PeriodSelector } from '@/components/period-selector';
 import { getGastosByDateRange, getGastosIncludeDeleted } from '@/presentation/actions/gastos';
+import { useExportExcel } from '@/hooks/use-export-excel';
 import type { GastoResponse } from '@/presentation/dtos';
 
 const MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
+
+const gastoExportMap = [
+  { key: 'concepto', header: 'Concepto' },
+  { key: 'valor', header: 'Valor', format: (v: unknown) => Number(v) },
+  { key: 'fecha', header: 'Fecha' },
 ];
 
 interface GastosClientPageProps {
@@ -40,6 +47,8 @@ export function GastosClientPage({ initialGastos, initialMonth, initialYear }: G
     getSortedRowModel: getSortedRowModel(),
     globalFilterFn: 'includesString',
   });
+
+  const { exportExcel, isExporting } = useExportExcel(table, gastoExportMap, 'Gastos');
 
   // Total of ALL period-filtered data (not just current page)
   const totalGastos = gastos.reduce((sum, g) => sum + Number(g.valor), 0);
@@ -109,6 +118,8 @@ export function GastosClientPage({ initialGastos, initialMonth, initialYear }: G
                 searchPlaceholder="Buscar gastos..."
                 showDeleted={showDeleted}
                 onShowDeletedChange={handleShowDeletedChange}
+                onExportExcel={exportExcel}
+                isExporting={isExporting}
               />
               <DataTable
                 table={table}
