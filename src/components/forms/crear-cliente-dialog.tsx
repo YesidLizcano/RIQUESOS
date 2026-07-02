@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { crearCliente } from '@/presentation/actions/clientes';
 import { toast } from 'sonner';
 import { TipoCliente } from '@/domain/enums';
@@ -30,6 +31,7 @@ interface CrearClienteDialogProps {
 }
 
 export function CrearClienteDialog({}: CrearClienteDialogProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [tipo, setTipo] = useState<string>('');
 
@@ -39,6 +41,7 @@ export function CrearClienteDialog({}: CrearClienteDialogProps) {
     const result = await crearCliente(formData);
     if (result.success) {
       toast.success('Cliente creado exitosamente');
+      router.refresh();
       setOpen(false);
       setTipo('');
     } else {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { crearGasto } from '@/presentation/actions/gastos';
 import { toast } from 'sonner';
 import {
@@ -17,12 +18,14 @@ import { Label } from '@/components/ui/label';
 import { PlusIcon } from 'lucide-react';
 
 export function CrearGastoFijoDialog() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
 
   async function action(formData: FormData) {
     const result = await crearGasto(formData);
     if (result.success) {
       toast.success('Gasto registrado exitosamente');
+      router.refresh();
       setOpen(false);
     } else {
       toast.error(result.error || 'Error al registrar gasto');

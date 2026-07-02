@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,12 +26,14 @@ export function DeleteConfirmDialog({
   entityName,
   onConfirm,
 }: DeleteConfirmDialogProps) {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleConfirm() {
     setIsLoading(true);
     try {
       await onConfirm();
+      router.refresh();
     } finally {
       setIsLoading(false);
       onOpenChange(false);

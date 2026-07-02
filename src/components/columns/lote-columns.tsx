@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { ColumnDef } from '@tanstack/react-table';
 import { Pencil, Trash2, RotateCcw } from 'lucide-react';
 import type { LoteResponse } from '@/presentation/dtos';
@@ -18,6 +19,7 @@ export interface AlertaInfo {
 }
 
 export function LoteActions({ lote }: { lote: LoteResponse }) {
+  const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const isDeleted = lote.deletedAt !== null;
@@ -28,6 +30,7 @@ export function LoteActions({ lote }: { lote: LoteResponse }) {
     const result = await eliminarLote(formData);
     if (result.success) {
       toast.success('Lote eliminado exitosamente');
+      router.refresh();
     } else {
       toast.error(result.error || 'Error al eliminar lote');
     }
@@ -39,6 +42,7 @@ export function LoteActions({ lote }: { lote: LoteResponse }) {
     const result = await restaurarLote(formData);
     if (result.success) {
       toast.success('Lote restaurado exitosamente');
+      router.refresh();
     } else {
       toast.error(result.error || 'Error al restaurar lote');
     }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { actualizarCliente } from '@/presentation/actions/clientes';
 import { toast } from 'sonner';
 import type { ClienteResponse } from '@/presentation/dtos';
@@ -22,6 +23,7 @@ interface EditarClienteDialogProps {
 }
 
 export function EditarClienteDialog({ cliente, open, onOpenChange }: EditarClienteDialogProps) {
+  const router = useRouter();
   const [nombre, setNombre] = useState(cliente.nombre);
   const [precioDobleCrema, setPrecioDobleCrema] = useState(cliente.precioDobleCrema ?? '');
   const [precioSemisalado, setPrecioSemisalado] = useState(cliente.precioSemisalado ?? '');
@@ -30,6 +32,7 @@ export function EditarClienteDialog({ cliente, open, onOpenChange }: EditarClien
     const result = await actualizarCliente(formData);
     if (result.success) {
       toast.success('Cliente actualizado exitosamente');
+      router.refresh();
       onOpenChange(false);
     } else {
       toast.error(result.error || 'Error al actualizar cliente');

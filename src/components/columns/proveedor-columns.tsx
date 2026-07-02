@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { ColumnDef } from '@tanstack/react-table';
 import { Pencil, Trash2, RotateCcw } from 'lucide-react';
 import type { ProveedorResponse } from '@/presentation/dtos';
@@ -11,6 +12,7 @@ import { toast } from 'sonner';
 import { startTransition } from 'react';
 
 export function ProveedorActions({ proveedor }: { proveedor: ProveedorResponse }) {
+  const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const isDeleted = proveedor.deletedAt !== null;
@@ -21,6 +23,7 @@ export function ProveedorActions({ proveedor }: { proveedor: ProveedorResponse }
     const result = await eliminarProveedor(formData);
     if (result.success) {
       toast.success('Proveedor eliminado exitosamente');
+      router.refresh();
     } else {
       toast.error(result.error || 'Error al eliminar proveedor');
     }
@@ -32,6 +35,7 @@ export function ProveedorActions({ proveedor }: { proveedor: ProveedorResponse }
     const result = await restaurarProveedor(formData);
     if (result.success) {
       toast.success('Proveedor restaurado exitosamente');
+      router.refresh();
     } else {
       toast.error(result.error || 'Error al restaurar proveedor');
     }

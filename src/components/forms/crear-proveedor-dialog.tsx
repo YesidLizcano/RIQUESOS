@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { crearProveedor } from '@/presentation/actions/proveedores';
 import { toast } from 'sonner';
 import {
@@ -17,12 +18,14 @@ import { Label } from '@/components/ui/label';
 import { PlusIcon } from 'lucide-react';
 
 export function CrearProveedorDialog() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
 
   async function action(formData: FormData) {
     const result = await crearProveedor(formData);
     if (result.success) {
       toast.success('Proveedor creado exitosamente');
+      router.refresh();
       setOpen(false);
     } else {
       toast.error(result.error || 'Error al crear proveedor');

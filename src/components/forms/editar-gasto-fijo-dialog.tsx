@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { actualizarGasto } from '@/presentation/actions/gastos';
 import { toast } from 'sonner';
 import type { GastoResponse } from '@/presentation/dtos';
@@ -22,6 +23,7 @@ interface EditarGastoFijoDialogProps {
 }
 
 export function EditarGastoFijoDialog({ gasto, open, onOpenChange }: EditarGastoFijoDialogProps) {
+  const router = useRouter();
   const [concepto, setConcepto] = useState(gasto.concepto);
   const [valor, setValor] = useState(gasto.valor);
 
@@ -29,6 +31,7 @@ export function EditarGastoFijoDialog({ gasto, open, onOpenChange }: EditarGasto
     const result = await actualizarGasto(formData);
     if (result.success) {
       toast.success('Gasto actualizado exitosamente');
+      router.refresh();
       onOpenChange(false);
     } else {
       toast.error(result.error || 'Error al actualizar gasto');
