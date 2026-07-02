@@ -28,7 +28,7 @@ export default defineConfig({
     },
     {
       name: 'authenticated',
-      testMatch: /(dashboard|lotes|ventas|clientes|gastos)\.spec\.ts/,
+      testMatch: /(dashboard|lotes|ventas|clientes|gastos|proveedores|crud-forms|pagination|filters|dark-mode)\.spec\.ts/,
       dependencies: ['setup'],
       use: {
         storageState: '.auth/admin.json',

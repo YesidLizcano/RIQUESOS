@@ -20,6 +20,7 @@ test.describe('Dashboard page', () => {
     await expect(page.getByRole('link', { name: 'Lotes' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Ventas' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Clientes' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Proveedores' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Gastos Fijos' })).toBeVisible();
   });
 

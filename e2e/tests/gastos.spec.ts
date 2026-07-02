@@ -8,7 +8,7 @@ test.describe('Gastos page', () => {
 
   test('shows empty state when no gastos seeded', async ({ page }) => {
     await page.goto('/gastos');
-    await expect(page.getByText('No hay gastos fijos registrados')).toBeVisible();
+    await expect(page.getByText('No hay gastos en el período seleccionado')).toBeVisible();
   });
 
   test('renders navigation links', async ({ page }) => {

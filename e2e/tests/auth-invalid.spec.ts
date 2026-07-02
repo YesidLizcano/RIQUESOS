@@ -10,7 +10,7 @@ test.describe('Invalid credentials', () => {
     await page.getByRole('button', { name: 'Iniciar Sesión' }).click();
 
     // Should show error message
-    await expect(page.locator('div.bg-red-50')).toBeVisible();
+    await expect(page.getByRole('alert')).toBeVisible();
     await expect(page.getByText('Credenciales inválidas')).toBeVisible();
 
     // Should stay on login page
@@ -25,7 +25,7 @@ test.describe('Invalid credentials', () => {
 
     await page.getByRole('button', { name: 'Iniciar Sesión' }).click();
 
-    await expect(page.locator('div.bg-red-50')).toBeVisible();
+    await expect(page.getByRole('alert')).toBeVisible();
     await expect(page).toHaveURL('/login');
   });
 });

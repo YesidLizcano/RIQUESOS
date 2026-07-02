@@ -11,7 +11,7 @@ test.describe('Lotes page', () => {
 
     // Seed creates two proveedores, but no lotes by default
     // So we should see the empty state
-    await expect(page.getByText('No hay lotes activos')).toBeVisible();
+    await expect(page.getByText('No hay lotes')).toBeVisible();
   });
 
   test('renders navigation links', async ({ page }) => {

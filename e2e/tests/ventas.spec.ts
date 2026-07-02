@@ -8,7 +8,7 @@ test.describe('Ventas page', () => {
 
   test('shows empty state when no ventas seeded', async ({ page }) => {
     await page.goto('/ventas');
-    await expect(page.getByText('No hay ventas en el período actual')).toBeVisible();
+    await expect(page.getByText('No hay ventas en el período seleccionado')).toBeVisible();
   });
 
   test('renders navigation links', async ({ page }) => {

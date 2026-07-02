@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Validate auth flow and page rendering end-to-end via Playwright browser tests, ensuring runtime correctness beyond structural file checks.
+Validate auth flow and page rendering end-to-end via Playwright browser tests, ensuring runtime correctness beyond structural file checks. All E2E tests SHALL use role-based selectors (`getByRole()`, `getByText()`, `getByLabel()`, `getByTestId()`) — NOT CSS class selectors — to remain resilient to UI library class changes.
 
 ## Requirements
 
@@ -24,7 +24,7 @@ The system SHALL configure Playwright for Next.js App Router with a `next dev` w
 
 ### Requirement: Auth E2E Tests
 
-The system SHALL verify login with valid credentials redirects to the dashboard, invalid credentials display an error, and unauthenticated access to protected routes redirects to `/login`. Session persistence across page navigation MUST be confirmed.
+The system SHALL verify login with valid credentials redirects to the dashboard, invalid credentials display an error using role-based selectors (`getByRole('alert')` or `getByText('Credenciales inválidas')`), and unauthenticated access to protected routes redirects to `/login`. Session persistence across page navigation MUST be confirmed. Tests MUST NOT depend on implementation-specific CSS classes like `div.bg-red-50`.
 
 #### Scenario: Valid login redirects to dashboard
 
@@ -32,11 +32,12 @@ The system SHALL verify login with valid credentials redirects to the dashboard,
 - WHEN submitting valid credentials on the login page
 - THEN the browser redirects to the dashboard
 
-#### Scenario: Invalid credentials show error
+#### Scenario: Invalid credentials show alert
 
 - GIVEN a seeded admin user
 - WHEN submitting an incorrect password on the login page
-- THEN an authentication error message is displayed
+- THEN an alert with `role="alert"` is visible
+- AND the text "Credenciales inválidas" is displayed
 
 #### Scenario: Unauthenticated access redirects to login
 
@@ -52,7 +53,12 @@ The system SHALL verify login with valid credentials redirects to the dashboard,
 
 ### Requirement: Page Rendering E2E Tests
 
-The system SHALL verify the dashboard renders metrics from seeded data, each list page (lotes, ventas, clientes, gastos) renders seeded records, and empty state displays correctly when no data exists.
+The system SHALL verify the dashboard renders metrics from seeded data, each list page (lotes, ventas, clientes, gastos, proveedores) renders seeded records, and empty state displays correctly when no data exists. Empty state text MUST match current application strings:
+- Lotes: "No hay lotes"
+- Ventas: "No hay ventas en el período seleccionado"
+- Gastos: "No hay gastos en el período seleccionado"
+
+The dashboard navigation test SHALL verify all 6 sidebar items: Dashboard, Lotes, Ventas, Clientes, Proveedores, and Gastos Fijos.
 
 #### Scenario: Dashboard renders seeded metrics
 
@@ -63,14 +69,68 @@ The system SHALL verify the dashboard renders metrics from seeded data, each lis
 #### Scenario: List pages render seeded data
 
 - GIVEN a database seeded with records for each entity
-- WHEN navigating to lotes, ventas, clientes, or gastos list pages
+- WHEN navigating to lotes, ventas, clientes, gastos, or proveedores list pages
 - THEN each page displays the corresponding seeded records
 
 #### Scenario: Empty state displayed correctly
 
 - GIVEN a freshly reset database with no entity records
 - WHEN navigating to a list page
-- THEN an appropriate empty-state message is shown
+- THEN the correct empty-state message is shown
+
+#### Scenario: Dashboard shows all nav items
+
+- GIVEN an authenticated user on the dashboard
+- WHEN the sidebar renders
+- THEN links for Dashboard, Lotes, Ventas, Clientes, Proveedores, and Gastos Fijos are all visible
+
+### Requirement: CRUD Form Create Tests
+
+E2E tests SHALL verify that each entity's create dialog opens, accepts field input, and submits successfully. Entities: Lote, Cliente, Venta, GastoFijo, Proveedor. Each test SHALL:
+- Open the create dialog
+- Fill minimum required fields
+- Submit the form
+- Verify the new row appears in the table
+
+#### Scenario: Create Lote via dialog
+
+- GIVEN an authenticated user on /lotes
+- WHEN they click "Crear Lote", fill required fields, and submit
+- THEN the new lote row appears in the table
+
+### Requirement: Pagination Controls
+
+E2E tests SHALL verify that pagination controls render on list pages. The page size selector (10/20/50 rows) MUST be visible and functional on at least one entity page. Tests verify UI controls exist and respond to interaction, NOT data accuracy.
+
+#### Scenario: Pagination controls visible
+
+- GIVEN an authenticated user on any entity list page
+- WHEN the page loads
+- THEN the page size selector and page navigation are visible
+
+### Requirement: Search and Column Filters
+
+E2E tests SHALL verify that the search input renders and filters table rows. Column filter selects (e.g., Clientes tipo filter) SHALL be verified to render and respond to selection.
+
+#### Scenario: Search filters rows
+
+- GIVEN an authenticated user on /clientes with data present
+- WHEN they type in the search input
+- THEN the table rows are filtered to matching results
+
+### Requirement: Dark Mode Toggle
+
+An E2E test SHALL verify that the theme toggle exists in the sidebar and cycles through light → dark → system themes, adding/removing the `dark` CSS class on the `<html>` element.
+
+#### Scenario: Dark mode toggle cycles themes
+
+- GIVEN an authenticated user on any page
+- WHEN they click the theme toggle
+- THEN the `dark` class is toggled on the `<html>` element
+
+### Requirement: Proveedores Page
+
+E2E tests SHALL verify that the Proveedores page renders with its heading, empty state text, and navigation links.
 
 ### Requirement: Test Data Strategy
 
