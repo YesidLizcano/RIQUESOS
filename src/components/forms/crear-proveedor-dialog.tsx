@@ -19,15 +19,6 @@ import { PlusIcon } from 'lucide-react';
 export function CrearProveedorDialog() {
   const [open, setOpen] = useState(false);
 
-  async function handleSubmit(formData: FormData) {
-    'use server';
-    const result = await crearProveedor(formData);
-    if (result.success) {
-      return { success: true };
-    }
-    return { success: false, error: result.error };
-  }
-
   async function action(formData: FormData) {
     const result = await crearProveedor(formData);
     if (result.success) {

@@ -9,38 +9,9 @@ import { MetricCard } from '@/components/dashboard-metric-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { DataTable } from '@/components/data-table';
-import { ColumnDef } from '@tanstack/react-table';
-import type { LoteResponse } from '@/presentation/dtos';
+import { lotesColumns } from '@/components/columns/dashboard-lote-columns';
 
-// Column definitions for Active Lotes table
-const lotesColumns: ColumnDef<LoteResponse, unknown>[] = [
-  {
-    accessorKey: 'producto',
-    header: 'Producto',
-  },
-  {
-    accessorKey: 'stockDisponibleKg',
-    header: 'Stock (Kg)',
-    cell: ({ row }) => Number(row.getValue('stockDisponibleKg')).toLocaleString('es-AR'),
-  },
-  {
-    accessorKey: 'costoRealCalculadoKg',
-    header: 'Costo Real/Kg',
-    cell: ({ row }) => `$${Number(row.getValue('costoRealCalculadoKg')).toLocaleString('es-AR')}`,
-  },
-  {
-    accessorKey: 'estado',
-    header: 'Estado',
-    cell: ({ row }) => {
-      const estado = row.getValue('estado') as string;
-      return (
-        <Badge variant={estado === 'ACTIVO' ? 'default' : 'secondary'}>
-          {estado}
-        </Badge>
-      );
-    },
-  },
-];
+export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
