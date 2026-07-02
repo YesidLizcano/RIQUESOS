@@ -9,6 +9,13 @@ import { DeleteConfirmDialog } from '@/components/forms/delete-confirm-dialog';
 import { eliminarLote, restaurarLote } from '@/presentation/actions/lotes';
 import { toast } from 'sonner';
 import { startTransition } from 'react';
+import { Badge } from '@/components/ui/badge';
+
+export interface AlertaInfo {
+  stockSeverity?: 'warning' | 'critical';
+  ageSeverity?: 'warning' | 'critical';
+  diasEnInventario: number;
+}
 
 export function LoteActions({ lote }: { lote: LoteResponse }) {
   const [editOpen, setEditOpen] = useState(false);
@@ -78,7 +85,8 @@ export function LoteActions({ lote }: { lote: LoteResponse }) {
 
 export function createLoteColumns(
   proveedorMap?: Map<string, string>,
-  showDeleted?: boolean
+  showDeleted?: boolean,
+  alertMap?: Map<string, AlertaInfo>
 ): ColumnDef<LoteResponse, unknown>[] {
   return [
     {
@@ -129,7 +137,75 @@ export function createLoteColumns(
       accessorKey: 'stockDisponibleKg',
       header: 'Stock Disp. (Kg)',
       enableGlobalFilter: false,
-      cell: ({ row }) => Number(row.getValue('stockDisponibleKg')).toLocaleString('es-AR'),
+      cell: ({ row }) => {
+        const stockValue = Number(row.getValue('stockDisponibleKg'));
+        const info = alertMap?.get(row.original.id);
+        const severity = info?.stockSeverity;
+
+        if (severity === 'critical') {
+          return (
+            <div className="flex items-center gap-1.5">
+              <span>{stockValue.toLocaleString('es-AR')}</span>
+              <Badge variant="destructive">Crítico</Badge>
+            </div>
+          );
+        }
+        if (severity === 'warning') {
+          return (
+            <div className="flex items-center gap-1.5">
+              <span>{stockValue.toLocaleString('es-AR')}</span>
+              <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Bajo</Badge>
+            </div>
+          );
+        }
+        return stockValue.toLocaleString('es-AR');
+      },
+    },
+    {
+      id: 'diasEnInventario',
+      header: 'Días en Inv.',
+      enableGlobalFilter: false,
+      accessorFn: (row) => {
+        const info = alertMap?.get(row.id);
+        return info?.diasEnInventario ?? (() => {
+          const ingreso = new Date(row.fechaIngreso);
+          const hoy = new Date();
+          const msPerDay = 1000 * 60 * 60 * 24;
+          const laterDay = Date.UTC(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+          const earlierDay = Date.UTC(ingreso.getFullYear(), ingreso.getMonth(), ingreso.getDate());
+          return Math.floor((laterDay - earlierDay) / msPerDay);
+        })();
+      },
+      cell: ({ row }) => {
+        const info = alertMap?.get(row.original.id);
+        const dias = info?.diasEnInventario ?? (() => {
+          const ingreso = new Date(row.original.fechaIngreso);
+          const hoy = new Date();
+          const msPerDay = 1000 * 60 * 60 * 24;
+          const laterDay = Date.UTC(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+          const earlierDay = Date.UTC(ingreso.getFullYear(), ingreso.getMonth(), ingreso.getDate());
+          return Math.floor((laterDay - earlierDay) / msPerDay);
+        })();
+        const ageSeverity = info?.ageSeverity;
+
+        if (ageSeverity === 'critical') {
+          return (
+            <div className="flex items-center gap-1.5">
+              <span>{dias}</span>
+              <Badge variant="destructive">60+ días</Badge>
+            </div>
+          );
+        }
+        if (ageSeverity === 'warning') {
+          return (
+            <div className="flex items-center gap-1.5">
+              <span>{dias}</span>
+              <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">30+</Badge>
+            </div>
+          );
+        }
+        return <span>{dias}</span>;
+      },
     },
     {
       accessorKey: 'estado',

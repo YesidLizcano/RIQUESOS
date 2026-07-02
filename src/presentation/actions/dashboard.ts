@@ -6,8 +6,11 @@ import { PrismaVentaRepo } from '@/infrastructure/repositories/PrismaVentaRepo';
 import { PrismaLoteRepo } from '@/infrastructure/repositories/PrismaLoteRepo';
 import { PrismaGastoFijoRepo } from '@/infrastructure/repositories/PrismaGastoFijoRepo';
 import { PrismaClienteRepo } from '@/infrastructure/repositories/PrismaClienteRepo';
+import { PrismaProveedorRepo } from '@/infrastructure/repositories/PrismaProveedorRepo';
 import { ObtenerMetricas } from '@/application/use-cases/ObtenerMetricas';
-import type { DashboardMetricasResponse } from '../dtos';
+import { ObtenerAlertas } from '@/application/use-cases/ObtenerAlertas';
+import type { DashboardMetricasResponse, AlertasResultResponse, AlertaLoteResponse } from '../dtos';
+import { AlertaTipo, AlertaSeveridad } from '../dtos';
 import { logger } from '@/infrastructure/pino-logger';
 
 async function getObtenerMetricasUseCase() {
@@ -73,5 +76,35 @@ export async function getMetricas(month?: number, year?: number) {
   } catch (error) {
     logger.error({ err: error }, 'Error fetching metricas');
     return { success: false, error: 'Error fetching dashboard metrics' };
+  }
+}
+
+export async function getAlertas() {
+  await requireSession();
+
+  try {
+    const loteRepo = new PrismaLoteRepo();
+    const proveedorRepo = new PrismaProveedorRepo();
+    const useCase = new ObtenerAlertas(loteRepo, proveedorRepo);
+    const result = await useCase.execute();
+
+    const response: AlertasResultResponse = {
+      alertas: result.alertas.map((a): AlertaLoteResponse => ({
+        loteId: a.loteId,
+        tipoProducto: a.tipoProducto,
+        proveedorNombre: a.proveedorNombre,
+        stockDisponibleKg: a.stockDisponibleKg,
+        cantidadCompradaKg: a.cantidadCompradaKg,
+        diasEnInventario: a.diasEnInventario,
+        alertaTipo: a.alertType as AlertaTipo,
+        severidad: a.severity as AlertaSeveridad,
+      })),
+      resumen: result.resumen,
+    };
+
+    return { success: true, ...response };
+  } catch (error) {
+    logger.error({ err: error }, 'Error fetching alertas');
+    return { success: false, error: 'Error fetching alertas', alertas: [], resumen: { stockBajo: 0, stockCritico: 0, antiguo: 0, muyAntiguo: 0, total: 0 } };
   }
 }

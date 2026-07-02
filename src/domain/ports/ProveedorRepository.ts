@@ -3,6 +3,7 @@ import { Proveedor } from '../entities/Proveedor';
 
 export interface ProveedorRepository {
   findById(id: string): Promise<Proveedor | null>;
+  findByIds(ids: string[]): Promise<Proveedor[]>;
   findAll(): Promise<Proveedor[]>;
   save(proveedor: Proveedor): Promise<Proveedor>;
   softDelete(id: string): Promise<void>;

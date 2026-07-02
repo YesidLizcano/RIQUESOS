@@ -6,6 +6,7 @@ import type { ProveedorRepository } from '../../domain/ports/ProveedorRepository
 describe('GestionarProveedores', () => {
   const mockProveedorRepo: ProveedorRepository = {
     findById: vi.fn(),
+    findByIds: vi.fn(),
     findAll: vi.fn(),
     save: vi.fn(),
     softDelete: vi.fn(),

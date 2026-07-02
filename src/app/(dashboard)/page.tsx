@@ -1,9 +1,10 @@
-import { getMetricas } from '@/presentation/actions/dashboard';
+import { getMetricas, getAlertas } from '@/presentation/actions/dashboard';
 import { getLotes } from '@/presentation/actions/lotes';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/infrastructure/auth';
 import { redirect } from 'next/navigation';
 import { DashboardClientPage } from './dashboard-client-page';
+import { DashboardAlertSection } from '@/components/dashboard-alert-section';
 import { MetricCard } from '@/components/dashboard-metric-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -49,13 +50,16 @@ export default async function DashboardPage() {
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
 
-  const [metricasResult, lotesResult] = await Promise.all([
+  const [metricasResult, lotesResult, alertasResult] = await Promise.all([
     getMetricas(currentMonth, currentYear),
     getLotes(),
+    getAlertas(),
   ]);
 
   const metricas = metricasResult.success ? metricasResult.metricas : null;
   const lotes = lotesResult.success ? lotesResult.lotes : [];
+  const alertas = alertasResult.success ? alertasResult.alertas : [];
+  const alertasResumen = alertasResult.success ? alertasResult.resumen : { stockBajo: 0, stockCritico: 0, antiguo: 0, muyAntiguo: 0, total: 0 };
 
   if (!metricas) {
     return (
@@ -67,6 +71,11 @@ export default async function DashboardPage() {
         <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-amber-800">
           Error al cargar las métricas. Intente recargar la página.
         </div>
+
+        {/* Alert Section */}
+        {alertasResumen.total > 0 && (
+          <DashboardAlertSection alertas={alertas} resumen={alertasResumen} />
+        )}
 
         {/* Active Lotes Summary */}
         <Card>
@@ -92,6 +101,11 @@ export default async function DashboardPage() {
         initialMonth={currentMonth}
         initialYear={currentYear}
       />
+
+      {/* Alert Section */}
+      {alertasResumen.total > 0 && (
+        <DashboardAlertSection alertas={alertas} resumen={alertasResumen} />
+      )}
 
       {/* Active Lotes Summary */}
       <Card>

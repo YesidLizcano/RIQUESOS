@@ -5,11 +5,12 @@ import { useReactTable, getCoreRowModel, getFilteredRowModel, getPaginationRowMo
 import { Card, CardContent } from '@/components/ui/card';
 import { DataTable } from '@/components/data-table';
 import { DataTableToolbar, FilterConfig } from '@/components/data-table-toolbar';
-import { createLoteColumns } from '@/components/columns/lote-columns';
+import { createLoteColumns, AlertaInfo } from '@/components/columns/lote-columns';
 import { CrearLoteDialog } from '@/components/forms/crear-lote-dialog';
 import { getLotesIncludeDeleted } from '@/presentation/actions/lotes';
 import { useExportExcel } from '@/hooks/use-export-excel';
-import type { LoteResponse, ProveedorResponse } from '@/presentation/dtos';
+import type { LoteResponse, ProveedorResponse, AlertaLoteResponse } from '@/presentation/dtos';
+import { AlertaSeveridad } from '@/presentation/dtos';
 import { TipoProducto, EstadoLote } from '@/domain/enums';
 
 const ESTADO_LABELS: Record<string, string> = {
@@ -36,6 +37,7 @@ const loteExportMap = [
 interface LotesClientPageProps {
   lotes: LoteResponse[];
   proveedores: ProveedorResponse[];
+  alertas: AlertaLoteResponse[];
 }
 
 const productoFilterOptions = [
@@ -48,7 +50,7 @@ const estadoFilterOptions = [
   { label: 'Agotado', value: EstadoLote.AGOTADO },
 ];
 
-export function LotesClientPage({ lotes, proveedores }: LotesClientPageProps) {
+export function LotesClientPage({ lotes, proveedores, alertas }: LotesClientPageProps) {
   const [showDeleted, setShowDeleted] = useState(false);
   const [data, setData] = useState<LoteResponse[]>(lotes);
 
@@ -56,6 +58,26 @@ export function LotesClientPage({ lotes, proveedores }: LotesClientPageProps) {
     () => new Map(proveedores.map((p) => [p.id, p.nombre])),
     [proveedores]
   );
+
+  // Build alertMap from alertas for badge rendering in lote columns
+  const alertMap = useMemo(() => {
+    const map = new Map<string, AlertaInfo>();
+    for (const alerta of alertas) {
+      const existing = map.get(alerta.loteId);
+      const stockSeverity = (alerta.alertaTipo === 'STOCK_CRITICO' || alerta.alertaTipo === 'STOCK_BAJO')
+        ? (alerta.severidad === AlertaSeveridad.CRITICAL ? 'critical' as const : 'warning' as const)
+        : existing?.stockSeverity;
+      const ageSeverity = (alerta.alertaTipo === 'MUY_ANTIGUO' || alerta.alertaTipo === 'ANTIGUO')
+        ? (alerta.severidad === AlertaSeveridad.CRITICAL ? 'critical' as const : 'warning' as const)
+        : existing?.ageSeverity;
+      map.set(alerta.loteId, {
+        stockSeverity,
+        ageSeverity,
+        diasEnInventario: alerta.diasEnInventario,
+      });
+    }
+    return map;
+  }, [alertas]);
 
   const proveedorFilterOptions = useMemo(
     () => proveedores.map((p) => ({ label: p.nombre, value: p.id })),
@@ -72,8 +94,8 @@ export function LotesClientPage({ lotes, proveedores }: LotesClientPageProps) {
   );
 
   const columns = useMemo(
-    () => createLoteColumns(proveedorMap, showDeleted),
-    [proveedorMap, showDeleted]
+    () => createLoteColumns(proveedorMap, showDeleted, alertMap),
+    [proveedorMap, showDeleted, alertMap]
   );
 
   const handleShowDeletedChange = useCallback(async (checked: boolean) => {
