@@ -2,10 +2,7 @@ import { getGastos } from '@/presentation/actions/gastos';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/infrastructure/auth';
 import { redirect } from 'next/navigation';
-import { Card, CardContent } from '@/components/ui/card';
-import { DataTable } from '@/components/data-table';
-import { CrearGastoFijoDialog } from '@/components/forms/crear-gasto-fijo-dialog';
-import { gastoColumns } from '@/components/columns/gasto-columns';
+import { GastosClientPage } from './gastos-client-page';
 
 export default async function GastosPage() {
   const session = await getServerSession(authOptions);
@@ -14,40 +11,5 @@ export default async function GastosPage() {
   const result = await getGastos();
   const gastos = result.success && result.gastos ? result.gastos : [];
 
-  const totalGastos = gastos.reduce((sum, g) => sum + Number(g.valor), 0);
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gastos Fijos</h1>
-          <p className="text-muted-foreground">Gestión de gastos fijos mensuales</p>
-        </div>
-        <CrearGastoFijoDialog />
-      </div>
-
-      <Card>
-        <CardContent className="pt-6">
-          {gastos.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">No hay gastos fijos registrados</p>
-          ) : (
-            <DataTable
-              columns={gastoColumns}
-              data={gastos}
-              footerRow={
-                <tr className="border-t-2 bg-muted/50 font-semibold">
-                  <td className="p-3">Total</td>
-                  <td className="p-3 text-right">
-                    ${totalGastos.toLocaleString('es-AR')}
-                  </td>
-                  <td></td>
-                  <td></td>
-                </tr>
-              }
-            />
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
+  return <GastosClientPage gastos={gastos} />;
 }

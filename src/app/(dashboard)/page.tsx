@@ -154,11 +154,11 @@ export default async function DashboardPage() {
       {/* Active Lotes Summary */}
       <Card>
         <CardHeader>
-          <CardTitle>Lotes Activos</CardTitle>
+            <CardTitle>Lotes</CardTitle>
         </CardHeader>
         <CardContent>
           {lotes.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">No hay lotes activos</p>
+            <p className="text-muted-foreground text-center py-4">No hay lotes</p>
           ) : (
             <DataTable columns={lotesColumns} data={lotes} pagination={false} />
           )}

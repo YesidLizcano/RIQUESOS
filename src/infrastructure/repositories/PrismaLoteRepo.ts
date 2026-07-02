@@ -21,6 +21,13 @@ export class PrismaLoteRepo implements LoteRepository {
     return records.map((r) => this.toEntity(r));
   }
 
+  async findAll(): Promise<Lote[]> {
+    const records = await prisma.lote.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+    return records.map((r) => this.toEntity(r));
+  }
+
   async findByProveedor(proveedorId: string): Promise<Lote[]> {
     const records = await prisma.lote.findMany({
       where: { proveedorId },

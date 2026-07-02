@@ -51,54 +51,76 @@ export function LoteActions({ lote }: { lote: LoteResponse }) {
   );
 }
 
-export const loteColumns: ColumnDef<LoteResponse, unknown>[] = [
-  {
-    accessorKey: 'producto',
-    header: 'Producto',
-    cell: ({ row }) => {
-      const producto = row.getValue('producto') as string;
-      return producto === 'DOBLE_CREMA' ? 'Doble Crema' : 'Semisalado';
+export function createLoteColumns(
+  proveedorMap?: Map<string, string>
+): ColumnDef<LoteResponse, unknown>[] {
+  return [
+    {
+      accessorKey: 'producto',
+      header: 'Producto',
+      cell: ({ row }) => {
+        const producto = row.getValue('producto') as string;
+        return producto === 'DOBLE_CREMA' ? 'Doble Crema' : 'Semisalado';
+      },
     },
-  },
-  {
-    accessorKey: 'proveedorId',
-    header: 'Proveedor',
-  },
-  {
-    accessorKey: 'cantidadCompradaKg',
-    header: 'Cant. Comprada (Kg)',
-    cell: ({ row }) => Number(row.getValue('cantidadCompradaKg')).toLocaleString('es-AR'),
-  },
-  {
-    accessorKey: 'precioCompraBaseKg',
-    header: 'Precio Base/Kg',
-    cell: ({ row }) => `$${Number(row.getValue('precioCompraBaseKg')).toLocaleString('es-AR')}`,
-  },
-  {
-    accessorKey: 'costoRealCalculadoKg',
-    header: 'Costo Real/Kg',
-    cell: ({ row }) => `$${Number(row.getValue('costoRealCalculadoKg')).toLocaleString('es-AR')}`,
-  },
-  {
-    accessorKey: 'stockDisponibleKg',
-    header: 'Stock Disp. (Kg)',
-    cell: ({ row }) => Number(row.getValue('stockDisponibleKg')).toLocaleString('es-AR'),
-  },
-  {
-    accessorKey: 'estado',
-    header: 'Estado',
-    cell: ({ row }) => {
-      const estado = row.getValue('estado') as string;
-      return (
-        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${estado === 'ACTIVO' ? 'bg-primary/10 text-primary' : 'bg-secondary/10 text-secondary-foreground'}`}>
-          {estado}
-        </span>
-      );
+    {
+      id: 'proveedorNombre',
+      header: 'Proveedor',
+      accessorFn: (row) => {
+        if (proveedorMap) {
+          return proveedorMap.get(row.proveedorId) ?? row.proveedorId;
+        }
+        return row.proveedorId;
+      },
+      filterFn: (row, _columnId, filterValue) => {
+        return row.original.proveedorId === filterValue;
+      },
     },
-  },
-  {
-    id: 'actions',
-    header: 'Acciones',
-    cell: ({ row }) => <LoteActions lote={row.original} />,
-  },
-];
+    {
+      accessorKey: 'cantidadCompradaKg',
+      header: 'Cant. Comprada (Kg)',
+      enableGlobalFilter: false,
+      cell: ({ row }) => Number(row.getValue('cantidadCompradaKg')).toLocaleString('es-AR'),
+    },
+    {
+      accessorKey: 'precioCompraBaseKg',
+      header: 'Precio Base/Kg',
+      enableGlobalFilter: false,
+      cell: ({ row }) => `$${Number(row.getValue('precioCompraBaseKg')).toLocaleString('es-AR')}`,
+    },
+    {
+      accessorKey: 'costoRealCalculadoKg',
+      header: 'Costo Real/Kg',
+      enableGlobalFilter: false,
+      cell: ({ row }) => `$${Number(row.getValue('costoRealCalculadoKg')).toLocaleString('es-AR')}`,
+    },
+    {
+      accessorKey: 'stockDisponibleKg',
+      header: 'Stock Disp. (Kg)',
+      enableGlobalFilter: false,
+      cell: ({ row }) => Number(row.getValue('stockDisponibleKg')).toLocaleString('es-AR'),
+    },
+    {
+      accessorKey: 'estado',
+      header: 'Estado',
+      enableGlobalFilter: false,
+      cell: ({ row }) => {
+        const estado = row.getValue('estado') as string;
+        return (
+          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${estado === 'ACTIVO' ? 'bg-primary/10 text-primary' : 'bg-secondary/10 text-secondary-foreground'}`}>
+            {estado}
+          </span>
+        );
+      },
+    },
+    {
+      id: 'actions',
+      header: 'Acciones',
+      enableGlobalFilter: false,
+      cell: ({ row }) => <LoteActions lote={row.original} />,
+    },
+  ];
+}
+
+// Keep backward-compatible export for pages that don't need FK resolution
+export const loteColumns = createLoteColumns();

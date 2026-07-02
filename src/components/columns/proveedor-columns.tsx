@@ -67,6 +67,7 @@ export const proveedorColumns: ColumnDef<ProveedorResponse, unknown>[] = [
   {
     id: 'actions',
     header: 'Acciones',
+    enableGlobalFilter: false,
     cell: ({ row }) => <ProveedorActions proveedor={row.original} />,
   },
 ];

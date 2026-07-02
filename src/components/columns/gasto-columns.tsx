@@ -59,16 +59,19 @@ export const gastoColumns: ColumnDef<GastoResponse, unknown>[] = [
   {
     accessorKey: 'valor',
     header: 'Valor',
+    enableGlobalFilter: false,
     cell: ({ row }) => `$${Number(row.getValue('valor')).toLocaleString('es-AR')}`,
   },
   {
     accessorKey: 'fecha',
     header: 'Fecha',
+    enableGlobalFilter: false,
     cell: ({ row }) => new Date(row.getValue('fecha') as string).toLocaleDateString('es-AR'),
   },
   {
     id: 'actions',
     header: 'Acciones',
+    enableGlobalFilter: false,
     cell: ({ row }) => <GastoActions gasto={row.original} />,
   },
 ];

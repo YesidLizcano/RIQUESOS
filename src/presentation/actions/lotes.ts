@@ -154,7 +154,7 @@ export async function getLotes() {
 
   try {
     const loteRepo = new PrismaLoteRepo();
-    const lotes = await loteRepo.findActive();
+    const lotes = await loteRepo.findAll();
     return { success: true, lotes: lotes.map(loteToResponse) };
   } catch (error) {
     logger.error({ err: error }, 'Error fetching lotes');

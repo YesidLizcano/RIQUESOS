@@ -22,6 +22,7 @@ describe('RegistrarVenta', () => {
   const mockLoteRepo: LoteRepository = {
     findById: vi.fn(),
     findActive: vi.fn(),
+    findAll: vi.fn(),
     findByProveedor: vi.fn(),
     save: vi.fn(),
     deductStock: vi.fn(),

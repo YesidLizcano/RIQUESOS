@@ -4,15 +4,17 @@ import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
+  getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   SortingState,
+  Table,
   useReactTable,
 } from '@tanstack/react-table';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
-  Table,
+  Table as TableUI,
   TableBody,
   TableCell,
   TableHead,
@@ -40,17 +42,19 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
 const DEFAULT_PAGE_SIZE = 20;
 
 interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
-  data: TData[];
+  columns?: ColumnDef<TData, TValue>[];
+  data?: TData[];
   footerRow?: React.ReactNode;
   pagination?: boolean;
+  table?: Table<TData>;
 }
 
 export function DataTable<TData, TValue>({
-  columns,
-  data,
+  columns = [],
+  data = [],
   footerRow,
   pagination = true,
+  table: externalTable,
 }: DataTableProps<TData, TValue>) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -82,10 +86,11 @@ export function DataTable<TData, TValue>({
     router.replace(`?${params.toString()}`, { scroll: false });
   }, [searchParams, router]);
 
-  const table = useReactTable({
+  const internalTable = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     ...(pagination ? { getPaginationRowModel: getPaginationRowModel() } : {}),
     onSortingChange: setSorting,
@@ -105,6 +110,8 @@ export function DataTable<TData, TValue>({
         : {}),
     },
   });
+
+  const table = externalTable ?? internalTable;
 
   // When pagination is enabled, reset page index if data changes and current page is out of range
   useEffect(() => {
@@ -158,7 +165,7 @@ export function DataTable<TData, TValue>({
         </div>
       )}
       <div className="rounded-md border">
-        <Table>
+        <TableUI>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -209,7 +216,7 @@ export function DataTable<TData, TValue>({
             )}
           </TableBody>
           {footerRow && <TableFooter>{footerRow}</TableFooter>}
-        </Table>
+        </TableUI>
       </div>
       {showPagination && (
         <div className="flex items-center justify-between">

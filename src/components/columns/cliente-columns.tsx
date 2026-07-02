@@ -72,6 +72,7 @@ export const clienteColumns: ColumnDef<ClienteResponse, unknown>[] = [
   {
     accessorKey: 'precioDobleCrema',
     header: 'Precio Doble Crema',
+    enableGlobalFilter: false,
     cell: ({ row }) => {
       const value = row.getValue('precioDobleCrema') as string | null;
       return value ? `$${Number(value).toLocaleString('es-AR')}` : '—';
@@ -80,6 +81,7 @@ export const clienteColumns: ColumnDef<ClienteResponse, unknown>[] = [
   {
     accessorKey: 'precioSemisalado',
     header: 'Precio Semisalado',
+    enableGlobalFilter: false,
     cell: ({ row }) => {
       const value = row.getValue('precioSemisalado') as string | null;
       return value ? `$${Number(value).toLocaleString('es-AR')}` : '—';
@@ -88,6 +90,7 @@ export const clienteColumns: ColumnDef<ClienteResponse, unknown>[] = [
   {
     id: 'actions',
     header: 'Acciones',
+    enableGlobalFilter: false,
     cell: ({ row }) => <ClienteActions cliente={row.original} />,
   },
 ];
