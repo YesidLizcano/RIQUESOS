@@ -105,6 +105,42 @@ export class PrismaLoteRepo implements LoteRepository {
     return this.toEntity(updated);
   }
 
+  /**
+   * Update cost fields with optimistic locking.
+   * Uses updateMany with version check to detect concurrent modifications.
+   * Returns updated Lote or throws ConcurrencyError if version mismatch.
+   */
+  async updateCosts(id: string, lote: Lote, expectedVersion: number): Promise<Lote> {
+    const result = await prisma.lote.updateMany({
+      where: { id, version: expectedVersion },
+      data: {
+        precioCompraBaseKg: new Prisma.Decimal(lote.precioCompraBaseKg.value),
+        cantidadCompradaKg: new Prisma.Decimal(lote.cantidadCompradaKg.value),
+        costoFlete: new Prisma.Decimal(lote.costoFlete.value),
+        costoTajado: new Prisma.Decimal(lote.costoTajado.value),
+        costoEmpaques: new Prisma.Decimal(lote.costoEmpaques.value),
+        costoRealCalculadoKg: new Prisma.Decimal(lote.costoRealCalculadoKg.value),
+        version: { increment: 1 },
+      },
+    });
+
+    if (result.count === 0) {
+      throw new ConcurrencyError(
+        `Lote ${id} was modified by another transaction (expected version ${expectedVersion})`
+      );
+    }
+
+    const updated = await prisma.lote.findUnique({ where: { id } });
+    if (!updated) {
+      throw new Error(`Lote not found after update: ${id}`);
+    }
+    return this.toEntity(updated);
+  }
+
+  async delete(id: string): Promise<void> {
+    await prisma.lote.delete({ where: { id } });
+  }
+
   private toEntity(record: Prisma.LoteGetPayload<{}>): Lote {
     return new Lote({
       id: record.id,

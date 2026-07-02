@@ -16,7 +16,9 @@ export {
 export {
   GestionarProveedores,
   type CrearProveedorInput,
+  type ActualizarProveedorInput,
 } from './GestionarProveedores';
+export { ModificarLote, type ModificarLoteInput } from './ModificarLote';
 export {
   ObtenerMetricas,
   type MetricasPeriodo,

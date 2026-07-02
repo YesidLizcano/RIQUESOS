@@ -5,8 +5,9 @@ import { revalidatePath } from 'next/cache';
 import { requireSession } from './auth';
 import { PrismaGastoFijoRepo } from '@/infrastructure/repositories/PrismaGastoFijoRepo';
 import { GestionarGastos } from '@/application/use-cases/GestionarGastos';
-import { crearGastoFijoSchema } from '@/presentation/validations/gasto-fijo.schema';
+import { crearGastoFijoSchema, actualizarGastoFijoSchema, eliminarGastoFijoSchema } from '@/presentation/validations/gasto-fijo.schema';
 import type { CrearGastoRequest, ActualizarGastoRequest, GastoResponse, GastoMensualResumenResponse } from '../dtos';
+import { handlePrismaError } from './utils';
 import { logger } from '@/infrastructure/pino-logger';
 
 async function getGestionarGastosUseCase() {
@@ -53,10 +54,15 @@ export async function crearGasto(formData: FormData) {
 export async function actualizarGasto(formData: FormData) {
   await requireSession();
 
+  const parsed = actualizarGastoFijoSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
   const request: ActualizarGastoRequest = {
-    id: formData.get('id') as string,
-    concepto: (formData.get('concepto') as string) || undefined,
-    valor: (formData.get('valor') as string) || undefined,
+    id: parsed.data.id,
+    concepto: parsed.data.concepto || undefined,
+    valor: parsed.data.valor !== undefined ? String(parsed.data.valor) : undefined,
   };
 
   try {
@@ -76,15 +82,22 @@ export async function actualizarGasto(formData: FormData) {
 export async function eliminarGasto(formData: FormData) {
   await requireSession();
 
-  const id = formData.get('id') as string;
+  const parsed = eliminarGastoFijoSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
 
   try {
     const useCase = await getGestionarGastosUseCase();
-    await useCase.eliminar(id);
+    await useCase.eliminar(parsed.data.id);
     revalidatePath('/gastos');
     return { success: true };
   } catch (error) {
     logger.error({ err: error }, 'Error deleting gasto');
+    const prismaError = handlePrismaError(error);
+    if (prismaError) {
+      return { success: false, error: prismaError };
+    }
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error deleting gasto',

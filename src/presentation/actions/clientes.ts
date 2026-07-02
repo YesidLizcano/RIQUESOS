@@ -5,8 +5,9 @@ import { revalidatePath } from 'next/cache';
 import { requireSession } from './auth';
 import { PrismaClienteRepo } from '@/infrastructure/repositories/PrismaClienteRepo';
 import { GestionarClientes } from '@/application/use-cases/GestionarClientes';
-import { crearClienteSchema } from '@/presentation/validations/cliente.schema';
+import { crearClienteSchema, actualizarClienteSchema, eliminarClienteSchema } from '@/presentation/validations/cliente.schema';
 import type { CrearClienteRequest, ActualizarClienteRequest, ClienteResponse } from '../dtos';
+import { handlePrismaError } from './utils';
 import { logger } from '@/infrastructure/pino-logger';
 
 async function getGestionarClientesUseCase() {
@@ -56,11 +57,16 @@ export async function crearCliente(formData: FormData) {
 export async function actualizarCliente(formData: FormData) {
   await requireSession();
 
+  const parsed = actualizarClienteSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
   const request: ActualizarClienteRequest = {
-    id: formData.get('id') as string,
-    nombre: (formData.get('nombre') as string) || undefined,
-    precioDobleCrema: (formData.get('precioDobleCrema') as string) || undefined,
-    precioSemisalado: (formData.get('precioSemisalado') as string) || undefined,
+    id: parsed.data.id,
+    nombre: parsed.data.nombre || undefined,
+    precioDobleCrema: parsed.data.precioDobleCrema || undefined,
+    precioSemisalado: parsed.data.precioSemisalado || undefined,
   };
 
   try {
@@ -80,15 +86,22 @@ export async function actualizarCliente(formData: FormData) {
 export async function eliminarCliente(formData: FormData) {
   await requireSession();
 
-  const id = formData.get('id') as string;
+  const parsed = eliminarClienteSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
 
   try {
     const useCase = await getGestionarClientesUseCase();
-    await useCase.eliminar(id);
+    await useCase.eliminar(parsed.data.id);
     revalidatePath('/clientes');
     return { success: true };
   } catch (error) {
     logger.error({ err: error }, 'Error deleting cliente');
+    const prismaError = handlePrismaError(error);
+    if (prismaError) {
+      return { success: false, error: 'No se puede eliminar un cliente con ventas asociadas' };
+    }
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error deleting cliente',

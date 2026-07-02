@@ -4,26 +4,8 @@ import { authOptions } from '@/infrastructure/auth';
 import { redirect } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { DataTable } from '@/components/data-table';
-import { ColumnDef } from '@tanstack/react-table';
-import type { GastoResponse } from '@/presentation/dtos';
 import { CrearGastoFijoDialog } from '@/components/forms/crear-gasto-fijo-dialog';
-
-const columns: ColumnDef<GastoResponse, unknown>[] = [
-  {
-    accessorKey: 'concepto',
-    header: 'Concepto',
-  },
-  {
-    accessorKey: 'valor',
-    header: 'Valor',
-    cell: ({ row }) => `$${Number(row.getValue('valor')).toLocaleString('es-AR')}`,
-  },
-  {
-    accessorKey: 'fecha',
-    header: 'Fecha',
-    cell: ({ row }) => new Date(row.getValue('fecha') as string).toLocaleDateString('es-AR'),
-  },
-];
+import { gastoColumns } from '@/components/columns/gasto-columns';
 
 export default async function GastosPage() {
   const session = await getServerSession(authOptions);
@@ -50,7 +32,7 @@ export default async function GastosPage() {
             <p className="text-muted-foreground text-center py-8">No hay gastos fijos registrados</p>
           ) : (
             <DataTable
-              columns={columns}
+              columns={gastoColumns}
               data={gastos}
               footerRow={
                 <tr className="border-t-2 bg-muted/50 font-semibold">
@@ -58,6 +40,7 @@ export default async function GastosPage() {
                   <td className="p-3 text-right">
                     ${totalGastos.toLocaleString('es-AR')}
                   </td>
+                  <td></td>
                   <td></td>
                 </tr>
               }

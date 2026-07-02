@@ -5,8 +5,9 @@ import { revalidatePath } from 'next/cache';
 import { requireSession } from './auth';
 import { PrismaProveedorRepo } from '@/infrastructure/repositories/PrismaProveedorRepo';
 import { GestionarProveedores } from '@/application/use-cases/GestionarProveedores';
-import { crearProveedorSchema } from '@/presentation/validations/proveedor.schema';
-import type { CrearProveedorRequest, ProveedorResponse } from '../dtos';
+import { crearProveedorSchema, actualizarProveedorSchema, eliminarProveedorSchema } from '@/presentation/validations/proveedor.schema';
+import type { CrearProveedorRequest, ActualizarProveedorRequest, ProveedorResponse } from '../dtos';
+import { handlePrismaError } from './utils';
 import { logger } from '@/infrastructure/pino-logger';
 
 async function getGestionarProveedoresUseCase() {
@@ -45,6 +46,60 @@ export async function crearProveedor(formData: FormData) {
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error creating proveedor',
+    };
+  }
+}
+
+export async function actualizarProveedor(formData: FormData) {
+  await requireSession();
+
+  const parsed = actualizarProveedorSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
+  const request: ActualizarProveedorRequest = {
+    id: parsed.data.id,
+    nombre: parsed.data.nombre || undefined,
+    telefono: parsed.data.telefono || undefined,
+  };
+
+  try {
+    const useCase = await getGestionarProveedoresUseCase();
+    const proveedor = await useCase.actualizar(request);
+    revalidatePath('/proveedores');
+    return { success: true, proveedor: proveedorToResponse(proveedor) };
+  } catch (error) {
+    logger.error({ err: error }, 'Error updating proveedor');
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error updating proveedor',
+    };
+  }
+}
+
+export async function eliminarProveedor(formData: FormData) {
+  await requireSession();
+
+  const parsed = eliminarProveedorSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
+  try {
+    const useCase = await getGestionarProveedoresUseCase();
+    await useCase.eliminar(parsed.data.id);
+    revalidatePath('/proveedores');
+    return { success: true };
+  } catch (error) {
+    logger.error({ err: error }, 'Error deleting proveedor');
+    const prismaError = handlePrismaError(error);
+    if (prismaError) {
+      return { success: false, error: prismaError };
+    }
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error deleting proveedor',
     };
   }
 }

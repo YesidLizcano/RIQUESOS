@@ -5,6 +5,12 @@ export interface CrearProveedorRequest {
   telefono?: string;
 }
 
+export interface ActualizarProveedorRequest {
+  id: string;
+  nombre?: string;
+  telefono?: string;
+}
+
 export interface ProveedorResponse {
   id: string;
   nombre: string;

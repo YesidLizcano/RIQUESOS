@@ -136,4 +136,31 @@ export class Lote {
       version: this.version,
     });
   }
+
+  /**
+   * Update cost fields and recalculate costoRealCalculadoKg.
+   * Does NOT change producto, proveedorId, or version (version increment happens at repo level).
+   */
+  updateCosts(params: {
+    precioCompraBaseKg?: string;
+    cantidadCompradaKg?: string;
+    costoFlete?: string;
+    costoTajado?: string;
+    costoEmpaques?: string;
+  }): Lote {
+    return new Lote({
+      id: this.id,
+      producto: this.producto,
+      fechaIngreso: this.fechaIngreso,
+      proveedorId: this.proveedorId,
+      cantidadCompradaKg: params.cantidadCompradaKg ?? this.cantidadCompradaKg.value,
+      precioCompraBaseKg: params.precioCompraBaseKg ?? this.precioCompraBaseKg.value,
+      costoFlete: params.costoFlete ?? this.costoFlete.value,
+      costoTajado: params.costoTajado ?? this.costoTajado.value,
+      costoEmpaques: params.costoEmpaques ?? this.costoEmpaques.value,
+      stockDisponibleKg: this.stockDisponibleKg.value,
+      estado: this.estado,
+      version: this.version,
+    });
+  }
 }

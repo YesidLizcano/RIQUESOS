@@ -11,6 +11,16 @@ export interface CrearLoteRequest {
   costoEmpaques?: string;
 }
 
+export interface ActualizarLoteRequest {
+  id: string;
+  version: number;
+  precioCompraBaseKg?: string;
+  cantidadCompradaKg?: string;
+  costoFlete?: string;
+  costoTajado?: string;
+  costoEmpaques?: string;
+}
+
 export interface LoteResponse {
   id: string;
   producto: TipoProducto;

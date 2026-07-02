@@ -4,24 +4,8 @@ import { authOptions } from '@/infrastructure/auth';
 import { redirect } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { DataTable } from '@/components/data-table';
-import { ColumnDef } from '@tanstack/react-table';
-import type { ProveedorResponse } from '@/presentation/dtos';
 import { CrearProveedorDialog } from '@/components/forms/crear-proveedor-dialog';
-
-const columns: ColumnDef<ProveedorResponse, unknown>[] = [
-  {
-    accessorKey: 'nombre',
-    header: 'Nombre',
-  },
-  {
-    accessorKey: 'telefono',
-    header: 'Teléfono',
-    cell: ({ row }) => {
-      const telefono = row.getValue('telefono') as string | null;
-      return telefono || '—';
-    },
-  },
-];
+import { proveedorColumns } from '@/components/columns/proveedor-columns';
 
 export default async function ProveedoresPage() {
   const session = await getServerSession(authOptions);
@@ -45,7 +29,7 @@ export default async function ProveedoresPage() {
           {proveedores.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">No hay proveedores registrados</p>
           ) : (
-            <DataTable columns={columns} data={proveedores} />
+            <DataTable columns={proveedorColumns} data={proveedores} />
           )}
         </CardContent>
       </Card>

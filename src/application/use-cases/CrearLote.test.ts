@@ -14,6 +14,8 @@ describe('CrearLote', () => {
     findByProveedor: vi.fn(),
     save: vi.fn(),
     deductStock: vi.fn(),
+    updateCosts: vi.fn(),
+    delete: vi.fn(),
   };
 
   const mockProveedorRepo: ProveedorRepository = {
