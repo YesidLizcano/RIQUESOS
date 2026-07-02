@@ -39,12 +39,21 @@ export async function getMetricas(month?: number, year?: number) {
         gananciaBruta: metricas.periodo.gananciaBruta,
         gastosFijos: metricas.periodo.gastosFijos,
         gananciaNeta: metricas.periodo.gananciaNeta,
+        ventasCount: metricas.periodo.ventasCount,
+        clientesActivos: metricas.periodo.clientesActivos,
+        kgVendidos: metricas.periodo.kgVendidos,
+        margenBrutoPct: metricas.periodo.margenBrutoPct,
+        margenNetoPct: metricas.periodo.margenNetoPct,
       },
       inventario: metricas.inventario.map((item) => ({
         producto: item.producto,
         stockDisponibleKg: item.stockDisponibleKg,
         lotesActivos: item.lotesActivos,
       })),
+      inventarioResumen: {
+        valorTotal: metricas.inventarioResumen.valorTotal,
+        lotesActivos: metricas.inventarioResumen.lotesActivos,
+      },
       topClientes: metricas.topClientes.map((c) => ({
         clienteId: c.clienteId,
         nombre: c.nombre,

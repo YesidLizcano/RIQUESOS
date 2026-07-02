@@ -12,6 +12,14 @@ export class PrismaClienteRepo implements ClienteRepository {
     return this.toEntity(record);
   }
 
+  async findByIds(ids: string[]): Promise<Cliente[]> {
+    if (ids.length === 0) return [];
+    const records = await prisma.cliente.findMany({
+      where: { id: { in: ids } },
+    });
+    return records.map((r) => this.toEntity(r));
+  }
+
   async findAll(): Promise<Cliente[]> {
     const records = await prisma.cliente.findMany({
       orderBy: { createdAt: 'desc' },

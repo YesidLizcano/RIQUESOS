@@ -12,11 +12,21 @@ export interface MetricasPeriodo {
   gananciaBruta: string;
   gastosFijos: string;
   gananciaNeta: string;
+  ventasCount: number;
+  clientesActivos: number;
+  kgVendidos: string;
+  margenBrutoPct: string;
+  margenNetoPct: string;
 }
 
 export interface InventarioPorProducto {
   producto: string;
   stockDisponibleKg: string;
+  lotesActivos: number;
+}
+
+export interface InventarioResumen {
+  valorTotal: string;
   lotesActivos: number;
 }
 
@@ -29,6 +39,7 @@ export interface TopCliente {
 export interface MetricasDashboard {
   periodo: MetricasPeriodo;
   inventario: InventarioPorProducto[];
+  inventarioResumen: InventarioResumen;
   topClientes: TopCliente[];
 }
 
@@ -54,15 +65,37 @@ export class ObtenerMetricas {
     const gananciaBruta = ingreso.subtract(costo);
     const gananciaNeta = gananciaBruta.subtract(gastosFijos);
 
+    // 2. Sales-derived metrics from ventas in the period
+    const ventas = await this.ventaRepo.findByDateRange(inicio, fin);
+    const ventasCount = ventas.length;
+    const clientesActivos = new Set(ventas.map((v) => v.clienteId)).size;
+    const kgVendidos = ventas.reduce(
+      (sum, v) => sum.add(new Dinero(v.cantidadVendidaKg.value)),
+      Dinero.zero()
+    );
+
+    // 3. Margin percentages (as strings, "N/A" if revenue is zero)
+    const margenBrutoPct = ingreso.isZero()
+      ? 'N/A'
+      : gananciaBruta.divide(ingreso.value).multiply('100').value;
+    const margenNetoPct = ingreso.isZero()
+      ? 'N/A'
+      : gananciaNeta.divide(ingreso.value).multiply('100').value;
+
     const periodo: MetricasPeriodo = {
       ingresoTotal: ingreso.value,
       costoMercancia: costo.value,
       gananciaBruta: gananciaBruta.value,
       gastosFijos: gastosFijos.value,
       gananciaNeta: gananciaNeta.value,
+      ventasCount,
+      clientesActivos,
+      kgVendidos: kgVendidos.value,
+      margenBrutoPct,
+      margenNetoPct,
     };
 
-    // 2. Inventory levels by product type (only ACTIVO lotes)
+    // 4. Inventory levels by product type (only ACTIVO lotes)
     const lotesActivos = await this.loteRepo.findActive();
     const inventarioMap = new Map<string, { stock: number; count: number }>();
 
@@ -89,8 +122,19 @@ export class ObtenerMetricas {
       })
     );
 
-    // 3. Top clients by revenue in the period
-    const ventas = await this.ventaRepo.findByDateRange(inicio, fin);
+    // 5. Inventory value (sum of costoRealCalculadoKg × stockDisponibleKg for active lotes)
+    let inventarioValor = Dinero.zero();
+    for (const lote of lotesActivos) {
+      const valorLote = lote.costoRealCalculadoKg.multiply(lote.stockDisponibleKg.value);
+      inventarioValor = inventarioValor.add(valorLote);
+    }
+
+    const inventarioResumen: InventarioResumen = {
+      valorTotal: inventarioValor.value,
+      lotesActivos: lotesActivos.length,
+    };
+
+    // 6. Top clients by revenue in the period — batch resolve with findByIds
     const clienteIngresos = new Map<string, string>();
 
     for (const venta of ventas) {
@@ -114,20 +158,21 @@ export class ObtenerMetricas {
       })
       .slice(0, topN);
 
-    // Resolve client names
-    const topClientes: TopCliente[] = [];
-    for (const [clienteId, ingreso] of sortedClientes) {
-      const cliente = await this.clienteRepo.findById(clienteId);
-      topClientes.push({
-        clienteId,
-        nombre: cliente?.nombre ?? 'Unknown',
-        ingresoTotal: ingreso,
-      });
-    }
+    // Batch resolve client names (N+1 fix)
+    const topIds = sortedClientes.map(([id]) => id);
+    const clientes = await this.clienteRepo.findByIds(topIds);
+    const clienteMap = new Map(clientes.map((c) => [c.id, c.nombre]));
+
+    const topClientes: TopCliente[] = sortedClientes.map(([clienteId, ingreso]) => ({
+      clienteId,
+      nombre: clienteMap.get(clienteId) ?? 'Unknown',
+      ingresoTotal: ingreso,
+    }));
 
     return {
       periodo,
       inventario,
+      inventarioResumen,
       topClientes,
     };
   }

@@ -32,6 +32,7 @@ describe('RegistrarVenta', () => {
 
   const mockClienteRepo: ClienteRepository = {
     findById: vi.fn(),
+    findByIds: vi.fn(),
     findAll: vi.fn(),
     save: vi.fn(),
     delete: vi.fn(),
