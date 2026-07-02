@@ -61,7 +61,7 @@ describe('E2E structural verification', () => {
 
   describe('Dashboard page', () => {
     it('should have a dashboard page that fetches metrics', () => {
-      const dashPath = path.join(srcDir, 'app', 'page.tsx');
+      const dashPath = path.join(srcDir, 'app', '(dashboard)', 'page.tsx');
       expect(fs.existsSync(dashPath)).toBe(true);
 
       const content = fs.readFileSync(dashPath, 'utf-8');
