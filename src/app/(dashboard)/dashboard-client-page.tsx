@@ -49,29 +49,29 @@ function formatDate(dateStr: string): string {
 }
 
 // --- Chart color palettes ---
+// Revenue composition colors (used for Pie/Bar fills and legend)
 const REVENUE_COLORS = {
-  costoMercancia: '#ef4444',
-  gananciaBruta: '#22c55e',
-  gastosFijos: '#f59e0b',
-  gananciaNeta: '#3b82f6',
-};
+  costoMercancia: { light: '#ef4444', dark: '#f87171' },
+  gastosFijos: { light: '#f59e0b', dark: '#fbbf24' },
+  gananciaNeta: { light: '#3b82f6', dark: '#60a5fa' },
+} as const;
 
 const DAILY_SALES_CONFIG: ChartConfig = {
-  total: { label: 'Ventas diarias', color: '#3b82f6' },
+  total: { label: 'Ventas diarias', theme: { light: '#3b82f6', dark: '#60a5fa' } },
 };
 
 const TOP_CLIENTS_CONFIG: ChartConfig = {
-  ingresoTotal: { label: 'Ingresos', color: '#8b5cf6' },
+  ingresoTotal: { label: 'Ingresos', theme: { light: '#8b5cf6', dark: '#a78bfa' } },
 };
 
 const INVENTORY_CONFIG: ChartConfig = {
-  DOBLE_CREMA: { label: 'Doble Crema', color: '#3b82f6' },
-  SEMISALADO: { label: 'Semisalado', color: '#22c55e' },
+  DOBLE_CREMA: { label: 'Doble Crema', theme: { light: '#3b82f6', dark: '#60a5fa' } },
+  SEMISALADO: { label: 'Semisalado', theme: { light: '#22c55e', dark: '#4ade80' } },
 };
 
 const CLIENT_TYPE_CONFIG: ChartConfig = {
-  MAYORISTA: { label: 'Mayorista', color: '#8b5cf6' },
-  MINORISTA: { label: 'Minorista', color: '#f59e0b' },
+  MAYORISTA: { label: 'Mayorista', theme: { light: '#8b5cf6', dark: '#a78bfa' } },
+  MINORISTA: { label: 'Minorista', theme: { light: '#f59e0b', dark: '#fbbf24' } },
 };
 
 // --- Empty state component ---
@@ -145,15 +145,15 @@ export function DashboardClientPage({ initialMetricas, initialMonth, initialYear
 
   // Revenue composition data
   const revenueCompositionData = [
-    { name: 'Costo de mercadería', value: Number(p.costoMercancia), fill: REVENUE_COLORS.costoMercancia },
-    { name: 'Gastos fijos', value: Number(p.gastosFijos), fill: REVENUE_COLORS.gastosFijos },
-    { name: 'Margen', value: Number(p.gananciaNeta), fill: REVENUE_COLORS.gananciaNeta },
+    { name: 'Costo de mercadería', value: Number(p.costoMercancia), fill: 'var(--color-costoMercancia)' },
+    { name: 'Gastos fijos', value: Number(p.gastosFijos), fill: 'var(--color-gastosFijos)' },
+    { name: 'Margen', value: Number(p.gananciaNeta), fill: 'var(--color-gananciaNeta)' },
   ];
 
   const revenueCompositionConfig: ChartConfig = {
-    costoMercancia: { label: 'Costo de mercadería', color: REVENUE_COLORS.costoMercancia },
-    gastosFijos: { label: 'Gastos fijos', color: REVENUE_COLORS.gastosFijos },
-    gananciaNeta: { label: 'Margen', color: REVENUE_COLORS.gananciaNeta },
+    costoMercancia: { label: 'Costo de mercadería', theme: REVENUE_COLORS.costoMercancia },
+    gastosFijos: { label: 'Gastos fijos', theme: REVENUE_COLORS.gastosFijos },
+    gananciaNeta: { label: 'Margen', theme: REVENUE_COLORS.gananciaNeta },
   };
 
   // Daily sales data
@@ -172,14 +172,14 @@ export function DashboardClientPage({ initialMetricas, initialMonth, initialYear
   const inventoryData = metricas.inventario.map((item) => ({
     producto: item.producto,
     stockDisponibleKg: Number(item.stockDisponibleKg),
-    fill: item.producto === 'DOBLE_CREMA' ? INVENTORY_CONFIG.DOBLE_CREMA.color : INVENTORY_CONFIG.SEMISALADO.color,
+    fill: item.producto === 'DOBLE_CREMA' ? 'var(--color-DOBLE_CREMA)' : 'var(--color-SEMISALADO)',
   }));
 
   // Client type donut data
   const clientTypeData = metricas.ingresosPorTipoCliente.map((itc) => ({
     tipo: itc.tipo,
     total: Number(itc.total),
-    fill: itc.tipo === 'MAYORISTA' ? CLIENT_TYPE_CONFIG.MAYORISTA.color : CLIENT_TYPE_CONFIG.MINORISTA.color,
+    fill: itc.tipo === 'MAYORISTA' ? 'var(--color-MAYORISTA)' : 'var(--color-MINORISTA)',
   }));
 
   const hasRevenueData = Number(p.ingresoTotal) > 0;

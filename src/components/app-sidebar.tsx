@@ -11,6 +11,7 @@ import {
   Truck,
   LogOut,
 } from 'lucide-react';
+import { ThemeToggle } from '@/components/theme-toggle';
 import {
   Sidebar,
   SidebarContent,
@@ -80,6 +81,9 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
+        <div className="flex items-center justify-between px-2">
+          <ThemeToggle />
+        </div>
         <form action="/api/auth/signout" method="POST" className="w-full">
           <Button
             variant="ghost"

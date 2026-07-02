@@ -57,7 +57,7 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           {sessionExpired && (
-            <Alert className="mb-4 border-amber-200 bg-amber-50 text-amber-800">
+            <Alert className="mb-4 border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
               <Clock className="h-4 w-4" />
               <AlertDescription>
                 Tu sesión ha expirado. Por favor, iniciá sesión nuevamente.
