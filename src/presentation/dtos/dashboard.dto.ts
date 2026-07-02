@@ -42,9 +42,21 @@ export interface TopClienteResponse {
   ingresoTotal: string;
 }
 
+export interface VentasDiariasResponse {
+  fecha: string;
+  total: string;
+}
+
+export interface IngresosPorTipoClienteResponse {
+  tipo: string;
+  total: string;
+}
+
 export interface DashboardMetricasResponse {
   periodo: MetricasPeriodoResponse;
   inventario: InventarioPorProductoResponse[];
   inventarioResumen: InventarioResumenResponse;
   topClientes: TopClienteResponse[];
+  ventasDiarias: VentasDiariasResponse[];
+  ingresosPorTipoCliente: IngresosPorTipoClienteResponse[];
 }

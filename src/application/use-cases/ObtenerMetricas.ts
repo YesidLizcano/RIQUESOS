@@ -36,11 +36,23 @@ export interface TopCliente {
   ingresoTotal: string;
 }
 
+export interface VentaDiaria {
+  fecha: string;
+  total: string;
+}
+
+export interface IngresoPorTipoCliente {
+  tipo: string;
+  total: string;
+}
+
 export interface MetricasDashboard {
   periodo: MetricasPeriodo;
   inventario: InventarioPorProducto[];
   inventarioResumen: InventarioResumen;
   topClientes: TopCliente[];
+  ventasDiarias: VentaDiaria[];
+  ingresosPorTipoCliente: IngresoPorTipoCliente[];
 }
 
 export class ObtenerMetricas {
@@ -169,11 +181,75 @@ export class ObtenerMetricas {
       ingresoTotal: ingreso,
     }));
 
+    // 7. Daily sales trend — group ventas by date, fill gaps for days with zero sales
+    const ventasDiariasMap = new Map<string, string>();
+
+    /** Format a Date as YYYY-MM-DD using local timezone (avoids UTC shift from toISOString) */
+    const toLocalDateKey = (d: Date): string => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    for (const venta of ventas) {
+      const dateKey = toLocalDateKey(venta.fecha);
+      const existing = ventasDiariasMap.get(dateKey);
+      if (existing) {
+        const sum = new Dinero(existing).add(venta.ingresoTotal);
+        ventasDiariasMap.set(dateKey, sum.value);
+      } else {
+        ventasDiariasMap.set(dateKey, venta.ingresoTotal.value);
+      }
+    }
+
+    // Fill gaps: iterate all days in the period range
+    const ventasDiarias: VentaDiaria[] = [];
+    const currentDay = new Date(inicio);
+    currentDay.setHours(0, 0, 0, 0);
+    const endDay = new Date(fin);
+    endDay.setHours(0, 0, 0, 0);
+
+    while (currentDay <= endDay) {
+      const dateKey = toLocalDateKey(currentDay);
+      ventasDiarias.push({
+        fecha: dateKey,
+        total: ventasDiariasMap.get(dateKey) ?? '0',
+      });
+      currentDay.setDate(currentDay.getDate() + 1);
+    }
+
+    // 8. Revenue by client type — join ventas with client tipo
+    const allClientIds = Array.from(new Set(ventas.map((v) => v.clienteId)));
+    const allClients = allClientIds.length > 0
+      ? await this.clienteRepo.findByIds(allClientIds)
+      : [];
+    const allClienteMap = new Map(allClients.map((c) => [c.id, c]));
+
+    const ingresosPorTipoMap = new Map<string, string>();
+    for (const venta of ventas) {
+      const cliente = allClienteMap.get(venta.clienteId);
+      const tipo = cliente?.tipo ?? 'UNKNOWN';
+      const existing = ingresosPorTipoMap.get(tipo);
+      if (existing) {
+        const sum = new Dinero(existing).add(venta.ingresoTotal);
+        ingresosPorTipoMap.set(tipo, sum.value);
+      } else {
+        ingresosPorTipoMap.set(tipo, venta.ingresoTotal.value);
+      }
+    }
+
+    const ingresosPorTipoCliente: IngresoPorTipoCliente[] = Array.from(
+      ingresosPorTipoMap.entries()
+    ).map(([tipo, total]) => ({ tipo, total }));
+
     return {
       periodo,
       inventario,
       inventarioResumen,
       topClientes,
+      ventasDiarias,
+      ingresosPorTipoCliente,
     };
   }
 }

@@ -59,6 +59,14 @@ export async function getMetricas(month?: number, year?: number) {
         nombre: c.nombre,
         ingresoTotal: c.ingresoTotal,
       })),
+      ventasDiarias: metricas.ventasDiarias.map((vd) => ({
+        fecha: vd.fecha,
+        total: vd.total,
+      })),
+      ingresosPorTipoCliente: metricas.ingresosPorTipoCliente.map((itc) => ({
+        tipo: itc.tipo,
+        total: itc.total,
+      })),
     };
 
     return { success: true, metricas: response };
