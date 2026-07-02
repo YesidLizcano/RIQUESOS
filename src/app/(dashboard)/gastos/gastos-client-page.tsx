@@ -1,19 +1,33 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useReactTable, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel } from '@tanstack/react-table';
 import { Card, CardContent } from '@/components/ui/card';
 import { DataTable } from '@/components/data-table';
 import { DataTableToolbar } from '@/components/data-table-toolbar';
 import { gastoColumns } from '@/components/columns/gasto-columns';
 import { CrearGastoFijoDialog } from '@/components/forms/crear-gasto-fijo-dialog';
+import { PeriodSelector } from '@/components/period-selector';
+import { getGastosByDateRange } from '@/presentation/actions/gastos';
 import type { GastoResponse } from '@/presentation/dtos';
 
+const MESES = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
+
 interface GastosClientPageProps {
-  gastos: GastoResponse[];
+  initialGastos: GastoResponse[];
+  initialMonth: number;
+  initialYear: number;
 }
 
-export function GastosClientPage({ gastos }: GastosClientPageProps) {
+export function GastosClientPage({ initialGastos, initialMonth, initialYear }: GastosClientPageProps) {
+  const [gastos, setGastos] = useState<GastoResponse[]>(initialGastos);
+  const [month, setMonth] = useState(initialMonth);
+  const [year, setYear] = useState(initialYear);
+  const [loading, setLoading] = useState(false);
+
   const table = useReactTable({
     data: gastos,
     columns: gastoColumns,
@@ -24,22 +38,51 @@ export function GastosClientPage({ gastos }: GastosClientPageProps) {
     globalFilterFn: 'includesString',
   });
 
+  // Total of ALL period-filtered data (not just current page)
   const totalGastos = gastos.reduce((sum, g) => sum + Number(g.valor), 0);
+
+  const handlePeriodChange = async (newMonth: number, newYear: number) => {
+    setMonth(newMonth);
+    setYear(newYear);
+    setLoading(true);
+
+    try {
+      const result = await getGastosByDateRange(newMonth, newYear);
+      if (result.success && result.gastos) {
+        setGastos(result.gastos);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const periodLabel = month === -1 ? 'Todos' : `${MESES[month]} ${year}`;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Gastos Fijos</h1>
-          <p className="text-muted-foreground">Gestión de gastos fijos mensuales</p>
+          <p className="text-muted-foreground">Gestión de gastos fijos — {periodLabel}</p>
         </div>
-        <CrearGastoFijoDialog />
+        <div className="flex items-center gap-3">
+          <PeriodSelector
+            month={month}
+            year={year}
+            onPeriodChange={handlePeriodChange}
+          />
+          <CrearGastoFijoDialog />
+        </div>
       </div>
+
+      {loading && (
+        <p className="text-sm text-muted-foreground">Actualizando gastos...</p>
+      )}
 
       <Card>
         <CardContent className="pt-6 space-y-4">
-          {gastos.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">No hay gastos fijos registrados</p>
+          {gastos.length === 0 && !loading ? (
+            <p className="text-muted-foreground text-center py-8">No hay gastos en el período seleccionado</p>
           ) : (
             <>
               <DataTableToolbar table={table} searchPlaceholder="Buscar gastos..." />

@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/select';
 
 const MESES = [
+  { value: '-1', label: 'Todos' },
   { value: '0', label: 'Enero' },
   { value: '1', label: 'Febrero' },
   { value: '2', label: 'Marzo' },

@@ -82,11 +82,22 @@ export async function getVentas() {
   }
 }
 
-export async function getVentasByDateRange(inicio: Date, fin: Date) {
+export async function getVentasByDateRange(month: number, year: number) {
   await requireSession();
 
   try {
     const ventaRepo = new PrismaVentaRepo();
+
+    if (month === -1) {
+      // "Todos" — return all ventas without date filter
+      const inicio = new Date(2000, 0, 1);
+      const fin = new Date(2100, 11, 31, 23, 59, 59, 999);
+      const allVentas = await ventaRepo.findByDateRange(inicio, fin);
+      return { success: true, ventas: allVentas.map(ventaToResponse) };
+    }
+
+    const inicio = new Date(year, month, 1);
+    const fin = new Date(year, month + 1, 0, 23, 59, 59, 999);
     const ventas = await ventaRepo.findByDateRange(inicio, fin);
     return { success: true, ventas: ventas.map(ventaToResponse) };
   } catch (error) {

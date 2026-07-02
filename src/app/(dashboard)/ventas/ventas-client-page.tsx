@@ -1,19 +1,28 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useReactTable, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel } from '@tanstack/react-table';
 import { Card, CardContent } from '@/components/ui/card';
 import { DataTable } from '@/components/data-table';
 import { DataTableToolbar, FilterConfig } from '@/components/data-table-toolbar';
 import { createVentaColumns } from '@/components/columns/venta-columns';
 import { RegistrarVentaDialog } from '@/components/forms/registrar-venta-dialog';
+import { PeriodSelector } from '@/components/period-selector';
+import { getVentasByDateRange } from '@/presentation/actions/ventas';
 import type { VentaResponse, ClienteResponse, LoteResponse } from '@/presentation/dtos';
 import { TipoProducto } from '@/domain/enums';
 
+const MESES = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
+
 interface VentasClientPageProps {
-  ventas: VentaResponse[];
+  initialVentas: VentaResponse[];
   clientes: ClienteResponse[];
   lotes: LoteResponse[];
+  initialMonth: number;
+  initialYear: number;
 }
 
 type VentaRow = VentaResponse & { producto: string };
@@ -23,7 +32,12 @@ const productoFilterOptions = [
   { label: 'Semisalado', value: TipoProducto.SEMISALADO },
 ];
 
-export function VentasClientPage({ ventas, clientes, lotes }: VentasClientPageProps) {
+export function VentasClientPage({ initialVentas, clientes, lotes, initialMonth, initialYear }: VentasClientPageProps) {
+  const [ventas, setVentas] = useState<VentaResponse[]>(initialVentas);
+  const [month, setMonth] = useState(initialMonth);
+  const [year, setYear] = useState(initialYear);
+  const [loading, setLoading] = useState(false);
+
   const clienteMap = useMemo(
     () => new Map(clientes.map((c) => [c.id, c.nombre])),
     [clientes]
@@ -66,20 +80,48 @@ export function VentasClientPage({ ventas, clientes, lotes }: VentasClientPagePr
     globalFilterFn: 'includesString',
   });
 
+  const handlePeriodChange = async (newMonth: number, newYear: number) => {
+    setMonth(newMonth);
+    setYear(newYear);
+    setLoading(true);
+
+    try {
+      const result = await getVentasByDateRange(newMonth, newYear);
+      if (result.success && result.ventas) {
+        setVentas(result.ventas);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const periodLabel = month === -1 ? 'Todos' : `${MESES[month]} ${year}`;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Ventas</h1>
-          <p className="text-muted-foreground">Registro de ventas del período actual</p>
+          <p className="text-muted-foreground">Registro de ventas — {periodLabel}</p>
         </div>
-        <RegistrarVentaDialog clientes={clientes} lotes={lotes} />
+        <div className="flex items-center gap-3">
+          <PeriodSelector
+            month={month}
+            year={year}
+            onPeriodChange={handlePeriodChange}
+          />
+          <RegistrarVentaDialog clientes={clientes} lotes={lotes} />
+        </div>
       </div>
+
+      {loading && (
+        <p className="text-sm text-muted-foreground">Actualizando ventas...</p>
+      )}
 
       <Card>
         <CardContent className="pt-6 space-y-4">
-          {ventas.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">No hay ventas en el período actual</p>
+          {ventas.length === 0 && !loading ? (
+            <p className="text-muted-foreground text-center py-8">No hay ventas en el período seleccionado</p>
           ) : (
             <>
               <DataTableToolbar

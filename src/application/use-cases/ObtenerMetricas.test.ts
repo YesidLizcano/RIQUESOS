@@ -33,6 +33,7 @@ describe('ObtenerMetricas', () => {
   const mockGastoFijoRepo: GastoFijoRepository = {
     findById: vi.fn(),
     findAll: vi.fn(),
+    findByDateRange: vi.fn(),
     save: vi.fn(),
     delete: vi.fn(),
     sumByPeriod: vi.fn(),

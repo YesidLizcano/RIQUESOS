@@ -1,4 +1,4 @@
-import { getGastos } from '@/presentation/actions/gastos';
+import { getGastosByDateRange } from '@/presentation/actions/gastos';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/infrastructure/auth';
 import { redirect } from 'next/navigation';
@@ -8,8 +8,18 @@ export default async function GastosPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect('/login');
 
-  const result = await getGastos();
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  const result = await getGastosByDateRange(currentMonth, currentYear);
   const gastos = result.success && result.gastos ? result.gastos : [];
 
-  return <GastosClientPage gastos={gastos} />;
+  return (
+    <GastosClientPage
+      initialGastos={gastos}
+      initialMonth={currentMonth}
+      initialYear={currentYear}
+    />
+  );
 }

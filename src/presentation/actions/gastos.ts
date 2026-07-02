@@ -118,6 +118,28 @@ export async function getGastos() {
   }
 }
 
+export async function getGastosByDateRange(month: number, year: number) {
+  await requireSession();
+
+  try {
+    const gastoRepo = new PrismaGastoFijoRepo();
+
+    if (month === -1) {
+      // "Todos" — return all gastos without date filter
+      const gastos = await gastoRepo.findAll();
+      return { success: true, gastos: gastos.map(gastoToResponse) };
+    }
+
+    const inicio = new Date(year, month, 1);
+    const fin = new Date(year, month + 1, 0, 23, 59, 59, 999);
+    const gastos = await gastoRepo.findByDateRange(inicio, fin);
+    return { success: true, gastos: gastos.map(gastoToResponse) };
+  } catch (error) {
+    logger.error({ err: error }, 'Error fetching gastos by date range');
+    return { success: false, error: 'Error fetching gastos', gastos: [] };
+  }
+}
+
 export async function getResumenMensual(inicio: Date, fin: Date) {
   await requireSession();
 

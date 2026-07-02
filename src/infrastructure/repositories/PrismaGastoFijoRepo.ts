@@ -40,6 +40,16 @@ export class PrismaGastoFijoRepo implements GastoFijoRepository {
     await prisma.gastoFijo.delete({ where: { id } });
   }
 
+  async findByDateRange(inicio: Date, fin: Date): Promise<GastoFijo[]> {
+    const records = await prisma.gastoFijo.findMany({
+      where: {
+        fecha: { gte: inicio, lte: fin },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return records.map((r) => this.toEntity(r));
+  }
+
   async sumByPeriod(inicio: Date, fin: Date): Promise<string> {
     const result = await prisma.gastoFijo.aggregate({
       where: {
