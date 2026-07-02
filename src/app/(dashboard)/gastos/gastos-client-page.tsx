@@ -10,6 +10,7 @@ import { CrearGastoFijoDialog } from '@/components/forms/crear-gasto-fijo-dialog
 import { PeriodSelector } from '@/components/period-selector';
 import { getGastosByDateRange, getGastosIncludeDeleted } from '@/presentation/actions/gastos';
 import { useExportExcel } from '@/hooks/use-export-excel';
+import { RefreshContext } from '@/components/refresh-context';
 import type { GastoResponse } from '@/presentation/dtos';
 
 const MESES = [
@@ -36,7 +37,7 @@ export function GastosClientPage({ initialGastos, initialMonth, initialYear }: G
   const [loading, setLoading] = useState(false);
   const [showDeleted, setShowDeleted] = useState(false);
 
-  // Sync when server data changes (e.g. after router.refresh())
+  // Sync when server data changes (fallback for initial load)
   useEffect(() => {
     setGastos(initialGastos);
   }, [initialGastos]);
@@ -89,9 +90,24 @@ export function GastosClientPage({ initialGastos, initialMonth, initialYear }: G
     }
   }, [month, year]);
 
+  const refreshData = useCallback(async () => {
+    if (showDeleted) {
+      const result = await getGastosIncludeDeleted();
+      if (result.success && result.gastos) {
+        setGastos(result.gastos);
+      }
+    } else {
+      const result = await getGastosByDateRange(month, year);
+      if (result.success && result.gastos) {
+        setGastos(result.gastos);
+      }
+    }
+  }, [showDeleted, month, year]);
+
   const periodLabel = month === -1 ? 'Todos' : `${MESES[month]} ${year}`;
 
   return (
+    <RefreshContext.Provider value={refreshData}>
     <div className="space-y-4">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
@@ -144,5 +160,6 @@ export function GastosClientPage({ initialGastos, initialMonth, initialYear }: G
         </CardContent>
       </Card>
     </div>
+    </RefreshContext.Provider>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRefresh } from '@/components/refresh-context';
 import { crearLote } from '@/presentation/actions/lotes';
 import { toast } from 'sonner';
 import { TipoProducto } from '@/domain/enums';
@@ -31,7 +31,7 @@ interface CrearLoteDialogProps {
 }
 
 export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
-  const router = useRouter();
+  const refreshData = useRefresh();
   const [open, setOpen] = useState(false);
   const [producto, setProducto] = useState<string>('');
   const [proveedorId, setProveedorId] = useState<string>('');
@@ -59,7 +59,7 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
     const result = await crearLote(formData);
     if (result.success) {
       toast.success('Lote creado exitosamente');
-      router.refresh();
+      refreshData();
       setOpen(false);
       setProducto('');
       setProveedorId('');

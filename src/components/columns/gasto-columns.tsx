@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRefresh } from '@/components/refresh-context';
 import { ColumnDef } from '@tanstack/react-table';
 import { Pencil, Trash2, RotateCcw } from 'lucide-react';
 import type { GastoResponse } from '@/presentation/dtos';
@@ -9,10 +9,9 @@ import { EditarGastoFijoDialog } from '@/components/forms/editar-gasto-fijo-dial
 import { DeleteConfirmDialog } from '@/components/forms/delete-confirm-dialog';
 import { eliminarGasto, restaurarGasto } from '@/presentation/actions/gastos';
 import { toast } from 'sonner';
-import { startTransition } from 'react';
 
 export function GastoActions({ gasto }: { gasto: GastoResponse }) {
-  const router = useRouter();
+  const refreshData = useRefresh();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const isDeleted = gasto.deletedAt !== null;
@@ -23,7 +22,7 @@ export function GastoActions({ gasto }: { gasto: GastoResponse }) {
     const result = await eliminarGasto(formData);
     if (result.success) {
       toast.success('Gasto eliminado exitosamente');
-      router.refresh();
+      refreshData();
     } else {
       toast.error(result.error || 'Error al eliminar gasto');
     }
@@ -35,7 +34,7 @@ export function GastoActions({ gasto }: { gasto: GastoResponse }) {
     const result = await restaurarGasto(formData);
     if (result.success) {
       toast.success('Gasto restaurado exitosamente');
-      router.refresh();
+      refreshData();
     } else {
       toast.error(result.error || 'Error al restaurar gasto');
     }
@@ -44,7 +43,7 @@ export function GastoActions({ gasto }: { gasto: GastoResponse }) {
   if (isDeleted) {
     return (
       <button
-        onClick={() => startTransition(() => { handleRestore(); })}
+        onClick={() => { handleRestore(); }}
         className="inline-flex items-center gap-1 rounded-md p-1.5 text-muted-foreground hover:text-green-600 hover:bg-green-50"
         title="Restaurar"
       >

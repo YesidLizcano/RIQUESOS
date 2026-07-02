@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRefresh } from '@/components/refresh-context';
 import { modificarLote } from '@/presentation/actions/lotes';
 import { toast } from 'sonner';
 import type { LoteResponse } from '@/presentation/dtos';
@@ -23,7 +23,7 @@ interface EditarLoteDialogProps {
 }
 
 export function EditarLoteDialog({ lote, open, onOpenChange }: EditarLoteDialogProps) {
-  const router = useRouter();
+  const refreshData = useRefresh();
   const [precioCompraBaseKg, setPrecioCompraBaseKg] = useState(lote.precioCompraBaseKg);
   const [cantidadCompradaKg, setCantidadCompradaKg] = useState(lote.cantidadCompradaKg);
   const [costoFlete, setCostoFlete] = useState(lote.costoFlete);
@@ -47,7 +47,7 @@ export function EditarLoteDialog({ lote, open, onOpenChange }: EditarLoteDialogP
     const result = await modificarLote(formData);
     if (result.success) {
       toast.success('Lote actualizado exitosamente');
-      router.refresh();
+      refreshData();
       onOpenChange(false);
     } else {
       toast.error(result.error || 'Error al actualizar lote');

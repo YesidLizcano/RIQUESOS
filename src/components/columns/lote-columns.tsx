@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRefresh } from '@/components/refresh-context';
 import { ColumnDef } from '@tanstack/react-table';
 import { Pencil, Trash2, RotateCcw } from 'lucide-react';
 import type { LoteResponse } from '@/presentation/dtos';
@@ -9,7 +9,6 @@ import { EditarLoteDialog } from '@/components/forms/editar-lote-dialog';
 import { DeleteConfirmDialog } from '@/components/forms/delete-confirm-dialog';
 import { eliminarLote, restaurarLote } from '@/presentation/actions/lotes';
 import { toast } from 'sonner';
-import { startTransition } from 'react';
 import { Badge } from '@/components/ui/badge';
 
 export interface AlertaInfo {
@@ -19,7 +18,7 @@ export interface AlertaInfo {
 }
 
 export function LoteActions({ lote }: { lote: LoteResponse }) {
-  const router = useRouter();
+  const refreshData = useRefresh();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const isDeleted = lote.deletedAt !== null;
@@ -30,7 +29,7 @@ export function LoteActions({ lote }: { lote: LoteResponse }) {
     const result = await eliminarLote(formData);
     if (result.success) {
       toast.success('Lote eliminado exitosamente');
-      router.refresh();
+      refreshData();
     } else {
       toast.error(result.error || 'Error al eliminar lote');
     }
@@ -42,7 +41,7 @@ export function LoteActions({ lote }: { lote: LoteResponse }) {
     const result = await restaurarLote(formData);
     if (result.success) {
       toast.success('Lote restaurado exitosamente');
-      router.refresh();
+      refreshData();
     } else {
       toast.error(result.error || 'Error al restaurar lote');
     }
@@ -51,7 +50,7 @@ export function LoteActions({ lote }: { lote: LoteResponse }) {
   if (isDeleted) {
     return (
       <button
-        onClick={() => startTransition(() => { handleRestore(); })}
+        onClick={() => { handleRestore(); }}
         className="inline-flex items-center gap-1 rounded-md p-1.5 text-muted-foreground hover:text-green-600 hover:bg-green-50"
         title="Restaurar"
       >

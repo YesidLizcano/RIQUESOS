@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRefresh } from '@/components/refresh-context';
 import { ColumnDef } from '@tanstack/react-table';
 import { Pencil, Trash2, RotateCcw } from 'lucide-react';
 import type { ClienteResponse } from '@/presentation/dtos';
@@ -9,10 +9,9 @@ import { EditarClienteDialog } from '@/components/forms/editar-cliente-dialog';
 import { DeleteConfirmDialog } from '@/components/forms/delete-confirm-dialog';
 import { eliminarCliente, restaurarCliente } from '@/presentation/actions/clientes';
 import { toast } from 'sonner';
-import { startTransition } from 'react';
 
 export function ClienteActions({ cliente }: { cliente: ClienteResponse }) {
-  const router = useRouter();
+  const refreshData = useRefresh();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const isDeleted = cliente.deletedAt !== null;
@@ -23,7 +22,7 @@ export function ClienteActions({ cliente }: { cliente: ClienteResponse }) {
     const result = await eliminarCliente(formData);
     if (result.success) {
       toast.success('Cliente eliminado exitosamente');
-      router.refresh();
+      refreshData();
     } else {
       toast.error(result.error || 'Error al eliminar cliente');
     }
@@ -35,7 +34,7 @@ export function ClienteActions({ cliente }: { cliente: ClienteResponse }) {
     const result = await restaurarCliente(formData);
     if (result.success) {
       toast.success('Cliente restaurado exitosamente');
-      router.refresh();
+      refreshData();
     } else {
       toast.error(result.error || 'Error al restaurar cliente');
     }
@@ -44,7 +43,7 @@ export function ClienteActions({ cliente }: { cliente: ClienteResponse }) {
   if (isDeleted) {
     return (
       <button
-        onClick={() => startTransition(() => { handleRestore(); })}
+        onClick={() => { handleRestore(); }}
         className="inline-flex items-center gap-1 rounded-md p-1.5 text-muted-foreground hover:text-green-600 hover:bg-green-50"
         title="Restaurar"
       >

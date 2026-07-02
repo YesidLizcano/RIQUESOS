@@ -7,8 +7,9 @@ import { DataTable } from '@/components/data-table';
 import { DataTableToolbar, FilterConfig } from '@/components/data-table-toolbar';
 import { createClienteColumns } from '@/components/columns/cliente-columns';
 import { CrearClienteDialog } from '@/components/forms/crear-cliente-dialog';
-import { getClientesIncludeDeleted } from '@/presentation/actions/clientes';
+import { getClientes, getClientesIncludeDeleted } from '@/presentation/actions/clientes';
 import { useExportExcel } from '@/hooks/use-export-excel';
+import { RefreshContext } from '@/components/refresh-context';
 import type { ClienteResponse } from '@/presentation/dtos';
 import { TipoCliente } from '@/domain/enums';
 
@@ -32,7 +33,7 @@ export function ClientesClientPage({ clientes }: ClientesClientPageProps) {
   const [showDeleted, setShowDeleted] = useState(false);
   const [data, setData] = useState<ClienteResponse[]>(clientes);
 
-  // Sync when server data changes (e.g. after router.refresh())
+  // Sync when server data changes (fallback for initial load)
   useEffect(() => {
     setData(clientes);
   }, [clientes]);
@@ -43,6 +44,20 @@ export function ClientesClientPage({ clientes }: ClientesClientPageProps) {
     ],
     []
   );
+
+  const refreshData = useCallback(async () => {
+    if (showDeleted) {
+      const result = await getClientesIncludeDeleted();
+      if (result.success && result.clientes) {
+        setData(result.clientes);
+      }
+    } else {
+      const result = await getClientes();
+      if (result.success && result.clientes) {
+        setData(result.clientes);
+      }
+    }
+  }, [showDeleted]);
 
   const handleShowDeletedChange = useCallback(async (checked: boolean) => {
     setShowDeleted(checked);
@@ -71,6 +86,7 @@ export function ClientesClientPage({ clientes }: ClientesClientPageProps) {
   const { exportExcel, isExporting } = useExportExcel(table, clienteExportMap, 'Clientes');
 
   return (
+    <RefreshContext.Provider value={refreshData}>
     <div className="space-y-4">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
@@ -101,5 +117,6 @@ export function ClientesClientPage({ clientes }: ClientesClientPageProps) {
         </CardContent>
       </Card>
     </div>
+    </RefreshContext.Provider>
   );
 }

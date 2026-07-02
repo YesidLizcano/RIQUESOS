@@ -7,8 +7,9 @@ import { DataTable } from '@/components/data-table';
 import { DataTableToolbar } from '@/components/data-table-toolbar';
 import { createProveedorColumns } from '@/components/columns/proveedor-columns';
 import { CrearProveedorDialog } from '@/components/forms/crear-proveedor-dialog';
-import { getProveedoresIncludeDeleted } from '@/presentation/actions/proveedores';
+import { getProveedores, getProveedoresIncludeDeleted } from '@/presentation/actions/proveedores';
 import { useExportExcel } from '@/hooks/use-export-excel';
+import { RefreshContext } from '@/components/refresh-context';
 import type { ProveedorResponse } from '@/presentation/dtos';
 
 const proveedorExportMap = [
@@ -24,10 +25,23 @@ export function ProveedoresClientPage({ proveedores }: ProveedoresClientPageProp
   const [showDeleted, setShowDeleted] = useState(false);
   const [data, setData] = useState<ProveedorResponse[]>(proveedores);
 
-  // Sync when server data changes (e.g. after router.refresh())
   useEffect(() => {
     setData(proveedores);
   }, [proveedores]);
+
+  const refreshData = useCallback(async () => {
+    if (showDeleted) {
+      const result = await getProveedoresIncludeDeleted();
+      if (result.success && result.proveedores) {
+        setData(result.proveedores);
+      }
+    } else {
+      const result = await getProveedores();
+      if (result.success && result.proveedores) {
+        setData(result.proveedores);
+      }
+    }
+  }, [showDeleted]);
 
   const handleShowDeletedChange = useCallback(async (checked: boolean) => {
     setShowDeleted(checked);
@@ -37,10 +51,12 @@ export function ProveedoresClientPage({ proveedores }: ProveedoresClientPageProp
         setData(result.proveedores);
       }
     } else {
-      // Reset to original active-only data
-      setData(proveedores);
+      const result = await getProveedores();
+      if (result.success && result.proveedores) {
+        setData(result.proveedores);
+      }
     }
-  }, [proveedores]);
+  }, []);
 
   const columns = createProveedorColumns(showDeleted);
 
@@ -57,34 +73,36 @@ export function ProveedoresClientPage({ proveedores }: ProveedoresClientPageProp
   const { exportExcel, isExporting } = useExportExcel(table, proveedorExportMap, 'Proveedores');
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Proveedores</h1>
-          <p className="text-muted-foreground">Gestión de proveedores</p>
+    <RefreshContext.Provider value={refreshData}>
+      <div className="space-y-4">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Proveedores</h1>
+            <p className="text-muted-foreground">Gestión de proveedores</p>
+          </div>
+          <CrearProveedorDialog />
         </div>
-        <CrearProveedorDialog />
-      </div>
 
-      <Card>
-        <CardContent className="pt-6 space-y-4">
-          {data.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">No hay proveedores registrados</p>
-          ) : (
-            <>
-              <DataTableToolbar
-                table={table}
-                searchPlaceholder="Buscar proveedores..."
-                showDeleted={showDeleted}
-                onShowDeletedChange={handleShowDeletedChange}
-                onExportExcel={exportExcel}
-                isExporting={isExporting}
-              />
-              <DataTable table={table} />
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+        <Card>
+          <CardContent className="pt-6 space-y-4">
+            {data.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">No hay proveedores registrados</p>
+            ) : (
+              <>
+                <DataTableToolbar
+                  table={table}
+                  searchPlaceholder="Buscar proveedores..."
+                  showDeleted={showDeleted}
+                  onShowDeletedChange={handleShowDeletedChange}
+                  onExportExcel={exportExcel}
+                  isExporting={isExporting}
+                />
+                <DataTable table={table} />
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </RefreshContext.Provider>
   );
 }

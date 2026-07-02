@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRefresh } from '@/components/refresh-context';
 import { actualizarProveedor } from '@/presentation/actions/proveedores';
 import { toast } from 'sonner';
 import type { ProveedorResponse } from '@/presentation/dtos';
@@ -23,7 +23,7 @@ interface EditarProveedorDialogProps {
 }
 
 export function EditarProveedorDialog({ proveedor, open, onOpenChange }: EditarProveedorDialogProps) {
-  const router = useRouter();
+  const refreshData = useRefresh();
   const [nombre, setNombre] = useState(proveedor.nombre);
   const [telefono, setTelefono] = useState(proveedor.telefono ?? '');
 
@@ -31,7 +31,7 @@ export function EditarProveedorDialog({ proveedor, open, onOpenChange }: EditarP
     const result = await actualizarProveedor(formData);
     if (result.success) {
       toast.success('Proveedor actualizado exitosamente');
-      router.refresh();
+      refreshData();
       onOpenChange(false);
     } else {
       toast.error(result.error || 'Error al actualizar proveedor');

@@ -7,8 +7,9 @@ import { DataTable } from '@/components/data-table';
 import { DataTableToolbar, FilterConfig } from '@/components/data-table-toolbar';
 import { createLoteColumns, AlertaInfo } from '@/components/columns/lote-columns';
 import { CrearLoteDialog } from '@/components/forms/crear-lote-dialog';
-import { getLotesIncludeDeleted } from '@/presentation/actions/lotes';
+import { getLotes, getLotesIncludeDeleted } from '@/presentation/actions/lotes';
 import { useExportExcel } from '@/hooks/use-export-excel';
+import { RefreshContext } from '@/components/refresh-context';
 import type { LoteResponse, ProveedorResponse, AlertaLoteResponse } from '@/presentation/dtos';
 import { AlertaSeveridad } from '@/presentation/dtos';
 import { TipoProducto, EstadoLote } from '@/domain/enums';
@@ -54,7 +55,7 @@ export function LotesClientPage({ lotes, proveedores, alertas }: LotesClientPage
   const [showDeleted, setShowDeleted] = useState(false);
   const [data, setData] = useState<LoteResponse[]>(lotes);
 
-  // Sync when server data changes (e.g. after router.refresh())
+  // Sync when server data changes (fallback for initial load)
   useEffect(() => {
     setData(lotes);
   }, [lotes]);
@@ -115,6 +116,20 @@ export function LotesClientPage({ lotes, proveedores, alertas }: LotesClientPage
     }
   }, [lotes]);
 
+  const refreshData = useCallback(async () => {
+    if (showDeleted) {
+      const result = await getLotesIncludeDeleted();
+      if (result.success && result.lotes) {
+        setData(result.lotes);
+      }
+    } else {
+      const result = await getLotes();
+      if (result.success && result.lotes) {
+        setData(result.lotes);
+      }
+    }
+  }, [showDeleted]);
+
   const table = useReactTable({
     data,
     columns,
@@ -128,6 +143,7 @@ export function LotesClientPage({ lotes, proveedores, alertas }: LotesClientPage
   const { exportExcel, isExporting } = useExportExcel(table, loteExportMap, 'Lotes');
 
   return (
+    <RefreshContext.Provider value={refreshData}>
     <div className="space-y-4">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
@@ -158,5 +174,6 @@ export function LotesClientPage({ lotes, proveedores, alertas }: LotesClientPage
         </CardContent>
       </Card>
     </div>
+    </RefreshContext.Provider>
   );
 }

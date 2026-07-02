@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useReactTable, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel } from '@tanstack/react-table';
 import { Card, CardContent } from '@/components/ui/card';
 import { DataTable } from '@/components/data-table';
@@ -10,6 +10,7 @@ import { RegistrarVentaDialog } from '@/components/forms/registrar-venta-dialog'
 import { PeriodSelector } from '@/components/period-selector';
 import { getVentasByDateRange } from '@/presentation/actions/ventas';
 import { useExportExcel } from '@/hooks/use-export-excel';
+import { RefreshContext } from '@/components/refresh-context';
 import type { VentaResponse, ClienteResponse, LoteResponse } from '@/presentation/dtos';
 import { TipoProducto } from '@/domain/enums';
 
@@ -55,7 +56,7 @@ export function VentasClientPage({ initialVentas, clientes, lotes, initialMonth,
   const [year, setYear] = useState(initialYear);
   const [loading, setLoading] = useState(false);
 
-  // Sync when server data changes (e.g. after router.refresh())
+  // Sync when server data changes (fallback for initial load)
   useEffect(() => {
     setVentas(initialVentas);
   }, [initialVentas]);
@@ -104,6 +105,13 @@ export function VentasClientPage({ initialVentas, clientes, lotes, initialMonth,
 
   const { exportExcel, isExporting } = useExportExcel(table, ventaExportMap, 'Ventas');
 
+  const refreshData = useCallback(async () => {
+    const result = await getVentasByDateRange(month, year);
+    if (result.success && result.ventas) {
+      setVentas(result.ventas);
+    }
+  }, [month, year]);
+
   const handlePeriodChange = async (newMonth: number, newYear: number) => {
     setMonth(newMonth);
     setYear(newYear);
@@ -122,6 +130,7 @@ export function VentasClientPage({ initialVentas, clientes, lotes, initialMonth,
   const periodLabel = month === -1 ? 'Todos' : `${MESES[month]} ${year}`;
 
   return (
+    <RefreshContext.Provider value={refreshData}>
     <div className="space-y-4">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
@@ -161,5 +170,6 @@ export function VentasClientPage({ initialVentas, clientes, lotes, initialMonth,
         </CardContent>
       </Card>
     </div>
+    </RefreshContext.Provider>
   );
 }

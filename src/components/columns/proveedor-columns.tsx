@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRefresh } from '@/components/refresh-context';
 import { ColumnDef } from '@tanstack/react-table';
 import { Pencil, Trash2, RotateCcw } from 'lucide-react';
 import type { ProveedorResponse } from '@/presentation/dtos';
@@ -9,10 +9,9 @@ import { EditarProveedorDialog } from '@/components/forms/editar-proveedor-dialo
 import { DeleteConfirmDialog } from '@/components/forms/delete-confirm-dialog';
 import { eliminarProveedor, restaurarProveedor } from '@/presentation/actions/proveedores';
 import { toast } from 'sonner';
-import { startTransition } from 'react';
 
 export function ProveedorActions({ proveedor }: { proveedor: ProveedorResponse }) {
-  const router = useRouter();
+  const refreshData = useRefresh();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const isDeleted = proveedor.deletedAt !== null;
@@ -23,7 +22,7 @@ export function ProveedorActions({ proveedor }: { proveedor: ProveedorResponse }
     const result = await eliminarProveedor(formData);
     if (result.success) {
       toast.success('Proveedor eliminado exitosamente');
-      router.refresh();
+      refreshData();
     } else {
       toast.error(result.error || 'Error al eliminar proveedor');
     }
@@ -35,7 +34,7 @@ export function ProveedorActions({ proveedor }: { proveedor: ProveedorResponse }
     const result = await restaurarProveedor(formData);
     if (result.success) {
       toast.success('Proveedor restaurado exitosamente');
-      router.refresh();
+      refreshData();
     } else {
       toast.error(result.error || 'Error al restaurar proveedor');
     }
@@ -44,7 +43,7 @@ export function ProveedorActions({ proveedor }: { proveedor: ProveedorResponse }
   if (isDeleted) {
     return (
       <button
-        onClick={() => startTransition(() => { handleRestore(); })}
+        onClick={() => { handleRestore(); }}
         className="inline-flex items-center gap-1 rounded-md p-1.5 text-muted-foreground hover:text-green-600 hover:bg-green-50"
         title="Restaurar"
       >

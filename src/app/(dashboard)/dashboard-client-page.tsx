@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { MetricCard } from '@/components/dashboard-metric-card';
 import { PeriodSelector } from '@/components/period-selector';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +10,7 @@ import { DataTable } from '@/components/data-table';
 import { ColumnDef } from '@tanstack/react-table';
 import { Download, Loader2 } from 'lucide-react';
 import { getMetricas } from '@/presentation/actions/dashboard';
+import { RefreshContext } from '@/components/refresh-context';
 import { exportDashboardExcel } from '@/hooks/export-dashboard';
 import type { InventarioPorProductoResponse, TopClienteResponse, DashboardMetricasResponse } from '@/presentation/dtos';
 import {
@@ -129,10 +130,17 @@ export function DashboardClientPage({ initialMetricas, initialMonth, initialYear
   const [isExporting, setIsExporting] = useState(false);
   const isMobile = useIsMobile();
 
-  // Sync when server data changes (e.g. after router.refresh())
+  // Sync when server data changes (fallback for initial load)
   useEffect(() => {
     setMetricas(initialMetricas);
   }, [initialMetricas]);
+
+  const refreshData = useCallback(async () => {
+    const result = await getMetricas(month, year);
+    if (result.success && result.metricas) {
+      setMetricas(result.metricas);
+    }
+  }, [month, year]);
 
   const handleExportDashboard = async () => {
     setIsExporting(true);
@@ -210,6 +218,7 @@ export function DashboardClientPage({ initialMetricas, initialMonth, initialYear
   const hasClientTypeData = clientTypeData.length > 0;
 
   return (
+    <RefreshContext.Provider value={refreshData}>
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
@@ -475,5 +484,6 @@ export function DashboardClientPage({ initialMetricas, initialMonth, initialYear
         </Card>
       </div>
     </div>
+    </RefreshContext.Provider>
   );
 }

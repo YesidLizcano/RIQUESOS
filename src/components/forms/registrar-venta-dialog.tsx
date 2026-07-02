@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRefresh } from '@/components/refresh-context';
 import { registrarVenta } from '@/presentation/actions/ventas';
 import { toast } from 'sonner';
 import { TipoProducto, TipoCliente } from '@/domain/enums';
@@ -32,7 +32,7 @@ interface RegistrarVentaDialogProps {
 }
 
 export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogProps) {
-  const router = useRouter();
+  const refreshData = useRefresh();
   const [open, setOpen] = useState(false);
   const [clienteId, setClienteId] = useState<string>('');
   const [loteId, setLoteId] = useState<string>('');
@@ -66,7 +66,7 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
     const result = await registrarVenta(formData);
     if (result.success) {
       toast.success('Venta registrada exitosamente');
-      router.refresh();
+      refreshData();
       setOpen(false);
       setClienteId('');
       setLoteId('');
