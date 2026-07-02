@@ -118,7 +118,7 @@ export function VentasClientPage({ initialVentas, clientes, lotes, initialMonth,
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Ventas</h1>
           <p className="text-muted-foreground">Registro de ventas — {periodLabel}</p>

@@ -164,7 +164,7 @@ export function DataTable<TData, TValue>({
           </Select>
         </div>
       )}
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-x-auto">
         <TableUI>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

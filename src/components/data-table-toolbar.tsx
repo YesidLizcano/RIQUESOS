@@ -42,7 +42,7 @@ export function DataTableToolbar<TData>({
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <div className="relative flex-1 min-w-[200px] max-w-sm">
+      <div className="relative flex-1 min-w-[200px] max-w-full sm:max-w-sm">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
         <Input
           placeholder={searchPlaceholder}
@@ -72,7 +72,7 @@ export function DataTableToolbar<TData>({
               column.setFilterValue(v === '__all__' ? undefined : v);
             }}
           >
-            <SelectTrigger size="sm" className="w-[160px]">
+            <SelectTrigger size="sm" className="w-full sm:w-[160px]">
               <SelectValue placeholder={filter.label} />
             </SelectTrigger>
             <SelectContent>

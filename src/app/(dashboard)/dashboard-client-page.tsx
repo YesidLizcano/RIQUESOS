@@ -32,6 +32,7 @@ import {
   YAxis,
   CartesianGrid,
 } from 'recharts';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -126,6 +127,7 @@ export function DashboardClientPage({ initialMetricas, initialMonth, initialYear
   const [year, setYear] = useState(initialYear);
   const [loading, setLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const isMobile = useIsMobile();
 
   const handleExportDashboard = async () => {
     setIsExporting(true);
@@ -204,7 +206,7 @@ export function DashboardClientPage({ initialMetricas, initialMonth, initialYear
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">Resumen de métricas del negocio</p>
@@ -307,7 +309,7 @@ export function DashboardClientPage({ initialMetricas, initialMonth, initialYear
               <BarChart data={revenueCompositionData} layout="vertical" margin={{ left: 20, right: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                 <XAxis type="number" tickFormatter={(v: number) => formatCurrency(v)} />
-                <YAxis type="category" dataKey="name" width={140} />
+                <YAxis type="category" dataKey="name" width={isMobile ? 80 : 140} />
                 <ChartTooltip content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} />} />
                 <ChartLegend content={<ChartLegendContent />} />
                 <Bar dataKey="value" radius={[0, 4, 4, 0]}>
@@ -366,7 +368,7 @@ export function DashboardClientPage({ initialMetricas, initialMonth, initialYear
                 <BarChart data={topClientsData} layout="vertical" margin={{ left: 20, right: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                   <XAxis type="number" tickFormatter={(v: number) => formatCurrency(v)} />
-                  <YAxis type="category" dataKey="nombre" width={120} />
+                  <YAxis type="category" dataKey="nombre" width={isMobile ? 60 : 120} />
                   <ChartTooltip content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} />} />
                   <Bar dataKey="ingresoTotal" fill="var(--color-ingresoTotal)" radius={[0, 4, 4, 0]} />
                 </BarChart>
