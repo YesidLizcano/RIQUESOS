@@ -8,6 +8,7 @@ import { GestionarGastos } from '@/application/use-cases/GestionarGastos';
 import { crearGastoFijoSchema, actualizarGastoFijoSchema, eliminarGastoFijoSchema } from '@/presentation/validations/gasto-fijo.schema';
 import type { CrearGastoRequest, ActualizarGastoRequest, GastoResponse, GastoMensualResumenResponse } from '../dtos';
 import { handlePrismaError } from './utils';
+import { recordAuditLog } from './audit-log';
 import { logger } from '@/infrastructure/pino-logger';
 
 async function getGestionarGastosUseCase() {
@@ -21,11 +22,12 @@ function gastoToResponse(gasto: import('@/domain/entities/GastoFijo').GastoFijo)
     fecha: gasto.fecha.toISOString(),
     concepto: gasto.concepto,
     valor: gasto.valor.value,
+    deletedAt: gasto.deletedAt?.toISOString() ?? null,
   };
 }
 
 export async function crearGasto(formData: FormData) {
-  await requireSession();
+  const session = await requireSession();
 
   const parsed = crearGastoFijoSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
@@ -40,6 +42,7 @@ export async function crearGasto(formData: FormData) {
   try {
     const useCase = await getGestionarGastosUseCase();
     const gasto = await useCase.crear(request);
+    await recordAuditLog({ entityType: 'GastoFijo', entityId: gasto.id, action: 'CREATE', userId: (session.user as { id?: string }).id });
     revalidatePath('/gastos');
     return { success: true, gasto: gastoToResponse(gasto) };
   } catch (error) {
@@ -52,7 +55,7 @@ export async function crearGasto(formData: FormData) {
 }
 
 export async function actualizarGasto(formData: FormData) {
-  await requireSession();
+  const session = await requireSession();
 
   const parsed = actualizarGastoFijoSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
@@ -68,6 +71,7 @@ export async function actualizarGasto(formData: FormData) {
   try {
     const useCase = await getGestionarGastosUseCase();
     const gasto = await useCase.actualizar(request);
+    await recordAuditLog({ entityType: 'GastoFijo', entityId: gasto.id, action: 'UPDATE', userId: (session.user as { id?: string }).id });
     revalidatePath('/gastos');
     return { success: true, gasto: gastoToResponse(gasto) };
   } catch (error) {
@@ -80,7 +84,7 @@ export async function actualizarGasto(formData: FormData) {
 }
 
 export async function eliminarGasto(formData: FormData) {
-  await requireSession();
+  const session = await requireSession();
 
   const parsed = eliminarGastoFijoSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
@@ -90,6 +94,7 @@ export async function eliminarGasto(formData: FormData) {
   try {
     const useCase = await getGestionarGastosUseCase();
     await useCase.eliminar(parsed.data.id);
+    await recordAuditLog({ entityType: 'GastoFijo', entityId: parsed.data.id, action: 'DELETE', userId: (session.user as { id?: string }).id });
     revalidatePath('/gastos');
     return { success: true };
   } catch (error) {
@@ -105,6 +110,26 @@ export async function eliminarGasto(formData: FormData) {
   }
 }
 
+export async function restaurarGasto(formData: FormData) {
+  const session = await requireSession();
+
+  const id = formData.get('id') as string;
+
+  try {
+    const useCase = await getGestionarGastosUseCase();
+    const gasto = await useCase.restaurar(id);
+    await recordAuditLog({ entityType: 'GastoFijo', entityId: id, action: 'RESTORE', userId: (session.user as { id?: string }).id });
+    revalidatePath('/gastos');
+    return { success: true, gasto: gastoToResponse(gasto) };
+  } catch (error) {
+    logger.error({ err: error }, 'Error restoring gasto');
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error restoring gasto',
+    };
+  }
+}
+
 export async function getGastos() {
   await requireSession();
 
@@ -114,6 +139,21 @@ export async function getGastos() {
     return { success: true, gastos: gastos.map(gastoToResponse) };
   } catch (error) {
     logger.error({ err: error }, 'Error fetching gastos');
+    return { success: false, error: 'Error fetching gastos', gastos: [] };
+  }
+}
+
+export async function getGastosIncludeDeleted() {
+  await requireSession();
+
+  try {
+    const gastoRepo = new PrismaGastoFijoRepo();
+    const deletedGastos = await gastoRepo.findDeleted();
+    const activeResult = await getGastos();
+    const active = activeResult.success && activeResult.gastos ? activeResult.gastos : [];
+    return { success: true, gastos: [...active, ...deletedGastos.map(gastoToResponse)] };
+  } catch (error) {
+    logger.error({ err: error }, 'Error fetching gastos including deleted');
     return { success: false, error: 'Error fetching gastos', gastos: [] };
   }
 }

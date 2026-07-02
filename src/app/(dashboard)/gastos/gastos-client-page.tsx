@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useReactTable, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel } from '@tanstack/react-table';
 import { Card, CardContent } from '@/components/ui/card';
 import { DataTable } from '@/components/data-table';
 import { DataTableToolbar } from '@/components/data-table-toolbar';
-import { gastoColumns } from '@/components/columns/gasto-columns';
+import { createGastoColumns } from '@/components/columns/gasto-columns';
 import { CrearGastoFijoDialog } from '@/components/forms/crear-gasto-fijo-dialog';
 import { PeriodSelector } from '@/components/period-selector';
-import { getGastosByDateRange } from '@/presentation/actions/gastos';
+import { getGastosByDateRange, getGastosIncludeDeleted } from '@/presentation/actions/gastos';
 import type { GastoResponse } from '@/presentation/dtos';
 
 const MESES = [
@@ -27,10 +27,13 @@ export function GastosClientPage({ initialGastos, initialMonth, initialYear }: G
   const [month, setMonth] = useState(initialMonth);
   const [year, setYear] = useState(initialYear);
   const [loading, setLoading] = useState(false);
+  const [showDeleted, setShowDeleted] = useState(false);
+
+  const columns = createGastoColumns(showDeleted);
 
   const table = useReactTable({
     data: gastos,
-    columns: gastoColumns,
+    columns,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -55,6 +58,22 @@ export function GastosClientPage({ initialGastos, initialMonth, initialYear }: G
       setLoading(false);
     }
   };
+
+  const handleShowDeletedChange = useCallback(async (checked: boolean) => {
+    setShowDeleted(checked);
+    if (checked) {
+      const result = await getGastosIncludeDeleted();
+      if (result.success && result.gastos) {
+        setGastos(result.gastos);
+      }
+    } else {
+      // Re-fetch active-only gastos for current period
+      const result = await getGastosByDateRange(month, year);
+      if (result.success && result.gastos) {
+        setGastos(result.gastos);
+      }
+    }
+  }, [month, year]);
 
   const periodLabel = month === -1 ? 'Todos' : `${MESES[month]} ${year}`;
 
@@ -85,7 +104,12 @@ export function GastosClientPage({ initialGastos, initialMonth, initialYear }: G
             <p className="text-muted-foreground text-center py-8">No hay gastos en el período seleccionado</p>
           ) : (
             <>
-              <DataTableToolbar table={table} searchPlaceholder="Buscar gastos..." />
+              <DataTableToolbar
+                table={table}
+                searchPlaceholder="Buscar gastos..."
+                showDeleted={showDeleted}
+                onShowDeletedChange={handleShowDeletedChange}
+              />
               <DataTable
                 table={table}
                 footerRow={

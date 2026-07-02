@@ -12,6 +12,7 @@ import { eliminarProveedorSchema } from '@/presentation/validations/proveedor.sc
 import type { CrearLoteRequest, ActualizarLoteRequest, LoteResponse } from '../dtos';
 import { ConcurrencyError } from '@/domain/errors/ConcurrencyError';
 import { handlePrismaError } from './utils';
+import { recordAuditLog } from './audit-log';
 import { logger } from '@/infrastructure/pino-logger';
 
 async function getCrearLoteUseCase() {
@@ -40,11 +41,12 @@ function loteToResponse(lote: import('@/domain/entities/Lote').Lote): LoteRespon
     stockDisponibleKg: lote.stockDisponibleKg.value,
     estado: lote.estado,
     version: lote.version,
+    deletedAt: lote.deletedAt?.toISOString() ?? null,
   };
 }
 
 export async function crearLote(formData: FormData) {
-  await requireSession();
+  const session = await requireSession();
 
   const parsed = crearLoteSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
@@ -64,6 +66,7 @@ export async function crearLote(formData: FormData) {
   try {
     const useCase = await getCrearLoteUseCase();
     const { lote } = await useCase.execute(request);
+    await recordAuditLog({ entityType: 'Lote', entityId: lote.id, action: 'CREATE', userId: (session.user as { id?: string }).id });
     revalidatePath('/lotes');
     return { success: true, lote: loteToResponse(lote) };
   } catch (error) {
@@ -76,7 +79,7 @@ export async function crearLote(formData: FormData) {
 }
 
 export async function modificarLote(formData: FormData) {
-  await requireSession();
+  const session = await requireSession();
 
   const parsed = actualizarLoteSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
@@ -96,6 +99,7 @@ export async function modificarLote(formData: FormData) {
   try {
     const useCase = await getModificarLoteUseCase();
     const lote = await useCase.execute(request);
+    await recordAuditLog({ entityType: 'Lote', entityId: lote.id, action: 'UPDATE', userId: (session.user as { id?: string }).id });
     revalidatePath('/lotes');
     return { success: true, lote: loteToResponse(lote) };
   } catch (error) {
@@ -114,7 +118,7 @@ export async function modificarLote(formData: FormData) {
 }
 
 export async function eliminarLote(formData: FormData) {
-  await requireSession();
+  const session = await requireSession();
 
   const id = formData.get('id') as string;
 
@@ -125,7 +129,7 @@ export async function eliminarLote(formData: FormData) {
       return { success: false, error: 'Lote no encontrado' };
     }
 
-    // Only allow delete if no stock has been sold (full stock remains)
+    // Only allow soft delete if no stock has been sold (full stock remains)
     if (lote.stockDisponibleKg.value !== lote.cantidadCompradaKg.value) {
       return {
         success: false,
@@ -133,7 +137,8 @@ export async function eliminarLote(formData: FormData) {
       };
     }
 
-    await loteRepo.delete(id);
+    await loteRepo.softDelete(id);
+    await recordAuditLog({ entityType: 'Lote', entityId: id, action: 'DELETE', userId: (session.user as { id?: string }).id });
     revalidatePath('/lotes');
     return { success: true };
   } catch (error) {
@@ -149,6 +154,26 @@ export async function eliminarLote(formData: FormData) {
   }
 }
 
+export async function restaurarLote(formData: FormData) {
+  const session = await requireSession();
+
+  const id = formData.get('id') as string;
+
+  try {
+    const loteRepo = new PrismaLoteRepo();
+    await loteRepo.restore(id);
+    await recordAuditLog({ entityType: 'Lote', entityId: id, action: 'RESTORE', userId: (session.user as { id?: string }).id });
+    revalidatePath('/lotes');
+    return { success: true };
+  } catch (error) {
+    logger.error({ err: error }, 'Error restoring lote');
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error restoring lote',
+    };
+  }
+}
+
 export async function getLotes() {
   await requireSession();
 
@@ -158,6 +183,19 @@ export async function getLotes() {
     return { success: true, lotes: lotes.map(loteToResponse) };
   } catch (error) {
     logger.error({ err: error }, 'Error fetching lotes');
+    return { success: false, error: 'Error fetching lotes', lotes: [] };
+  }
+}
+
+export async function getLotesIncludeDeleted() {
+  await requireSession();
+
+  try {
+    const loteRepo = new PrismaLoteRepo();
+    const lotes = await loteRepo.findAllIncludeDeleted();
+    return { success: true, lotes: lotes.map(loteToResponse) };
+  } catch (error) {
+    logger.error({ err: error }, 'Error fetching lotes including deleted');
     return { success: false, error: 'Error fetching lotes', lotes: [] };
   }
 }

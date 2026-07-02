@@ -14,7 +14,9 @@ describe('ModificarLote', () => {
     save: vi.fn(),
     deductStock: vi.fn(),
     updateCosts: vi.fn(),
-    delete: vi.fn(),
+    softDelete: vi.fn(),
+    restore: vi.fn(),
+    findAllIncludeDeleted: vi.fn(),
   };
 
   const useCase = new ModificarLote(mockLoteRepo);

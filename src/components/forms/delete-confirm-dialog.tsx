@@ -43,7 +43,7 @@ export function DeleteConfirmDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
           <AlertDialogDescription>
-            Esta acción no se puede deshacer. Se eliminará permanentemente {entityName}.
+            El registro será marcado como eliminado. Podrás restaurarlo desde la lista. Se eliminará {entityName}.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

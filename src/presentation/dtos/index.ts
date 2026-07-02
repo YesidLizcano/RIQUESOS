@@ -6,3 +6,4 @@ export type { CrearGastoRequest, ActualizarGastoRequest, GastoResponse, GastoLis
 export type { CrearProveedorRequest, ActualizarProveedorRequest, ProveedorResponse, ProveedorListResponse } from './proveedor.dto';
 export type { MetricasPeriodoResponse, InventarioPorProductoResponse, InventarioResumenResponse, TopClienteResponse, VentasDiariasResponse, IngresosPorTipoClienteResponse, DashboardMetricasResponse } from './dashboard.dto';
 export type { LoginRequest, AuthResponse } from './auth.dto';
+export type { AuditLogEntry, AuditLogResponse } from './audit-log.dto';

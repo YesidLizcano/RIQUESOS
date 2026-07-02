@@ -27,7 +27,9 @@ describe('ObtenerMetricas', () => {
     save: vi.fn(),
     deductStock: vi.fn(),
     updateCosts: vi.fn(),
-    delete: vi.fn(),
+    softDelete: vi.fn(),
+    restore: vi.fn(),
+    findAllIncludeDeleted: vi.fn(),
   };
 
   const mockGastoFijoRepo: GastoFijoRepository = {
@@ -35,7 +37,9 @@ describe('ObtenerMetricas', () => {
     findAll: vi.fn(),
     findByDateRange: vi.fn(),
     save: vi.fn(),
-    delete: vi.fn(),
+    softDelete: vi.fn(),
+    restore: vi.fn(),
+    findDeleted: vi.fn(),
     sumByPeriod: vi.fn(),
   };
 
@@ -44,7 +48,9 @@ describe('ObtenerMetricas', () => {
     findByIds: vi.fn(),
     findAll: vi.fn(),
     save: vi.fn(),
-    delete: vi.fn(),
+    softDelete: vi.fn(),
+    restore: vi.fn(),
+    findDeleted: vi.fn(),
   };
 
   const useCase = new ObtenerMetricas(mockVentaRepo, mockLoteRepo, mockGastoFijoRepo, mockClienteRepo);

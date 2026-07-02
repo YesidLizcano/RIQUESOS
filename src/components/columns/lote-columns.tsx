@@ -1,17 +1,19 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, RotateCcw } from 'lucide-react';
 import type { LoteResponse } from '@/presentation/dtos';
 import { EditarLoteDialog } from '@/components/forms/editar-lote-dialog';
 import { DeleteConfirmDialog } from '@/components/forms/delete-confirm-dialog';
-import { eliminarLote } from '@/presentation/actions/lotes';
+import { eliminarLote, restaurarLote } from '@/presentation/actions/lotes';
 import { toast } from 'sonner';
+import { startTransition } from 'react';
 
 export function LoteActions({ lote }: { lote: LoteResponse }) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const isDeleted = lote.deletedAt !== null;
 
   async function handleDelete() {
     const formData = new FormData();
@@ -22,6 +24,29 @@ export function LoteActions({ lote }: { lote: LoteResponse }) {
     } else {
       toast.error(result.error || 'Error al eliminar lote');
     }
+  }
+
+  async function handleRestore() {
+    const formData = new FormData();
+    formData.set('id', lote.id);
+    const result = await restaurarLote(formData);
+    if (result.success) {
+      toast.success('Lote restaurado exitosamente');
+    } else {
+      toast.error(result.error || 'Error al restaurar lote');
+    }
+  }
+
+  if (isDeleted) {
+    return (
+      <button
+        onClick={() => startTransition(() => { handleRestore(); })}
+        className="inline-flex items-center gap-1 rounded-md p-1.5 text-muted-foreground hover:text-green-600 hover:bg-green-50"
+        title="Restaurar"
+      >
+        <RotateCcw className="size-4" />
+      </button>
+    );
   }
 
   return (
@@ -52,7 +77,8 @@ export function LoteActions({ lote }: { lote: LoteResponse }) {
 }
 
 export function createLoteColumns(
-  proveedorMap?: Map<string, string>
+  proveedorMap?: Map<string, string>,
+  showDeleted?: boolean
 ): ColumnDef<LoteResponse, unknown>[] {
   return [
     {
@@ -60,7 +86,12 @@ export function createLoteColumns(
       header: 'Producto',
       cell: ({ row }) => {
         const producto = row.getValue('producto') as string;
-        return producto === 'DOBLE_CREMA' ? 'Doble Crema' : 'Semisalado';
+        const isDeleted = row.original.deletedAt !== null;
+        return (
+          <span className={isDeleted ? 'line-through opacity-50' : ''}>
+            {producto === 'DOBLE_CREMA' ? 'Doble Crema' : 'Semisalado'}
+          </span>
+        );
       },
     },
     {

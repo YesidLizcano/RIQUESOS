@@ -8,6 +8,7 @@ import { GestionarClientes } from '@/application/use-cases/GestionarClientes';
 import { crearClienteSchema, actualizarClienteSchema, eliminarClienteSchema } from '@/presentation/validations/cliente.schema';
 import type { CrearClienteRequest, ActualizarClienteRequest, ClienteResponse } from '../dtos';
 import { handlePrismaError } from './utils';
+import { recordAuditLog } from './audit-log';
 import { logger } from '@/infrastructure/pino-logger';
 
 async function getGestionarClientesUseCase() {
@@ -22,11 +23,12 @@ function clienteToResponse(cliente: import('@/domain/entities/Cliente').Cliente)
     tipo: cliente.tipo,
     precioDobleCrema: cliente.precioDobleCrema?.value ?? null,
     precioSemisalado: cliente.precioSemisalado?.value ?? null,
+    deletedAt: cliente.deletedAt?.toISOString() ?? null,
   };
 }
 
 export async function crearCliente(formData: FormData) {
-  await requireSession();
+  const session = await requireSession();
 
   const parsed = crearClienteSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
@@ -43,6 +45,7 @@ export async function crearCliente(formData: FormData) {
   try {
     const useCase = await getGestionarClientesUseCase();
     const cliente = await useCase.crear(request);
+    await recordAuditLog({ entityType: 'Cliente', entityId: cliente.id, action: 'CREATE', userId: (session.user as { id?: string }).id });
     revalidatePath('/clientes');
     return { success: true, cliente: clienteToResponse(cliente) };
   } catch (error) {
@@ -55,7 +58,7 @@ export async function crearCliente(formData: FormData) {
 }
 
 export async function actualizarCliente(formData: FormData) {
-  await requireSession();
+  const session = await requireSession();
 
   const parsed = actualizarClienteSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
@@ -72,6 +75,7 @@ export async function actualizarCliente(formData: FormData) {
   try {
     const useCase = await getGestionarClientesUseCase();
     const cliente = await useCase.actualizar(request);
+    await recordAuditLog({ entityType: 'Cliente', entityId: cliente.id, action: 'UPDATE', userId: (session.user as { id?: string }).id });
     revalidatePath('/clientes');
     return { success: true, cliente: clienteToResponse(cliente) };
   } catch (error) {
@@ -84,7 +88,7 @@ export async function actualizarCliente(formData: FormData) {
 }
 
 export async function eliminarCliente(formData: FormData) {
-  await requireSession();
+  const session = await requireSession();
 
   const parsed = eliminarClienteSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
@@ -94,6 +98,7 @@ export async function eliminarCliente(formData: FormData) {
   try {
     const useCase = await getGestionarClientesUseCase();
     await useCase.eliminar(parsed.data.id);
+    await recordAuditLog({ entityType: 'Cliente', entityId: parsed.data.id, action: 'DELETE', userId: (session.user as { id?: string }).id });
     revalidatePath('/clientes');
     return { success: true };
   } catch (error) {
@@ -109,6 +114,26 @@ export async function eliminarCliente(formData: FormData) {
   }
 }
 
+export async function restaurarCliente(formData: FormData) {
+  const session = await requireSession();
+
+  const id = formData.get('id') as string;
+
+  try {
+    const useCase = await getGestionarClientesUseCase();
+    const cliente = await useCase.restaurar(id);
+    await recordAuditLog({ entityType: 'Cliente', entityId: id, action: 'RESTORE', userId: (session.user as { id?: string }).id });
+    revalidatePath('/clientes');
+    return { success: true, cliente: clienteToResponse(cliente) };
+  } catch (error) {
+    logger.error({ err: error }, 'Error restoring cliente');
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error restoring cliente',
+    };
+  }
+}
+
 export async function getClientes() {
   await requireSession();
 
@@ -118,6 +143,21 @@ export async function getClientes() {
     return { success: true, clientes: clientes.map(clienteToResponse) };
   } catch (error) {
     logger.error({ err: error }, 'Error fetching clientes');
+    return { success: false, error: 'Error fetching clientes', clientes: [] };
+  }
+}
+
+export async function getClientesIncludeDeleted() {
+  await requireSession();
+
+  try {
+    const clienteRepo = new PrismaClienteRepo();
+    const deletedClientes = await clienteRepo.findDeleted();
+    const activeResult = await getClientes();
+    const active = activeResult.success && activeResult.clientes ? activeResult.clientes : [];
+    return { success: true, clientes: [...active, ...deletedClientes.map(clienteToResponse)] };
+  } catch (error) {
+    logger.error({ err: error }, 'Error fetching clientes including deleted');
     return { success: false, error: 'Error fetching clientes', clientes: [] };
   }
 }

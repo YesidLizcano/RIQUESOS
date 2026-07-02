@@ -5,13 +5,23 @@ import type { ProveedorRepository } from '../../domain/ports/ProveedorRepository
 
 export class PrismaProveedorRepo implements ProveedorRepository {
   async findById(id: string): Promise<Proveedor | null> {
-    const record = await prisma.proveedor.findUnique({ where: { id } });
+    const record = await prisma.proveedor.findUnique({ where: { id, deletedAt: null } });
     if (!record) return null;
     return this.toEntity(record);
   }
 
+  async findByIds(ids: string[]): Promise<Proveedor[]> {
+    if (ids.length === 0) return [];
+    // Include deleted records for FK resolution (e.g., Lote resolving Proveedor name)
+    const records = await prisma.proveedor.findMany({
+      where: { id: { in: ids } },
+    });
+    return records.map((r) => this.toEntity(r));
+  }
+
   async findAll(): Promise<Proveedor[]> {
     const records = await prisma.proveedor.findMany({
+      where: { deletedAt: null },
       orderBy: { createdAt: 'desc' },
     });
     return records.map((r) => this.toEntity(r));
@@ -35,14 +45,33 @@ export class PrismaProveedorRepo implements ProveedorRepository {
     return this.toEntity(created);
   }
 
-  async delete(id: string): Promise<void> {
-    await prisma.proveedor.delete({ where: { id } });
+  async softDelete(id: string): Promise<void> {
+    await prisma.proveedor.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+  }
+
+  async restore(id: string): Promise<void> {
+    await prisma.proveedor.update({
+      where: { id },
+      data: { deletedAt: null },
+    });
+  }
+
+  async findDeleted(): Promise<Proveedor[]> {
+    const records = await prisma.proveedor.findMany({
+      where: { deletedAt: { not: null } },
+      orderBy: { createdAt: 'desc' },
+    });
+    return records.map((r) => this.toEntity(r));
   }
 
   private toEntity(record: {
     id: string;
     nombre: string;
     telefono: string | null;
+    deletedAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
   }): Proveedor {
@@ -50,6 +79,7 @@ export class PrismaProveedorRepo implements ProveedorRepository {
       id: record.id,
       nombre: record.nombre,
       telefono: record.telefono ?? undefined,
+      deletedAt: record.deletedAt,
     });
   }
 }

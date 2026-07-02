@@ -18,6 +18,7 @@ export interface LoteProps {
   stockDisponibleKg?: string;
   estado?: EstadoLote;
   version?: number;
+  deletedAt?: Date | null;
 }
 
 export class Lote {
@@ -34,12 +35,14 @@ export class Lote {
   readonly stockDisponibleKg: Kilogramo;
   readonly estado: EstadoLote;
   readonly version: number;
+  readonly deletedAt: Date | null;
 
   constructor(props: LoteProps) {
     this.id = props.id ?? '';
     this.producto = props.producto;
     this.fechaIngreso = props.fechaIngreso ?? new Date();
     this.proveedorId = props.proveedorId;
+    this.deletedAt = props.deletedAt ?? null;
 
     this.cantidadCompradaKg = new Kilogramo(props.cantidadCompradaKg);
     this.precioCompraBaseKg = new Dinero(props.precioCompraBaseKg);
@@ -114,6 +117,7 @@ export class Lote {
       stockDisponibleKg: newStock.value,
       estado: newEstado,
       version: this.version,
+      deletedAt: this.deletedAt,
     });
   }
 
@@ -134,6 +138,7 @@ export class Lote {
       stockDisponibleKg: this.stockDisponibleKg.value,
       estado: EstadoLote.AGOTADO,
       version: this.version,
+      deletedAt: this.deletedAt,
     });
   }
 
@@ -161,6 +166,43 @@ export class Lote {
       stockDisponibleKg: this.stockDisponibleKg.value,
       estado: this.estado,
       version: this.version,
+      deletedAt: this.deletedAt,
+    });
+  }
+
+  softDelete(): Lote {
+    return new Lote({
+      id: this.id,
+      producto: this.producto,
+      fechaIngreso: this.fechaIngreso,
+      proveedorId: this.proveedorId,
+      cantidadCompradaKg: this.cantidadCompradaKg.value,
+      precioCompraBaseKg: this.precioCompraBaseKg.value,
+      costoFlete: this.costoFlete.value,
+      costoTajado: this.costoTajado.value,
+      costoEmpaques: this.costoEmpaques.value,
+      stockDisponibleKg: this.stockDisponibleKg.value,
+      estado: this.estado,
+      version: this.version,
+      deletedAt: new Date(),
+    });
+  }
+
+  restore(): Lote {
+    return new Lote({
+      id: this.id,
+      producto: this.producto,
+      fechaIngreso: this.fechaIngreso,
+      proveedorId: this.proveedorId,
+      cantidadCompradaKg: this.cantidadCompradaKg.value,
+      precioCompraBaseKg: this.precioCompraBaseKg.value,
+      costoFlete: this.costoFlete.value,
+      costoTajado: this.costoTajado.value,
+      costoEmpaques: this.costoEmpaques.value,
+      stockDisponibleKg: this.stockDisponibleKg.value,
+      estado: this.estado,
+      version: this.version,
+      deletedAt: null,
     });
   }
 }

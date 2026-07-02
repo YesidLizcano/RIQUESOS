@@ -8,14 +8,14 @@ import type { LoteRepository } from '../../domain/ports/LoteRepository';
 
 export class PrismaLoteRepo implements LoteRepository {
   async findById(id: string): Promise<Lote | null> {
-    const record = await prisma.lote.findUnique({ where: { id } });
+    const record = await prisma.lote.findUnique({ where: { id, deletedAt: null } });
     if (!record) return null;
     return this.toEntity(record);
   }
 
   async findActive(): Promise<Lote[]> {
     const records = await prisma.lote.findMany({
-      where: { estado: EstadoLote.ACTIVO },
+      where: { estado: EstadoLote.ACTIVO, deletedAt: null },
       orderBy: { createdAt: 'desc' },
     });
     return records.map((r) => this.toEntity(r));
@@ -23,6 +23,7 @@ export class PrismaLoteRepo implements LoteRepository {
 
   async findAll(): Promise<Lote[]> {
     const records = await prisma.lote.findMany({
+      where: { deletedAt: null },
       orderBy: { createdAt: 'desc' },
     });
     return records.map((r) => this.toEntity(r));
@@ -30,7 +31,7 @@ export class PrismaLoteRepo implements LoteRepository {
 
   async findByProveedor(proveedorId: string): Promise<Lote[]> {
     const records = await prisma.lote.findMany({
-      where: { proveedorId },
+      where: { proveedorId, deletedAt: null },
       orderBy: { createdAt: 'desc' },
     });
     return records.map((r) => this.toEntity(r));
@@ -144,8 +145,26 @@ export class PrismaLoteRepo implements LoteRepository {
     return this.toEntity(updated);
   }
 
-  async delete(id: string): Promise<void> {
-    await prisma.lote.delete({ where: { id } });
+  async softDelete(id: string): Promise<void> {
+    await prisma.lote.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+  }
+
+  async restore(id: string): Promise<void> {
+    await prisma.lote.update({
+      where: { id },
+      data: { deletedAt: null },
+    });
+  }
+
+  async findAllIncludeDeleted(): Promise<Lote[]> {
+    // No deletedAt filter — returns both active and deleted records
+    const records = await prisma.lote.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+    return records.map((r) => this.toEntity(r));
   }
 
   private toEntity(record: Prisma.LoteGetPayload<{}>): Lote {
@@ -162,6 +181,7 @@ export class PrismaLoteRepo implements LoteRepository {
       stockDisponibleKg: record.stockDisponibleKg.toString(),
       estado: record.estado as string as EstadoLote,
       version: record.version,
+      deletedAt: record.deletedAt,
     });
   }
 }

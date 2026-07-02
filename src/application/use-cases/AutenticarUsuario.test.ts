@@ -8,6 +8,9 @@ describe('AutenticarUsuario', () => {
   const mockUsuarioRepo: UsuarioRepository = {
     findByEmail: vi.fn(),
     save: vi.fn(),
+    softDelete: vi.fn(),
+    restore: vi.fn(),
+    findDeleted: vi.fn(),
   };
 
   // Mock verifyPassword function

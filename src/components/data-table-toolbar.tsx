@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export interface FilterConfig {
   columnId: string;
@@ -21,12 +22,16 @@ interface DataTableToolbarProps<TData> {
   table: Table<TData>;
   searchPlaceholder?: string;
   filters?: FilterConfig[];
+  showDeleted?: boolean;
+  onShowDeletedChange?: (show: boolean) => void;
 }
 
 export function DataTableToolbar<TData>({
   table,
   searchPlaceholder = 'Buscar...',
   filters = [],
+  showDeleted,
+  onShowDeletedChange,
 }: DataTableToolbarProps<TData>) {
   const globalFilter = table.getState().globalFilter as string | undefined;
 
@@ -76,6 +81,15 @@ export function DataTableToolbar<TData>({
           </Select>
         );
       })}
+      {onShowDeletedChange && (
+        <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+          <Checkbox
+            checked={showDeleted ?? false}
+            onCheckedChange={(checked) => onShowDeletedChange(checked === true)}
+          />
+          Mostrar eliminados
+        </label>
+      )}
     </div>
   );
 }

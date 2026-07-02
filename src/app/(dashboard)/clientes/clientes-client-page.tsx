@@ -1,12 +1,13 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useReactTable, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel } from '@tanstack/react-table';
 import { Card, CardContent } from '@/components/ui/card';
 import { DataTable } from '@/components/data-table';
 import { DataTableToolbar, FilterConfig } from '@/components/data-table-toolbar';
-import { clienteColumns } from '@/components/columns/cliente-columns';
+import { createClienteColumns } from '@/components/columns/cliente-columns';
 import { CrearClienteDialog } from '@/components/forms/crear-cliente-dialog';
+import { getClientesIncludeDeleted } from '@/presentation/actions/clientes';
 import type { ClienteResponse } from '@/presentation/dtos';
 import { TipoCliente } from '@/domain/enums';
 
@@ -20,6 +21,9 @@ const tipoFilterOptions = [
 ];
 
 export function ClientesClientPage({ clientes }: ClientesClientPageProps) {
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [data, setData] = useState<ClienteResponse[]>(clientes);
+
   const filters: FilterConfig[] = useMemo(
     () => [
       { columnId: 'tipo', label: 'Tipo', options: tipoFilterOptions },
@@ -27,9 +31,23 @@ export function ClientesClientPage({ clientes }: ClientesClientPageProps) {
     []
   );
 
+  const handleShowDeletedChange = useCallback(async (checked: boolean) => {
+    setShowDeleted(checked);
+    if (checked) {
+      const result = await getClientesIncludeDeleted();
+      if (result.success && result.clientes) {
+        setData(result.clientes);
+      }
+    } else {
+      setData(clientes);
+    }
+  }, [clientes]);
+
+  const columns = createClienteColumns(showDeleted);
+
   const table = useReactTable({
-    data: clientes,
-    columns: clienteColumns,
+    data,
+    columns,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -49,7 +67,7 @@ export function ClientesClientPage({ clientes }: ClientesClientPageProps) {
 
       <Card>
         <CardContent className="pt-6 space-y-4">
-          {clientes.length === 0 ? (
+          {data.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">No hay clientes registrados</p>
           ) : (
             <>
@@ -57,6 +75,8 @@ export function ClientesClientPage({ clientes }: ClientesClientPageProps) {
                 table={table}
                 searchPlaceholder="Buscar clientes..."
                 filters={filters}
+                showDeleted={showDeleted}
+                onShowDeletedChange={handleShowDeletedChange}
               />
               <DataTable table={table} />
             </>

@@ -1,5 +1,5 @@
 import { getLotes } from '@/presentation/actions/lotes';
-import { getProveedores } from '@/presentation/actions/proveedores';
+import { getProveedoresIncludeDeleted } from '@/presentation/actions/proveedores';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/infrastructure/auth';
 import { redirect } from 'next/navigation';
@@ -11,7 +11,7 @@ export default async function LotesPage() {
 
   const [lotesResult, proveedoresResult] = await Promise.all([
     getLotes(),
-    getProveedores(),
+    getProveedoresIncludeDeleted(),
   ]);
   const lotes = lotesResult.success && lotesResult.lotes ? lotesResult.lotes : [];
   const proveedores = proveedoresResult.success && proveedoresResult.proveedores ? proveedoresResult.proveedores : [];

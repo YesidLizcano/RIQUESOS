@@ -6,5 +6,7 @@ export interface ClienteRepository {
   findByIds(ids: string[]): Promise<Cliente[]>;
   findAll(): Promise<Cliente[]>;
   save(cliente: Cliente): Promise<Cliente>;
-  delete(id: string): Promise<void>;
+  softDelete(id: string): Promise<void>;
+  restore(id: string): Promise<void>;
+  findDeleted(): Promise<Cliente[]>;
 }

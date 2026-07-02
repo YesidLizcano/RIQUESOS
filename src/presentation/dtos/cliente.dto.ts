@@ -21,6 +21,7 @@ export interface ClienteResponse {
   tipo: TipoCliente;
   precioDobleCrema: string | null;
   precioSemisalado: string | null;
+  deletedAt: string | null;
 }
 
 export interface ClienteListResponse {

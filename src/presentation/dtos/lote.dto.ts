@@ -35,6 +35,7 @@ export interface LoteResponse {
   stockDisponibleKg: string;
   estado: string;
   version: number;
+  deletedAt: string | null;
 }
 
 export interface LoteListResponse {

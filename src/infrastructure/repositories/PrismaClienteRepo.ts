@@ -7,13 +7,14 @@ import type { ClienteRepository } from '../../domain/ports/ClienteRepository';
 
 export class PrismaClienteRepo implements ClienteRepository {
   async findById(id: string): Promise<Cliente | null> {
-    const record = await prisma.cliente.findUnique({ where: { id } });
+    const record = await prisma.cliente.findUnique({ where: { id, deletedAt: null } });
     if (!record) return null;
     return this.toEntity(record);
   }
 
   async findByIds(ids: string[]): Promise<Cliente[]> {
     if (ids.length === 0) return [];
+    // Include deleted records for FK resolution (e.g., Venta resolving Cliente names)
     const records = await prisma.cliente.findMany({
       where: { id: { in: ids } },
     });
@@ -22,6 +23,7 @@ export class PrismaClienteRepo implements ClienteRepository {
 
   async findAll(): Promise<Cliente[]> {
     const records = await prisma.cliente.findMany({
+      where: { deletedAt: null },
       orderBy: { createdAt: 'desc' },
     });
     return records.map((r) => this.toEntity(r));
@@ -51,8 +53,26 @@ export class PrismaClienteRepo implements ClienteRepository {
     return this.toEntity(created);
   }
 
-  async delete(id: string): Promise<void> {
-    await prisma.cliente.delete({ where: { id } });
+  async softDelete(id: string): Promise<void> {
+    await prisma.cliente.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+  }
+
+  async restore(id: string): Promise<void> {
+    await prisma.cliente.update({
+      where: { id },
+      data: { deletedAt: null },
+    });
+  }
+
+  async findDeleted(): Promise<Cliente[]> {
+    const records = await prisma.cliente.findMany({
+      where: { deletedAt: { not: null } },
+      orderBy: { createdAt: 'desc' },
+    });
+    return records.map((r) => this.toEntity(r));
   }
 
   private toEntity(record: Prisma.ClienteGetPayload<{}>): Cliente {
@@ -62,6 +82,7 @@ export class PrismaClienteRepo implements ClienteRepository {
       tipo: record.tipo as string as TipoCliente,
       precioDobleCrema: record.precioDobleCrema?.toString() ?? undefined,
       precioSemisalado: record.precioSemisalado?.toString() ?? undefined,
+      deletedAt: record.deletedAt,
     });
   }
 }

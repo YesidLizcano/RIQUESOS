@@ -1,6 +1,6 @@
 import { getVentasByDateRange } from '@/presentation/actions/ventas';
-import { getClientes } from '@/presentation/actions/clientes';
-import { getLotes } from '@/presentation/actions/lotes';
+import { getClientesIncludeDeleted } from '@/presentation/actions/clientes';
+import { getLotesIncludeDeleted } from '@/presentation/actions/lotes';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/infrastructure/auth';
 import { redirect } from 'next/navigation';
@@ -16,8 +16,8 @@ export default async function VentasPage() {
 
   const [ventasResult, clientesResult, lotesResult] = await Promise.all([
     getVentasByDateRange(currentMonth, currentYear),
-    getClientes(),
-    getLotes(),
+    getClientesIncludeDeleted(),
+    getLotesIncludeDeleted(),
   ]);
   const ventas = ventasResult.success && ventasResult.ventas ? ventasResult.ventas : [];
   const clientes = clientesResult.success && clientesResult.clientes ? clientesResult.clientes : [];

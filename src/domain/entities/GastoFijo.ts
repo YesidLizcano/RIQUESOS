@@ -8,6 +8,7 @@ export interface GastoFijoProps {
   fecha?: Date;
   concepto: string;
   valor: string;
+  deletedAt?: Date | null;
 }
 
 export class GastoFijo {
@@ -15,12 +16,14 @@ export class GastoFijo {
   readonly fecha: Date;
   readonly concepto: string;
   readonly valor: Dinero;
+  readonly deletedAt: Date | null;
 
   constructor(props: GastoFijoProps) {
     this.id = props.id ?? '';
     this.fecha = props.fecha ?? new Date();
     this.concepto = props.concepto;
     this.valor = new Dinero(props.valor);
+    this.deletedAt = props.deletedAt ?? null;
 
     this.validate();
   }
@@ -40,6 +43,7 @@ export class GastoFijo {
       fecha: this.fecha,
       concepto,
       valor: this.valor.value,
+      deletedAt: this.deletedAt,
     });
   }
 
@@ -49,6 +53,27 @@ export class GastoFijo {
       fecha: this.fecha,
       concepto: this.concepto,
       valor,
+      deletedAt: this.deletedAt,
+    });
+  }
+
+  softDelete(): GastoFijo {
+    return new GastoFijo({
+      id: this.id,
+      fecha: this.fecha,
+      concepto: this.concepto,
+      valor: this.valor.value,
+      deletedAt: new Date(),
+    });
+  }
+
+  restore(): GastoFijo {
+    return new GastoFijo({
+      id: this.id,
+      fecha: this.fecha,
+      concepto: this.concepto,
+      valor: this.valor.value,
+      deletedAt: null,
     });
   }
 }

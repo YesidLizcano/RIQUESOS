@@ -6,13 +6,14 @@ import type { GastoFijoRepository } from '../../domain/ports/GastoFijoRepository
 
 export class PrismaGastoFijoRepo implements GastoFijoRepository {
   async findById(id: string): Promise<GastoFijo | null> {
-    const record = await prisma.gastoFijo.findUnique({ where: { id } });
+    const record = await prisma.gastoFijo.findUnique({ where: { id, deletedAt: null } });
     if (!record) return null;
     return this.toEntity(record);
   }
 
   async findAll(): Promise<GastoFijo[]> {
     const records = await prisma.gastoFijo.findMany({
+      where: { deletedAt: null },
       orderBy: { createdAt: 'desc' },
     });
     return records.map((r) => this.toEntity(r));
@@ -36,14 +37,33 @@ export class PrismaGastoFijoRepo implements GastoFijoRepository {
     return this.toEntity(created);
   }
 
-  async delete(id: string): Promise<void> {
-    await prisma.gastoFijo.delete({ where: { id } });
+  async softDelete(id: string): Promise<void> {
+    await prisma.gastoFijo.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+  }
+
+  async restore(id: string): Promise<void> {
+    await prisma.gastoFijo.update({
+      where: { id },
+      data: { deletedAt: null },
+    });
+  }
+
+  async findDeleted(): Promise<GastoFijo[]> {
+    const records = await prisma.gastoFijo.findMany({
+      where: { deletedAt: { not: null } },
+      orderBy: { createdAt: 'desc' },
+    });
+    return records.map((r) => this.toEntity(r));
   }
 
   async findByDateRange(inicio: Date, fin: Date): Promise<GastoFijo[]> {
     const records = await prisma.gastoFijo.findMany({
       where: {
         fecha: { gte: inicio, lte: fin },
+        deletedAt: null,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -54,6 +74,7 @@ export class PrismaGastoFijoRepo implements GastoFijoRepository {
     const result = await prisma.gastoFijo.aggregate({
       where: {
         fecha: { gte: inicio, lte: fin },
+        deletedAt: null,
       },
       _sum: { valor: true },
     });
@@ -66,6 +87,7 @@ export class PrismaGastoFijoRepo implements GastoFijoRepository {
       fecha: record.fecha,
       concepto: record.concepto,
       valor: record.valor.toString(),
+      deletedAt: record.deletedAt,
     });
   }
 }

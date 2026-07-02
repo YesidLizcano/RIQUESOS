@@ -8,6 +8,7 @@ import { GestionarProveedores } from '@/application/use-cases/GestionarProveedor
 import { crearProveedorSchema, actualizarProveedorSchema, eliminarProveedorSchema } from '@/presentation/validations/proveedor.schema';
 import type { CrearProveedorRequest, ActualizarProveedorRequest, ProveedorResponse } from '../dtos';
 import { handlePrismaError } from './utils';
+import { recordAuditLog } from './audit-log';
 import { logger } from '@/infrastructure/pino-logger';
 
 async function getGestionarProveedoresUseCase() {
@@ -20,11 +21,12 @@ function proveedorToResponse(proveedor: import('@/domain/entities/Proveedor').Pr
     id: proveedor.id,
     nombre: proveedor.nombre,
     telefono: proveedor.telefono,
+    deletedAt: proveedor.deletedAt?.toISOString() ?? null,
   };
 }
 
 export async function crearProveedor(formData: FormData) {
-  await requireSession();
+  const session = await requireSession();
 
   const parsed = crearProveedorSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
@@ -39,6 +41,7 @@ export async function crearProveedor(formData: FormData) {
   try {
     const useCase = await getGestionarProveedoresUseCase();
     const proveedor = await useCase.crear(request);
+    await recordAuditLog({ entityType: 'Proveedor', entityId: proveedor.id, action: 'CREATE', userId: (session.user as { id?: string }).id });
     revalidatePath('/proveedores');
     return { success: true, proveedor: proveedorToResponse(proveedor) };
   } catch (error) {
@@ -51,7 +54,7 @@ export async function crearProveedor(formData: FormData) {
 }
 
 export async function actualizarProveedor(formData: FormData) {
-  await requireSession();
+  const session = await requireSession();
 
   const parsed = actualizarProveedorSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
@@ -67,6 +70,7 @@ export async function actualizarProveedor(formData: FormData) {
   try {
     const useCase = await getGestionarProveedoresUseCase();
     const proveedor = await useCase.actualizar(request);
+    await recordAuditLog({ entityType: 'Proveedor', entityId: proveedor.id, action: 'UPDATE', userId: (session.user as { id?: string }).id });
     revalidatePath('/proveedores');
     return { success: true, proveedor: proveedorToResponse(proveedor) };
   } catch (error) {
@@ -79,7 +83,7 @@ export async function actualizarProveedor(formData: FormData) {
 }
 
 export async function eliminarProveedor(formData: FormData) {
-  await requireSession();
+  const session = await requireSession();
 
   const parsed = eliminarProveedorSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
@@ -89,6 +93,7 @@ export async function eliminarProveedor(formData: FormData) {
   try {
     const useCase = await getGestionarProveedoresUseCase();
     await useCase.eliminar(parsed.data.id);
+    await recordAuditLog({ entityType: 'Proveedor', entityId: parsed.data.id, action: 'DELETE', userId: (session.user as { id?: string }).id });
     revalidatePath('/proveedores');
     return { success: true };
   } catch (error) {
@@ -104,6 +109,26 @@ export async function eliminarProveedor(formData: FormData) {
   }
 }
 
+export async function restaurarProveedor(formData: FormData) {
+  const session = await requireSession();
+
+  const id = formData.get('id') as string;
+
+  try {
+    const useCase = await getGestionarProveedoresUseCase();
+    const proveedor = await useCase.restaurar(id);
+    await recordAuditLog({ entityType: 'Proveedor', entityId: id, action: 'RESTORE', userId: (session.user as { id?: string }).id });
+    revalidatePath('/proveedores');
+    return { success: true, proveedor: proveedorToResponse(proveedor) };
+  } catch (error) {
+    logger.error({ err: error }, 'Error restoring proveedor');
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error restoring proveedor',
+    };
+  }
+}
+
 export async function getProveedores() {
   await requireSession();
 
@@ -113,6 +138,21 @@ export async function getProveedores() {
     return { success: true, proveedores: proveedores.map(proveedorToResponse) };
   } catch (error) {
     logger.error({ err: error }, 'Error fetching proveedores');
+    return { success: false, error: 'Error fetching proveedores', proveedores: [] };
+  }
+}
+
+export async function getProveedoresIncludeDeleted() {
+  await requireSession();
+
+  try {
+    const proveedorRepo = new PrismaProveedorRepo();
+    const deletedProveedores = await proveedorRepo.findDeleted();
+    const activeResult = await getProveedores();
+    const active = activeResult.success && activeResult.proveedores ? activeResult.proveedores : [];
+    return { success: true, proveedores: [...active, ...deletedProveedores.map(proveedorToResponse)] };
+  } catch (error) {
+    logger.error({ err: error }, 'Error fetching proveedores including deleted');
     return { success: false, error: 'Error fetching proveedores', proveedores: [] };
   }
 }

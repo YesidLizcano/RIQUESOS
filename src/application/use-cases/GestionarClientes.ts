@@ -69,6 +69,19 @@ export class GestionarClientes {
     if (!existing) {
       throw new Error(`Cliente not found: ${id}`);
     }
-    await this.clienteRepo.delete(id);
+    await this.clienteRepo.softDelete(id);
+  }
+
+  async restaurar(id: string): Promise<Cliente> {
+    const existing = await this.clienteRepo.findById(id);
+    if (!existing) {
+      throw new Error(`Cliente not found: ${id}`);
+    }
+    await this.clienteRepo.restore(id);
+    const restored = await this.clienteRepo.findById(id);
+    if (!restored) {
+      throw new Error(`Cliente not found after restore: ${id}`);
+    }
+    return restored;
   }
 }

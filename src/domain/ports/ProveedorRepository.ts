@@ -5,5 +5,7 @@ export interface ProveedorRepository {
   findById(id: string): Promise<Proveedor | null>;
   findAll(): Promise<Proveedor[]>;
   save(proveedor: Proveedor): Promise<Proveedor>;
-  delete(id: string): Promise<void>;
+  softDelete(id: string): Promise<void>;
+  restore(id: string): Promise<void>;
+  findDeleted(): Promise<Proveedor[]>;
 }

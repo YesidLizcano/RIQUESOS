@@ -1,11 +1,13 @@
 'use client';
 
+import { useState, useCallback } from 'react';
 import { useReactTable, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel } from '@tanstack/react-table';
 import { Card, CardContent } from '@/components/ui/card';
 import { DataTable } from '@/components/data-table';
 import { DataTableToolbar } from '@/components/data-table-toolbar';
-import { proveedorColumns } from '@/components/columns/proveedor-columns';
+import { createProveedorColumns } from '@/components/columns/proveedor-columns';
 import { CrearProveedorDialog } from '@/components/forms/crear-proveedor-dialog';
+import { getProveedoresIncludeDeleted } from '@/presentation/actions/proveedores';
 import type { ProveedorResponse } from '@/presentation/dtos';
 
 interface ProveedoresClientPageProps {
@@ -13,9 +15,27 @@ interface ProveedoresClientPageProps {
 }
 
 export function ProveedoresClientPage({ proveedores }: ProveedoresClientPageProps) {
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [data, setData] = useState<ProveedorResponse[]>(proveedores);
+
+  const handleShowDeletedChange = useCallback(async (checked: boolean) => {
+    setShowDeleted(checked);
+    if (checked) {
+      const result = await getProveedoresIncludeDeleted();
+      if (result.success && result.proveedores) {
+        setData(result.proveedores);
+      }
+    } else {
+      // Reset to original active-only data
+      setData(proveedores);
+    }
+  }, [proveedores]);
+
+  const columns = createProveedorColumns(showDeleted);
+
   const table = useReactTable({
-    data: proveedores,
-    columns: proveedorColumns,
+    data,
+    columns,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -35,11 +55,16 @@ export function ProveedoresClientPage({ proveedores }: ProveedoresClientPageProp
 
       <Card>
         <CardContent className="pt-6 space-y-4">
-          {proveedores.length === 0 ? (
+          {data.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">No hay proveedores registrados</p>
           ) : (
             <>
-              <DataTableToolbar table={table} searchPlaceholder="Buscar proveedores..." />
+              <DataTableToolbar
+                table={table}
+                searchPlaceholder="Buscar proveedores..."
+                showDeleted={showDeleted}
+                onShowDeletedChange={handleShowDeletedChange}
+              />
               <DataTable table={table} />
             </>
           )}

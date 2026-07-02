@@ -16,6 +16,7 @@ export interface GastoResponse {
   fecha: string;
   concepto: string;
   valor: string;
+  deletedAt: string | null;
 }
 
 export interface GastoListResponse {

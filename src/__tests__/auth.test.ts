@@ -17,6 +17,9 @@ describe('Auth unit tests', () => {
   const mockUsuarioRepo: UsuarioRepository = {
     findByEmail: vi.fn(),
     save: vi.fn(),
+    softDelete: vi.fn(),
+    restore: vi.fn(),
+    findDeleted: vi.fn(),
   };
 
   const mockVerifyPassword = vi.fn();

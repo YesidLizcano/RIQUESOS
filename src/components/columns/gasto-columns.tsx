@@ -2,16 +2,18 @@
 
 import { useState } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, RotateCcw } from 'lucide-react';
 import type { GastoResponse } from '@/presentation/dtos';
 import { EditarGastoFijoDialog } from '@/components/forms/editar-gasto-fijo-dialog';
 import { DeleteConfirmDialog } from '@/components/forms/delete-confirm-dialog';
-import { eliminarGasto } from '@/presentation/actions/gastos';
+import { eliminarGasto, restaurarGasto } from '@/presentation/actions/gastos';
 import { toast } from 'sonner';
+import { startTransition } from 'react';
 
 export function GastoActions({ gasto }: { gasto: GastoResponse }) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const isDeleted = gasto.deletedAt !== null;
 
   async function handleDelete() {
     const formData = new FormData();
@@ -22,6 +24,29 @@ export function GastoActions({ gasto }: { gasto: GastoResponse }) {
     } else {
       toast.error(result.error || 'Error al eliminar gasto');
     }
+  }
+
+  async function handleRestore() {
+    const formData = new FormData();
+    formData.set('id', gasto.id);
+    const result = await restaurarGasto(formData);
+    if (result.success) {
+      toast.success('Gasto restaurado exitosamente');
+    } else {
+      toast.error(result.error || 'Error al restaurar gasto');
+    }
+  }
+
+  if (isDeleted) {
+    return (
+      <button
+        onClick={() => startTransition(() => { handleRestore(); })}
+        className="inline-flex items-center gap-1 rounded-md p-1.5 text-muted-foreground hover:text-green-600 hover:bg-green-50"
+        title="Restaurar"
+      >
+        <RotateCcw className="size-4" />
+      </button>
+    );
   }
 
   return (
@@ -51,27 +76,42 @@ export function GastoActions({ gasto }: { gasto: GastoResponse }) {
   );
 }
 
-export const gastoColumns: ColumnDef<GastoResponse, unknown>[] = [
-  {
-    accessorKey: 'concepto',
-    header: 'Concepto',
-  },
-  {
-    accessorKey: 'valor',
-    header: 'Valor',
-    enableGlobalFilter: false,
-    cell: ({ row }) => `$${Number(row.getValue('valor')).toLocaleString('es-AR')}`,
-  },
-  {
-    accessorKey: 'fecha',
-    header: 'Fecha',
-    enableGlobalFilter: false,
-    cell: ({ row }) => new Date(row.getValue('fecha') as string).toLocaleDateString('es-AR'),
-  },
-  {
-    id: 'actions',
-    header: 'Acciones',
-    enableGlobalFilter: false,
-    cell: ({ row }) => <GastoActions gasto={row.original} />,
-  },
-];
+export function createGastoColumns(
+  showDeleted?: boolean
+): ColumnDef<GastoResponse, unknown>[] {
+  return [
+    {
+      accessorKey: 'concepto',
+      header: 'Concepto',
+      cell: ({ row }) => {
+        const isDeleted = row.original.deletedAt !== null;
+        return (
+          <span className={isDeleted ? 'line-through opacity-50' : ''}>
+            {row.getValue('concepto') as string}
+          </span>
+        );
+      },
+    },
+    {
+      accessorKey: 'valor',
+      header: 'Valor',
+      enableGlobalFilter: false,
+      cell: ({ row }) => `$${Number(row.getValue('valor')).toLocaleString('es-AR')}`,
+    },
+    {
+      accessorKey: 'fecha',
+      header: 'Fecha',
+      enableGlobalFilter: false,
+      cell: ({ row }) => new Date(row.getValue('fecha') as string).toLocaleDateString('es-AR'),
+    },
+    {
+      id: 'actions',
+      header: 'Acciones',
+      enableGlobalFilter: false,
+      cell: ({ row }) => <GastoActions gasto={row.original} />,
+    },
+  ];
+}
+
+// Keep backward-compatible export
+export const gastoColumns = createGastoColumns();

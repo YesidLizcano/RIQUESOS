@@ -15,6 +15,7 @@ export interface ProveedorResponse {
   id: string;
   nombre: string;
   telefono: string | null;
+  deletedAt: string | null;
 }
 
 export interface ProveedorListResponse {

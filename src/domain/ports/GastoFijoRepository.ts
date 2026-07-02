@@ -6,6 +6,8 @@ export interface GastoFijoRepository {
   findAll(): Promise<GastoFijo[]>;
   findByDateRange(inicio: Date, fin: Date): Promise<GastoFijo[]>;
   save(gasto: GastoFijo): Promise<GastoFijo>;
-  delete(id: string): Promise<void>;
+  softDelete(id: string): Promise<void>;
+  restore(id: string): Promise<void>;
+  findDeleted(): Promise<GastoFijo[]>;
   sumByPeriod(inicio: Date, fin: Date): Promise<string>;
 }

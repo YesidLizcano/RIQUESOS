@@ -49,7 +49,21 @@ export class GestionarProveedores {
     if (!existing) {
       throw new Error(`Proveedor not found: ${id}`);
     }
-    await this.proveedorRepo.delete(id);
+    await this.proveedorRepo.softDelete(id);
+  }
+
+  async restaurar(id: string): Promise<Proveedor> {
+    const existing = await this.proveedorRepo.findById(id);
+    if (!existing) {
+      throw new Error(`Proveedor not found: ${id}`);
+    }
+    await this.proveedorRepo.restore(id);
+    // Re-fetch to get the restored entity
+    const restored = await this.proveedorRepo.findById(id);
+    if (!restored) {
+      throw new Error(`Proveedor not found after restore: ${id}`);
+    }
+    return restored;
   }
 
   async obtenerPorId(id: string): Promise<Proveedor | null> {

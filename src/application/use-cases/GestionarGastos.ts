@@ -63,7 +63,20 @@ export class GestionarGastos {
     if (!existing) {
       throw new Error(`GastoFijo not found: ${id}`);
     }
-    await this.gastoRepo.delete(id);
+    await this.gastoRepo.softDelete(id);
+  }
+
+  async restaurar(id: string): Promise<GastoFijo> {
+    const existing = await this.gastoRepo.findById(id);
+    if (!existing) {
+      throw new Error(`GastoFijo not found: ${id}`);
+    }
+    await this.gastoRepo.restore(id);
+    const restored = await this.gastoRepo.findById(id);
+    if (!restored) {
+      throw new Error(`GastoFijo not found after restore: ${id}`);
+    }
+    return restored;
   }
 
   /**

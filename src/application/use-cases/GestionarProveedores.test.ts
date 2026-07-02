@@ -8,7 +8,9 @@ describe('GestionarProveedores', () => {
     findById: vi.fn(),
     findAll: vi.fn(),
     save: vi.fn(),
-    delete: vi.fn(),
+    softDelete: vi.fn(),
+    restore: vi.fn(),
+    findDeleted: vi.fn(),
   };
 
   const useCase = new GestionarProveedores(mockProveedorRepo);
@@ -54,14 +56,14 @@ describe('GestionarProveedores', () => {
   });
 
   describe('eliminar', () => {
-    it('should delete a proveedor', async () => {
+    it('should soft delete a proveedor', async () => {
       const existing = new Proveedor({ id: 'prov-1', nombre: 'Test Prov' });
       (mockProveedorRepo.findById as ReturnType<typeof vi.fn>).mockResolvedValue(existing);
-      (mockProveedorRepo.delete as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+      (mockProveedorRepo.softDelete as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
       await useCase.eliminar('prov-1');
 
-      expect(mockProveedorRepo.delete).toHaveBeenCalledWith('prov-1');
+      expect(mockProveedorRepo.softDelete).toHaveBeenCalledWith('prov-1');
     });
 
     it('should throw error when proveedor not found for deletion', async () => {

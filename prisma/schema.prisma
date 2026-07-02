@@ -28,12 +28,15 @@ enum RolUsuario {
 }
 
 model Proveedor {
-  id        String  @id @default(uuid())
-  nombre    String
-  telefono  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  lotes     Lote[]
+  id         String    @id @default(uuid())
+  nombre     String
+  telefono   String?
+  deletedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  lotes      Lote[]
+
+  @@index([deletedAt])
 }
 
 model Lote {
@@ -51,9 +54,12 @@ model Lote {
   stockDisponibleKg    Decimal      @default("0")
   estado               EstadoLote   @default(ACTIVO)
   version              Int          @default(1)
+  deletedAt            DateTime?
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
   ventas               Venta[]
+
+  @@index([deletedAt])
 }
 
 model Cliente {
@@ -62,9 +68,12 @@ model Cliente {
   tipo              TipoCliente
   precioDobleCrema  Decimal?
   precioSemisalado  Decimal?
+  deletedAt         DateTime?
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
   ventas            Venta[]
+
+  @@index([deletedAt])
 }
 
 model Venta {
@@ -85,19 +94,41 @@ model Venta {
 }
 
 model GastoFijo {
-  id        String   @id @default(uuid())
-  fecha     DateTime @default(now())
+  id        String    @id @default(uuid())
+  fecha     DateTime  @default(now())
   concepto  String
-  valor     Decimal  @default("0")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  valor     Decimal   @default("0")
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([deletedAt])
 }
 
 model Usuario {
-  id           String     @id @default(uuid())
-  email        String     @unique
+  id           String      @id @default(uuid())
+  email        String      @unique
   passwordHash String
-  role         RolUsuario @default(ADMIN)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  role         RolUsuario  @default(ADMIN)
+  deletedAt    DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  auditLogs    AuditLog[]
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  entityType  String
+  entityId    String
+  action      String
+  userId      String?
+  changes     String?
+  createdAt   DateTime @default(now())
+
+  user Usuario? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
 }
