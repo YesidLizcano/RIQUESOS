@@ -22,9 +22,16 @@ export async function middleware(request: NextRequest) {
   });
 
   if (!token) {
-    // Redirect unauthenticated users to login
+    // Distinguish expired sessions from never-logged-in users
+    const hasSessionCookie =
+      request.cookies.get('next-auth.session-token') ??
+      request.cookies.get('__Secure-next-auth.session-token');
+
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('callbackUrl', pathname);
+    if (hasSessionCookie) {
+      loginUrl.searchParams.set('error', 'SessionExpired');
+    }
     return NextResponse.redirect(loginUrl);
   }
 

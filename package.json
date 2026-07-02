@@ -12,7 +12,9 @@
     "backup": "npx tsx scripts/backup.ts",
     "db:push": "npx prisma db push",
     "db:seed": "npx prisma db seed",
-    "db:studio": "npx prisma studio"
+    "db:studio": "npx prisma studio",
+    "test:e2e": "npx playwright test",
+    "test:e2e:headed": "npx playwright test --headed"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
@@ -29,6 +31,7 @@
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/bcrypt": "^5.0.2",
     "@types/node": "^22.15.0",
     "@types/react": "^19.1.0",
