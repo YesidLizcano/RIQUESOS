@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum TipoProducto {
+  DOBLE_CREMA
+  SEMISALADO
+}
+
+enum TipoCliente {
+  MAYORISTA
+  MINORISTA
+}
+
+enum EstadoLote {
+  ACTIVO
+  AGOTADO
+}
+
+enum RolUsuario {
+  ADMIN
+  USER
+}
+
+model Proveedor {
+  id        String  @id @default(uuid())
+  nombre    String
+  telefono  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lotes     Lote[]
+}
+
+model Lote {
+  id                   String       @id @default(uuid())
+  producto             TipoProducto
+  fechaIngreso         DateTime     @default(now())
+  proveedorId          String
+  proveedor            Proveedor    @relation(fields: [proveedorId], references: [id])
+  cantidadCompradaKg   Decimal      @default("0")
+  precioCompraBaseKg   Decimal      @default("0")
+  costoFlete           Decimal      @default("0")
+  costoTajado          Decimal      @default("0")
+  costoEmpaques        Decimal      @default("0")
+  costoRealCalculadoKg Decimal      @default("0")
+  stockDisponibleKg    Decimal      @default("0")
+  estado               EstadoLote   @default(ACTIVO)
+  version              Int          @default(1)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  ventas               Venta[]
+}
+
+model Cliente {
+  id               String       @id @default(uuid())
+  nombre            String
+  tipo              TipoCliente
+  precioDobleCrema  Decimal?
+  precioSemisalado  Decimal?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  ventas            Venta[]
+}
+
+model Venta {
+  id               String   @id @default(uuid())
+  fecha            DateTime @default(now())
+  clienteId        String
+  cliente          Cliente  @relation(fields: [clienteId], references: [id])
+  loteId           String
+  lote             Lote     @relation(fields: [loteId], references: [id])
+  cantidadVendidaKg Decimal @default("0")
+  precioVentaKg    Decimal  @default("0")
+  ingresoTotal     Decimal  @default("0")
+  costoAplicado    Decimal  @default("0")
+  gananciaBruta    Decimal  @default("0")
+  valorDomicilio   Decimal  @default("0")
+  domiciliario     String   @default("")
+  createdAt        DateTime @default(now())
+}
+
+model GastoFijo {
+  id        String   @id @default(uuid())
+  fecha     DateTime @default(now())
+  concepto  String
+  valor     Decimal  @default("0")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Usuario {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String
+  role         RolUsuario @default(ADMIN)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
