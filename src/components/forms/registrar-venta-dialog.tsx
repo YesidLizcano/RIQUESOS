@@ -5,6 +5,7 @@ import { useRefresh } from '@/components/refresh-context';
 import { registrarVenta } from '@/presentation/actions/ventas';
 import { toast } from 'sonner';
 import { TipoProducto, TipoCliente } from '@/domain/enums';
+import { DOBLE_CREMA_BLOCK_KG } from '@/domain/constants';
 import type { ClienteResponse, LoteResponse } from '@/presentation/dtos';
 import {
   Dialog,
@@ -45,6 +46,11 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
   const selectedCliente = clientes.find((c) => c.id === clienteId);
   const selectedLote = lotesActivos.find((l) => l.id === loteId);
 
+  // Check if Doble Crema + Mayorista block constraint applies
+  const isDobleCremaMayorista =
+    selectedLote?.producto === TipoProducto.DOBLE_CREMA &&
+    selectedCliente?.tipo === TipoCliente.MAYORISTA;
+
   // Resolve the selling price based on client type and product
   const resolvedPrice = (() => {
     if (!selectedCliente || !selectedLote) return null;
@@ -63,6 +69,17 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
   })();
 
   async function action(formData: FormData) {
+    // Client-side validation: Doble Crema + Mayorista block constraint
+    if (isDobleCremaMayorista) {
+      const cantidad = parseFloat(cantidadVendidaKg);
+      if (!isNaN(cantidad)) {
+        const remainder = Number((cantidad / DOBLE_CREMA_BLOCK_KG).toFixed(6)) % 1;
+        if (Math.abs(remainder) >= 0.001) {
+          toast.error('Para Doble Crema mayorista, la cantidad debe ser múltiplo de 2.5 kg');
+          return;
+        }
+      }
+    }
     const result = await registrarVenta(formData);
     if (result.success) {
       toast.success('Venta registrada exitosamente');
@@ -138,6 +155,11 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
             {selectedLote && (
               <p className="text-xs text-muted-foreground">
                 Stock disponible: {Number(selectedLote.stockDisponibleKg).toLocaleString('es-AR')} Kg
+              </p>
+            )}
+            {isDobleCremaMayorista && (
+              <p className="text-xs text-muted-foreground">
+                Doble Crema mayorista: múltiplo de 2.5 kg
               </p>
             )}
           </div>

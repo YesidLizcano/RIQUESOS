@@ -5,6 +5,7 @@ import { useRefresh } from '@/components/refresh-context';
 import { crearLote } from '@/presentation/actions/lotes';
 import { toast } from 'sonner';
 import { TipoProducto } from '@/domain/enums';
+import { DOBLE_CREMA_BLOCK_KG } from '@/domain/constants';
 import type { ProveedorResponse } from '@/presentation/dtos';
 import {
   Dialog,
@@ -56,6 +57,17 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
   })();
 
   async function action(formData: FormData) {
+    // Client-side validation: Doble Crema block constraint
+    if (producto === TipoProducto.DOBLE_CREMA) {
+      const cantidad = parseFloat(cantidadCompradaKg);
+      if (!isNaN(cantidad)) {
+        const remainder = Number((cantidad / DOBLE_CREMA_BLOCK_KG).toFixed(6)) % 1;
+        if (Math.abs(remainder) >= 0.001) {
+          toast.error('Para Doble Crema, la cantidad debe ser múltiplo de 2.5 kg');
+          return;
+        }
+      }
+    }
     const result = await crearLote(formData);
     if (result.success) {
       toast.success('Lote creado exitosamente');
@@ -129,6 +141,11 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
               onChange={(e) => setCantidadCompradaKg(e.target.value)}
               required
             />
+            {producto === TipoProducto.DOBLE_CREMA && (
+              <p className="text-xs text-muted-foreground">
+                Doble Crema: múltiplo de 2.5 kg
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

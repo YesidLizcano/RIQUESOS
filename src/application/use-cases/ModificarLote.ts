@@ -2,6 +2,8 @@
 // Application layer: can import from Domain but NOT from Infrastructure
 import { Lote } from '../../domain/entities/Lote';
 import { ConcurrencyError } from '../../domain/errors/ConcurrencyError';
+import { TipoProducto } from '../../domain/enums';
+import { DOBLE_CREMA_BLOCK_KG } from '../../domain/constants';
 import type { LoteRepository } from '../../domain/ports/LoteRepository';
 
 export interface ModificarLoteInput {
@@ -27,6 +29,15 @@ export class ModificarLote {
       throw new ConcurrencyError(
         `Lote ${input.id} was modified by another transaction (expected version ${input.version}, current version ${existing.version})`
       );
+    }
+
+    // Doble Crema block constraint: if updating quantity, validate block multiple
+    if (existing.producto === TipoProducto.DOBLE_CREMA && input.cantidadCompradaKg !== undefined) {
+      const cantidad = Number(input.cantidadCompradaKg);
+      const remainder = Number((cantidad / DOBLE_CREMA_BLOCK_KG).toFixed(6)) % 1;
+      if (Math.abs(remainder) >= 0.001) {
+        throw new Error('Para Doble Crema, la cantidad debe ser múltiplo de 2.5 kg');
+      }
     }
 
     const updated = existing.updateCosts({

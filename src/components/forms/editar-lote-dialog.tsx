@@ -4,6 +4,8 @@ import { useState, useMemo } from 'react';
 import { useRefresh } from '@/components/refresh-context';
 import { modificarLote } from '@/presentation/actions/lotes';
 import { toast } from 'sonner';
+import { TipoProducto } from '@/domain/enums';
+import { DOBLE_CREMA_BLOCK_KG } from '@/domain/constants';
 import type { LoteResponse } from '@/presentation/dtos';
 import {
   Dialog,
@@ -44,6 +46,17 @@ export function EditarLoteDialog({ lote, open, onOpenChange }: EditarLoteDialogP
   }, [cantidadCompradaKg, precioCompraBaseKg, costoFlete, costoTajado, costoEmpaques]);
 
   async function action(formData: FormData) {
+    // Client-side validation: Doble Crema block constraint
+    if (lote.producto === TipoProducto.DOBLE_CREMA) {
+      const cantidad = parseFloat(cantidadCompradaKg);
+      if (!isNaN(cantidad)) {
+        const remainder = Number((cantidad / DOBLE_CREMA_BLOCK_KG).toFixed(6)) % 1;
+        if (Math.abs(remainder) >= 0.001) {
+          toast.error('Para Doble Crema, la cantidad debe ser múltiplo de 2.5 kg');
+          return;
+        }
+      }
+    }
     const result = await modificarLote(formData);
     if (result.success) {
       toast.success('Lote actualizado exitosamente');
@@ -97,6 +110,11 @@ export function EditarLoteDialog({ lote, open, onOpenChange }: EditarLoteDialogP
               onChange={(e) => setCantidadCompradaKg(e.target.value)}
               required
             />
+            {lote.producto === TipoProducto.DOBLE_CREMA && (
+              <p className="text-xs text-muted-foreground">
+                Doble Crema: múltiplo de 2.5 kg
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

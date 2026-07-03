@@ -1,5 +1,6 @@
 // Domain barrel export
 export { TipoProducto, TipoCliente, EstadoLote, RolUsuario } from './enums';
+export { DOBLE_CREMA_BLOCK_KG } from './constants';
 export { Dinero } from './value-objects/Dinero';
 export { Kilogramo } from './value-objects/Kilogramo';
 export { Proveedor, type ProveedorProps } from './entities/Proveedor';

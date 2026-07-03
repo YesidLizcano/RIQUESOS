@@ -4,6 +4,8 @@ import { Venta } from '../../domain/entities/Venta';
 import { Lote } from '../../domain/entities/Lote';
 import { Dinero } from '../../domain/value-objects/Dinero';
 import { Kilogramo } from '../../domain/value-objects/Kilogramo';
+import { TipoProducto, TipoCliente } from '../../domain/enums';
+import { DOBLE_CREMA_BLOCK_KG } from '../../domain/constants';
 import type { VentaRepository } from '../../domain/ports/VentaRepository';
 import type { LoteRepository } from '../../domain/ports/LoteRepository';
 import type { ClienteRepository } from '../../domain/ports/ClienteRepository';
@@ -42,6 +44,15 @@ export class RegistrarVenta {
     let lote = await this.loteRepo.findById(input.loteId);
     if (!lote) {
       throw new Error(`Lote not found: ${input.loteId}`);
+    }
+
+    // 2b. Doble Crema + Mayorista block constraint
+    if (lote.producto === TipoProducto.DOBLE_CREMA && cliente.tipo === TipoCliente.MAYORISTA) {
+      const cantidad = Number(input.cantidadVendidaKg);
+      const remainder = Number((cantidad / DOBLE_CREMA_BLOCK_KG).toFixed(6)) % 1;
+      if (Math.abs(remainder) >= 0.001) {
+        throw new Error('Para Doble Crema mayorista, la cantidad debe ser múltiplo de 2.5 kg');
+      }
     }
 
     // 3. Resolve price based on cliente type
