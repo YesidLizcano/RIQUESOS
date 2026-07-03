@@ -3,7 +3,8 @@ import { prisma } from '@/infrastructure/db';
 
 /**
  * Record an audit log entry for a CREATE, UPDATE, DELETE, or RESTORE action.
- * userId comes from the auth session; null for system actions.
+ * userId comes from the auth session; null for system actions or if unavailable.
+ * Only sets userId if it's a non-empty string to avoid FK constraint violations.
  */
 export async function recordAuditLog(params: {
   entityType: string;
@@ -18,7 +19,8 @@ export async function recordAuditLog(params: {
         entityType: params.entityType,
         entityId: params.entityId,
         action: params.action,
-        userId: params.userId ?? null,
+        // Only set userId if it's a valid non-empty string; otherwise null
+        userId: params.userId && params.userId.trim() !== '' ? params.userId : null,
         changes: params.changes ? JSON.stringify(params.changes) : null,
       },
     });
