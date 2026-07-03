@@ -5,6 +5,8 @@ import { useRefresh } from '@/components/refresh-context';
 import { modificarLote } from '@/presentation/actions/lotes';
 import { toast } from 'sonner';
 import { isDobleCrema, DOBLE_CREMA_BLOCK_KG } from '@/domain/constants';
+import { TipoProducto } from '@/domain/enums';
+import { tipoProductoLabel } from '@/domain/labels';
 import type { LoteResponse } from '@/presentation/dtos';
 import {
   Dialog,
@@ -21,9 +23,10 @@ interface EditarLoteDialogProps {
   lote: LoteResponse;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  proveedorNombre?: string;
 }
 
-export function EditarLoteDialog({ lote, open, onOpenChange }: EditarLoteDialogProps) {
+export function EditarLoteDialog({ lote, open, onOpenChange, proveedorNombre }: EditarLoteDialogProps) {
   const refreshData = useRefresh();
   const isDobleCremaLote = isDobleCrema(lote.producto);
 
@@ -79,7 +82,7 @@ export function EditarLoteDialog({ lote, open, onOpenChange }: EditarLoteDialogP
           <div className="space-y-2">
             <Label>Producto</Label>
             <Input
-              value={lote.producto === 'DOBLE_CREMA' ? 'Doble Crema' : 'Semisalado'}
+              value={tipoProductoLabel[lote.producto as TipoProducto] ?? lote.producto}
               disabled
               className="bg-muted"
             />
@@ -88,7 +91,7 @@ export function EditarLoteDialog({ lote, open, onOpenChange }: EditarLoteDialogP
           <div className="space-y-2">
             <Label>Proveedor</Label>
             <Input
-              value={lote.proveedorId}
+              value={proveedorNombre ?? lote.proveedorId}
               disabled
               className="bg-muted"
             />
@@ -98,7 +101,7 @@ export function EditarLoteDialog({ lote, open, onOpenChange }: EditarLoteDialogP
             <div className="rounded-lg bg-muted/50 p-3 space-y-1">
               <p className="text-sm font-medium">Bloques</p>
               <p className="text-xs text-muted-foreground">
-                Enteros: {lote.bloquesEnteros} | Tajados: {lote.bloquesTajados} | De Fábrica: {lote.bloquesTajadosDeFabrica}
+                Enteros: {lote.bloquesEnteros} | Tajados: {lote.bloquesTajadosDisponibles} | De Fábrica: {lote.bloquesTajadosDeFabrica}
               </p>
               <p className="text-xs text-muted-foreground">
                 Gestión de bloques vía módulo de Tajado

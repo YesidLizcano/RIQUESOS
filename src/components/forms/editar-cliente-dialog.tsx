@@ -5,6 +5,8 @@ import { useRefresh } from '@/components/refresh-context';
 import { actualizarCliente } from '@/presentation/actions/clientes';
 import { toast } from 'sonner';
 import type { ClienteResponse } from '@/presentation/dtos';
+import { TipoCliente } from '@/domain/enums';
+import { tipoClienteLabel } from '@/domain/labels';
 import {
   Dialog,
   DialogContent,
@@ -63,7 +65,7 @@ export function EditarClienteDialog({ cliente, open, onOpenChange }: EditarClien
           <div className="space-y-2">
             <Label>Tipo</Label>
             <Input
-              value={cliente.tipo === 'MAYORISTA' ? 'Mayorista' : 'Minorista'}
+              value={tipoClienteLabel[cliente.tipo as TipoCliente] ?? cliente.tipo}
               disabled
               className="bg-muted"
             />

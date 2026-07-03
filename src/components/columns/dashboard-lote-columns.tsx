@@ -3,11 +3,17 @@
 import { ColumnDef } from '@tanstack/react-table';
 import type { LoteResponse } from '@/presentation/dtos';
 import { Badge } from '@/components/ui/badge';
+import { TipoProducto, EstadoLote } from '@/domain/enums';
+import { tipoProductoLabel, estadoLoteLabel } from '@/domain/labels';
 
 export const lotesColumns: ColumnDef<LoteResponse, unknown>[] = [
   {
     accessorKey: 'producto',
     header: 'Producto',
+    cell: ({ row }) => {
+      const producto = row.getValue('producto') as string;
+      return tipoProductoLabel[producto as TipoProducto] ?? producto;
+    },
   },
   {
     accessorKey: 'stockDisponibleKg',
@@ -26,7 +32,7 @@ export const lotesColumns: ColumnDef<LoteResponse, unknown>[] = [
       const estado = row.getValue('estado') as string;
       return (
         <Badge variant={estado === 'ACTIVO' ? 'default' : 'secondary'}>
-          {estado}
+          {estadoLoteLabel[estado as EstadoLote] ?? estado}
         </Badge>
       );
     },

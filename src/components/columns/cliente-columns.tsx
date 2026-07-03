@@ -9,6 +9,8 @@ import { EditarClienteDialog } from '@/components/forms/editar-cliente-dialog';
 import { DeleteConfirmDialog } from '@/components/forms/delete-confirm-dialog';
 import { eliminarCliente, restaurarCliente } from '@/presentation/actions/clientes';
 import { toast } from 'sonner';
+import { TipoCliente } from '@/domain/enums';
+import { tipoClienteLabel } from '@/domain/labels';
 
 export function ClienteActions({ cliente }: { cliente: ClienteResponse }) {
   const refreshData = useRefresh();
@@ -102,7 +104,7 @@ export function createClienteColumns(
         const tipo = row.getValue('tipo') as string;
         return (
           <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${tipo === 'MAYORISTA' ? 'bg-primary/10 text-primary' : 'bg-secondary/10 text-secondary-foreground'}`}>
-            {tipo}
+            {tipoClienteLabel[tipo as TipoCliente] ?? tipo}
           </span>
         );
       },

@@ -3,6 +3,8 @@
 import { ColumnDef } from '@tanstack/react-table';
 import type { VentaResponse } from '@/presentation/dtos';
 import { bloquesCompletos, isDobleCrema } from '@/domain/constants';
+import { TipoProducto } from '@/domain/enums';
+import { tipoProductoLabel } from '@/domain/labels';
 
 /** Check if a kg value is a whole number of blocks (within floating-point tolerance) */
 function isWholeBlocks(kg: number): boolean {
@@ -24,9 +26,9 @@ export function createVentaColumns(
       header: 'Cliente',
       accessorFn: (row) => {
         if (clienteMap) {
-          return clienteMap.get((row as VentaResponse).clienteId) ?? (row as VentaResponse).clienteId;
+          return clienteMap.get((row as VentaResponse).clienteId) ?? '—';
         }
-        return (row as VentaResponse).clienteId;
+        return '—';
       },
       filterFn: (row, _columnId, filterValue) => {
         return (row.original as VentaResponse).clienteId === filterValue;
@@ -42,7 +44,7 @@ export function createVentaColumns(
       enableGlobalFilter: false,
       cell: ({ row }) => {
         const producto = row.getValue('producto') as string;
-        return producto === 'DOBLE_CREMA' ? 'Doble Crema' : 'Semisalado';
+        return producto ? (tipoProductoLabel[producto as TipoProducto] ?? producto) : '';
       },
     },
     {

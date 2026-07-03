@@ -11,6 +11,8 @@ import { eliminarLote, restaurarLote } from '@/presentation/actions/lotes';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { bloquesCompletos, kgParciales, isDobleCrema, DOBLE_CREMA_BLOCK_KG } from '@/domain/constants';
+import { TipoProducto, EstadoLote } from '@/domain/enums';
+import { tipoProductoLabel, estadoLoteLabel } from '@/domain/labels';
 
 export interface AlertaInfo {
   stockSeverity?: 'warning' | 'critical';
@@ -18,7 +20,7 @@ export interface AlertaInfo {
   diasEnInventario: number;
 }
 
-export function LoteActions({ lote }: { lote: LoteResponse }) {
+export function LoteActions({ lote, proveedorNombre }: { lote: LoteResponse; proveedorNombre?: string }) {
   const refreshData = useRefresh();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -76,11 +78,11 @@ export function LoteActions({ lote }: { lote: LoteResponse }) {
       >
         <Trash2 className="size-4" />
       </button>
-      <EditarLoteDialog lote={lote} open={editOpen} onOpenChange={setEditOpen} />
+      <EditarLoteDialog lote={lote} open={editOpen} onOpenChange={setEditOpen} proveedorNombre={proveedorNombre} />
       <DeleteConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        entityName={`el lote de ${lote.producto === 'DOBLE_CREMA' ? 'Doble Crema' : 'Semisalado'}`}
+        entityName={`el lote de ${tipoProductoLabel[lote.producto as TipoProducto] ?? lote.producto}`}
         onConfirm={handleDelete}
       />
     </>
@@ -101,7 +103,7 @@ export function createLoteColumns(
         const isDeleted = row.original.deletedAt !== null;
         return (
           <span className={isDeleted ? 'line-through opacity-50' : ''}>
-            {producto === 'DOBLE_CREMA' ? 'Doble Crema' : 'Semisalado'}
+             {tipoProductoLabel[producto as TipoProducto] ?? producto}
           </span>
         );
       },
@@ -111,9 +113,9 @@ export function createLoteColumns(
       header: 'Proveedor',
       accessorFn: (row) => {
         if (proveedorMap) {
-          return proveedorMap.get(row.proveedorId) ?? row.proveedorId;
+          return proveedorMap.get(row.proveedorId) ?? '—';
         }
-        return row.proveedorId;
+        return '—';
       },
       filterFn: (row, _columnId, filterValue) => {
         return row.original.proveedorId === filterValue;
@@ -270,20 +272,20 @@ export function createLoteColumns(
       accessorKey: 'estado',
       header: 'Estado',
       enableGlobalFilter: false,
-      cell: ({ row }) => {
-        const estado = row.getValue('estado') as string;
-        return (
-          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${estado === 'ACTIVO' ? 'bg-primary/10 text-primary' : 'bg-secondary/10 text-secondary-foreground'}`}>
-            {estado}
-          </span>
-        );
-      },
+        cell: ({ row }) => {
+          const estado = row.getValue('estado') as string;
+          return (
+            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${estado === 'ACTIVO' ? 'bg-primary/10 text-primary' : 'bg-secondary/10 text-secondary-foreground'}`}>
+              {estadoLoteLabel[estado as EstadoLote] ?? estado}
+            </span>
+          );
+        },
     },
     {
       id: 'actions',
       header: 'Acciones',
       enableGlobalFilter: false,
-      cell: ({ row }) => <LoteActions lote={row.original} />,
+      cell: ({ row }) => <LoteActions lote={row.original} proveedorNombre={proveedorMap?.get(row.original.proveedorId)} />,
     },
   ];
 }

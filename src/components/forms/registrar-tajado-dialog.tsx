@@ -6,6 +6,8 @@ import { registrarTajado } from '@/presentation/actions/tajados';
 import { toast } from 'sonner';
 import type { LoteResponse } from '@/presentation/dtos';
 import { DOBLE_CREMA_BLOCK_KG } from '@/domain/constants';
+import { TipoProducto } from '@/domain/enums';
+import { tipoProductoLabel } from '@/domain/labels';
 import {
   Dialog,
   DialogContent,
@@ -90,7 +92,7 @@ export function RegistrarTajadoDialog({ lotes }: RegistrarTajadoDialogProps) {
               <SelectContent>
                 {availableLotes.map((l) => (
                   <SelectItem key={l.id} value={l.id}>
-                    Lote {l.id.slice(0, 8)}... — {l.bloquesEnteros} bloques enteros ({Number(l.cantidadCompradaKg).toLocaleString('es-AR')} kg)
+                    {tipoProductoLabel[l.producto as TipoProducto] ?? l.producto} — {l.bloquesEnteros} bloques enteros ({Number(l.cantidadCompradaKg).toLocaleString('es-AR')} kg)
                   </SelectItem>
                 ))}
               </SelectContent>

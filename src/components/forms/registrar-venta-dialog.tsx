@@ -5,6 +5,7 @@ import { useRefresh } from '@/components/refresh-context';
 import { registrarVenta } from '@/presentation/actions/ventas';
 import { toast } from 'sonner';
 import { TipoProducto, TipoCliente } from '@/domain/enums';
+import { tipoProductoLabel, tipoClienteLabel } from '@/domain/labels';
 import { DOBLE_CREMA_BLOCK_KG, bloquesCompletos, isDobleCrema } from '@/domain/constants';
 import type { ClienteResponse, LoteResponse, VentaTipo } from '@/presentation/dtos';
 import {
@@ -203,7 +204,7 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
               <SelectContent>
                 {clientes.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
-                    {c.nombre} ({c.tipo === 'MAYORISTA' ? 'Mayorista' : 'Minorista'})
+                    {c.nombre} ({tipoClienteLabel[c.tipo as TipoCliente] ?? c.tipo})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -226,8 +227,8 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
                 {filteredLotes.map((l) => (
                   <SelectItem key={l.id} value={l.id}>
                     {isDobleCrema(l.producto)
-                      ? `${l.producto === 'DOBLE_CREMA' ? 'Doble Crema' : 'Semisalado'} — ${l.bloquesEnteros} ent. / ${l.bloquesTajadosDisponibles} taj. (${Number(l.stockDisponibleKg).toLocaleString('es-AR')} kg)`
-                      : `${l.producto === 'DOBLE_CREMA' ? 'Doble Crema' : 'Semisalado'} — ${Number(l.stockDisponibleKg).toLocaleString('es-AR')} kg disp.`
+                      ? `${tipoProductoLabel[l.producto as TipoProducto] ?? l.producto} — ${l.bloquesEnteros} ent. / ${l.bloquesTajadosDisponibles} taj. (${Number(l.stockDisponibleKg).toLocaleString('es-AR')} kg)`
+                      : `${tipoProductoLabel[l.producto as TipoProducto] ?? l.producto} — ${Number(l.stockDisponibleKg).toLocaleString('es-AR')} kg disp.`
                     }
                   </SelectItem>
                 ))}
