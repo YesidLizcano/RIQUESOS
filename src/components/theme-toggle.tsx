@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { useTheme } from 'next-themes'
 import { Sun, Moon, Monitor } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -9,12 +10,6 @@ import {
   TooltipContent,
 } from '@/components/ui/tooltip'
 
-const themeIcons = {
-  light: Moon,
-  dark: Sun,
-  system: Monitor,
-} as const
-
 const themeLabels: Record<string, string> = {
   light: 'Claro',
   dark: 'Oscuro',
@@ -22,7 +17,10 @@ const themeLabels: Record<string, string> = {
 }
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme()
+  const { theme, setTheme, resolvedTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => setMounted(true), [])
 
   const cycleTheme = () => {
     if (theme === 'light') setTheme('dark')
@@ -30,8 +28,15 @@ export function ThemeToggle() {
     else setTheme('light')
   }
 
-  const Icon = themeIcons[theme as keyof typeof themeIcons] ?? Monitor
   const label = themeLabels[theme ?? 'system'] ?? 'Sistema'
+
+  // Avoid hydration mismatch: render a neutral placeholder until mounted.
+  // On server resolvedTheme is undefined; on client it's 'light' or 'dark'.
+  const Icon = !mounted
+    ? Monitor
+    : resolvedTheme === 'dark'
+      ? Sun
+      : Moon
 
   return (
     <Tooltip>
@@ -40,12 +45,12 @@ export function ThemeToggle() {
           variant="ghost"
           size="icon"
           onClick={cycleTheme}
-          aria-label={`Tema actual: ${label}`}
+          aria-label={`Tema actual: ${mounted ? label : ''}`}
         >
           <Icon className="size-4" />
         </Button>
       </TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
+      <TooltipContent>{mounted ? label : ''}</TooltipContent>
     </Tooltip>
   )
 }
