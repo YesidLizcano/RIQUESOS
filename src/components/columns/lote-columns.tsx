@@ -159,9 +159,23 @@ export function createLoteColumns(
     },
     {
       accessorKey: 'costoRealCalculadoKg',
-      header: 'Costo Real/Kg',
+      header: 'Costo Real',
       enableGlobalFilter: false,
-      cell: ({ row }) => `$${Number(row.getValue('costoRealCalculadoKg')).toLocaleString('es-AR')}`,
+      cell: ({ row }) => {
+        const costoKg = Number(row.getValue('costoRealCalculadoKg'));
+        const producto = row.original.producto;
+        if (isDobleCrema(producto)) {
+          const costoBloque = costoKg * DOBLE_CREMA_BLOCK_KG;
+          return (
+            <span>
+              ${costoBloque.toLocaleString('es-AR', { minimumFractionDigits: 2 })}/bloque
+              <br />
+              <span className="text-xs text-muted-foreground">${costoKg.toLocaleString('es-AR', { minimumFractionDigits: 2 })}/kg</span>
+            </span>
+          );
+        }
+        return `$${costoKg.toLocaleString('es-AR')}/kg`;
+      },
     },
     {
       accessorKey: 'stockDisponibleKg',

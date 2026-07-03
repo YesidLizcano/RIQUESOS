@@ -19,8 +19,8 @@ describe('Lote', () => {
         costoTajado: '20000',
         costoEmpaques: '10000',
       });
-      // Costo_Real_Por_Kg = (3000 × 100 + 50000 + 20000 + 10000) / 100 = 3800
-      expect(lote.costoRealCalculadoKg.value).toBe('3800');
+      // Costo_Real_Por_Kg = (3000 × 100 + 50000 + 20000) / 100 = 3700  (empaques excluded)
+      expect(lote.costoRealCalculadoKg.value).toBe('3700');
     });
 
     it('should calculate Costo_Real_Por_Kg with zero optional costs', () => {
@@ -346,10 +346,10 @@ describe('Lote', () => {
       });
       // cantidadCompradaKg = 100
       // After tajado: costoTajado = 0 + 1500 * 10 = 15000
-      // costoReal = (3000 * 100 + 10000 + 15000 + 5000) / 100 = 3300
+      // costoReal = (3000 * 100 + 10000 + 15000) / 100 = 3250  (empaques excluded)
       const result = lote.registrarTajado(10, '1500');
       expect(result.costoTajado.value).toBe('15000');
-      expect(result.costoRealCalculadoKg.value).toBe('3300');
+      expect(result.costoRealCalculadoKg.value).toBe('3250');
     });
 
     it('should accumulate tajado costs across multiple tajado operations', () => {

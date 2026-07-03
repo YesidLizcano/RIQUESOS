@@ -80,14 +80,14 @@ export class Lote {
   }
 
   /**
-   * Costo_Real_Por_Kg = (Precio_Base × Cantidad + Flete + Tajado + Empaques) / Cantidad
+   * Costo_Real_Por_Kg = (Precio_Base × Cantidad + Flete + Tajado) / Cantidad
+   * Note: empaques cost is tracked per-venta, not per-lote
    */
   private calculateCostoReal(): Dinero {
     const costoBaseTotal = this.precioCompraBaseKg.multiply(this.cantidadCompradaKg.value);
     const costoTotal = costoBaseTotal
       .add(this.costoFlete)
-      .add(this.costoTajado)
-      .add(this.costoEmpaques);
+      .add(this.costoTajado);
     return costoTotal.divide(this.cantidadCompradaKg.value);
   }
 

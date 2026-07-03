@@ -58,8 +58,8 @@ describe('CrearLote', () => {
     });
 
     // precioCompraBaseKg = 7500 / 2.5 = 3000
-    // (3000 × 100 + 50000 + 0 + 10000) / 100 = 3600
-    expect(result.lote.costoRealCalculadoKg.value).toBe('3600');
+    // (3000 × 100 + 50000 + 0) / 100 = 3500  (empaques excluded from formula)
+    expect(result.lote.costoRealCalculadoKg.value).toBe('3500');
     expect(result.lote.precioPorBloque.value).toBe('7500');
     expect(result.lote.precioCompraBaseKg.value).toBe('3000');
     expect(result.lote.cantidadCompradaKg.value).toBe('100');

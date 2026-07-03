@@ -48,8 +48,8 @@ describe('PrismaLoteRepo — Integration', () => {
 
       expect(saved.id).toBeTruthy();
       expect(saved.producto).toBe(TipoProducto.DOBLE_CREMA);
-      // (3000 × 100 + 5000 + 2000 + 1000) / 100 = 3080
-      expect(saved.costoRealCalculadoKg.value).toBe('3080');
+      // (3000 × 100 + 5000 + 2000) / 100 = 3070  (empaques excluded)
+      expect(saved.costoRealCalculadoKg.value).toBe('3070');
       expect(saved.stockDisponibleKg.value).toBe('100');
       expect(saved.estado).toBe(EstadoLote.ACTIVO);
 

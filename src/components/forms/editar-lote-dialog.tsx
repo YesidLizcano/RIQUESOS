@@ -30,7 +30,6 @@ export function EditarLoteDialog({ lote, open, onOpenChange }: EditarLoteDialogP
   const [precioPorBloque, setPrecioPorBloque] = useState(lote.precioPorBloque);
   const [precioCompraBaseKg, setPrecioCompraBaseKg] = useState(lote.precioCompraBaseKg);
   const [costoFlete, setCostoFlete] = useState(lote.costoFlete);
-  const [costoEmpaques, setCostoEmpaques] = useState(lote.costoEmpaques);
 
   // For DC: derive precioCompraBaseKg from precioPorBloque
   const effectivePrecioBaseKg = isDobleCremaLote
@@ -42,13 +41,16 @@ export function EditarLoteDialog({ lote, open, onOpenChange }: EditarLoteDialogP
     const precioBase = effectivePrecioBaseKg;
     const flete = parseFloat(costoFlete) || 0;
     const tajado = parseFloat(lote.costoTajado) || 0;
-    const empaques = parseFloat(costoEmpaques) || 0;
 
     if (!cantidad || cantidad <= 0 || isNaN(precioBase)) return null;
 
-    const costoTotal = (precioBase * cantidad) + flete + tajado + empaques;
+    const costoTotal = (precioBase * cantidad) + flete + tajado;
     return costoTotal / cantidad;
-  }, [lote.cantidadCompradaKg, lote.costoTajado, effectivePrecioBaseKg, costoFlete, costoEmpaques, isDobleCremaLote, precioPorBloque, precioCompraBaseKg]);
+  }, [lote.cantidadCompradaKg, lote.costoTajado, effectivePrecioBaseKg, costoFlete, isDobleCremaLote, precioPorBloque, precioCompraBaseKg]);
+
+  const costoRealPorBloque = isDobleCremaLote && costoRealCalculadoKg !== null
+    ? costoRealCalculadoKg * DOBLE_CREMA_BLOCK_KG
+    : null;
 
   async function action(formData: FormData) {
     const result = await modificarLote(formData);
@@ -187,27 +189,24 @@ export function EditarLoteDialog({ lote, open, onOpenChange }: EditarLoteDialogP
             </p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="edit-costoEmpaques">Costo Empaques ($)</Label>
-            <Input
-              id="edit-costoEmpaques"
-              name="costoEmpaques"
-              type="number"
-              step="0.01"
-              min="0"
-              value={costoEmpaques}
-              onChange={(e) => setCostoEmpaques(e.target.value)}
-            />
-          </div>
-
-          {costoRealCalculadoKg !== null && !isNaN(costoRealCalculadoKg) && (
+          {isDobleCremaLote && costoRealPorBloque !== null ? (
+            <div className="rounded-lg bg-muted p-3">
+              <p className="text-sm text-muted-foreground">Costo Real Calculado por Bloque:</p>
+              <p className="text-lg font-semibold">
+                ${costoRealPorBloque.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                (${costoRealCalculadoKg!.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/kg)
+              </p>
+            </div>
+          ) : !isDobleCremaLote && costoRealCalculadoKg !== null && !isNaN(costoRealCalculadoKg) ? (
             <div className="rounded-lg bg-muted p-3">
               <p className="text-sm text-muted-foreground">Costo Real Calculado por Kg:</p>
               <p className="text-lg font-semibold">
                 ${costoRealCalculadoKg.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
-          )}
+          ) : null}
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
