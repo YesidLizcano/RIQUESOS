@@ -22,6 +22,8 @@ export class PrismaVentaRepo implements VentaRepository {
         domiciliario: venta.domiciliario,
         ventaTipo: venta.ventaTipo,
         bloquesReempacados: venta.bloquesReempacados,
+        bloquesEnterosVendidos: venta.bloquesEnterosVendidos,
+        bloquesTajadosVendidos: venta.bloquesTajadosVendidos,
         costoEmpaques: new Prisma.Decimal(venta.costoEmpaques.value),
       },
     });
@@ -79,18 +81,23 @@ export class PrismaVentaRepo implements VentaRepository {
           };
 
           if (ventaTipo === 'BLOQUES' && (lote.producto as string) === TipoProducto.DOBLE_CREMA) {
-            // Block deduction: decrement bloquesEnteros by the number of blocks sold
-            const cantidadBloques = Number(cantidadKg) / DOBLE_CREMA_BLOCK_KG;
-            if (!Number.isInteger(cantidadBloques)) {
-              throw new Error('Block quantity must be an integer for BLOQUES venta');
-            }
-            const currentBloques = lote.bloquesEnteros;
-            if (currentBloques < cantidadBloques) {
+            // Block deduction: decrement bloquesEnteros and bloquesTajados
+            const bloquesEnterosVendidos = venta.bloquesEnterosVendidos ?? 0;
+            const bloquesTajadosVendidos = venta.bloquesTajadosVendidos ?? 0;
+
+            if (bloquesEnterosVendidos > lote.bloquesEnteros) {
               throw new Error(
-                `Insufficient blocks: available ${currentBloques}, requested ${cantidadBloques}`
+                `Insufficient whole blocks: available ${lote.bloquesEnteros}, requested ${bloquesEnterosVendidos}`
               );
             }
-            loteUpdateData.bloquesEnteros = currentBloques - cantidadBloques;
+            if (bloquesTajadosVendidos > lote.bloquesTajados) {
+              throw new Error(
+                `Insufficient cut blocks: available ${lote.bloquesTajados}, requested ${bloquesTajadosVendidos}`
+              );
+            }
+
+            loteUpdateData.bloquesEnteros = lote.bloquesEnteros - bloquesEnterosVendidos;
+            loteUpdateData.bloquesTajados = lote.bloquesTajados - bloquesTajadosVendidos;
           } else if ((lote.producto as string) === TipoProducto.DOBLE_CREMA) {
             // Granel (kg) deduction for Doble Crema: recalculate bloquesEnteros
             // Partial kg sales can reduce complete block count
@@ -225,6 +232,8 @@ export class PrismaVentaRepo implements VentaRepository {
       domiciliario: record.domiciliario,
       ventaTipo: (record.ventaTipo as 'BLOQUES' | 'GRANEL') ?? 'GRANEL',
       bloquesReempacados: record.bloquesReempacados ?? 0,
+      bloquesEnterosVendidos: record.bloquesEnterosVendidos ?? 0,
+      bloquesTajadosVendidos: record.bloquesTajadosVendidos ?? 0,
       costoEmpaques: record.costoEmpaques?.toString() ?? '0',
     });
   }

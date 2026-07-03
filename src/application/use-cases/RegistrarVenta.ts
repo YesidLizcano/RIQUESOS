@@ -20,6 +20,8 @@ export interface RegistrarVentaInput {
   domiciliario?: string;
   ventaTipo?: VentaTipo;
   bloquesReempacados?: number;
+  bloquesEnterosVendidos?: number; // whole blocks sold
+  bloquesTajadosVendidos?: number; // cut blocks sold
 }
 
 export interface RegistrarVentaOutput {
@@ -53,21 +55,23 @@ export class RegistrarVenta {
       throw new Error(`Lote not found: ${input.loteId}`);
     }
 
-    // 2b. Validate ventaTipo against client and product rules
-    if (lote.producto === TipoProducto.DOBLE_CREMA && ventaTipo === 'BLOQUES') {
-      const cantidad = Number(input.cantidadVendidaKg);
-      const bloques = cantidad / DOBLE_CREMA_BLOCK_KG;
-      if (!Number.isInteger(bloques)) {
-        throw new Error('Para venta por bloques, la cantidad debe ser múltiplo de 2.5 kg');
-      }
-    }
+    // 2b. Validate block quantities for BLOQUES ventas
+    const bloquesEnterosVendidos = input.bloquesEnterosVendidos ?? 0;
+    const bloquesTajadosVendidos = input.bloquesTajadosVendidos ?? 0;
 
-    // Doble Crema + Mayorista block constraint (legacy validation)
-    if (lote.producto === TipoProducto.DOBLE_CREMA && cliente.tipo === TipoCliente.MAYORISTA && ventaTipo === 'BLOQUES') {
-      const cantidad = Number(input.cantidadVendidaKg);
-      const bloques = cantidad / DOBLE_CREMA_BLOCK_KG;
-      if (!Number.isInteger(bloques)) {
-        throw new Error('Para Doble Crema mayorista, la cantidad debe ser múltiplo de 2.5 kg');
+    if (lote.producto === TipoProducto.DOBLE_CREMA && ventaTipo === 'BLOQUES') {
+      // Validate that total blocks matches cantidadVendidaKg
+      const totalBloques = bloquesEnterosVendidos + bloquesTajadosVendidos;
+      const cantidadBloques = Number(input.cantidadVendidaKg) / DOBLE_CREMA_BLOCK_KG;
+      if (totalBloques !== Math.round(cantidadBloques)) {
+        throw new Error(`La cantidad de bloques (${totalBloques}) no coincide con los kg vendidos (${input.cantidadVendidaKg})`);
+      }
+      // Validate available stock
+      if (bloquesEnterosVendidos > lote.bloquesEnteros) {
+        throw new Error(`Bloques enteros insuficientes: disponible ${lote.bloquesEnteros}, solicitado ${bloquesEnterosVendidos}`);
+      }
+      if (bloquesTajadosVendidos > lote.bloquesTajados) {
+        throw new Error(`Bloques tajados insuficientes: disponible ${lote.bloquesTajados}, solicitado ${bloquesTajadosVendidos}`);
       }
     }
 

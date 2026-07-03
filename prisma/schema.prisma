@@ -127,9 +127,11 @@ model Venta {
   gananciaBruta    Decimal   @default("0")
   valorDomicilio   Decimal   @default("0")
   domiciliario     String    @default("")
-  ventaTipo        VentaTipo @default(GRANEL)
-  bloquesReempacados Int      @default(0)
-  costoEmpaques     Decimal  @default("0")
+  ventaTipo              VentaTipo @default(GRANEL)
+  bloquesReempacados     Int      @default(0)
+  bloquesEnterosVendidos Int     @default(0)
+  bloquesTajadosVendidos Int     @default(0)
+  costoEmpaques          Decimal  @default("0")
   createdAt        DateTime  @default(now())
 }
 

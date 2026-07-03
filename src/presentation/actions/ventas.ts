@@ -36,6 +36,8 @@ function ventaToResponse(venta: import('@/domain/entities/Venta').Venta): VentaR
     domiciliario: venta.domiciliario,
     ventaTipo: venta.ventaTipo,
     bloquesReempacados: venta.bloquesReempacados,
+    bloquesEnterosVendidos: venta.bloquesEnterosVendidos,
+    bloquesTajadosVendidos: venta.bloquesTajadosVendidos,
     costoEmpaques: venta.costoEmpaques.value,
   };
 }
@@ -57,6 +59,8 @@ export async function registrarVenta(formData: FormData) {
     domiciliario: parsed.data.domiciliario || undefined,
     ventaTipo: (parsed.data.ventaTipo as VentaTipo) ?? 'GRANEL',
     bloquesReempacados: parsed.data.bloquesReempacados ?? 0,
+    bloquesEnterosVendidos: parsed.data.bloquesEnterosVendidos ?? 0,
+    bloquesTajadosVendidos: parsed.data.bloquesTajadosVendidos ?? 0,
   };
 
   try {

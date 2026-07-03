@@ -37,17 +37,19 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
   const [open, setOpen] = useState(false);
   const [clienteId, setClienteId] = useState<string>('');
   const [loteId, setLoteId] = useState<string>('');
+  const [bloquesEnteros, setBloquesEnteros] = useState<string>('');
+  const [bloquesTajados, setBloquesTajados] = useState<string>('');
   const [cantidadInput, setCantidadInput] = useState<string>('');
   const [ventaTipo, setVentaTipo] = useState<VentaTipo>('GRANEL');
   const [bloquesReempacados, setBloquesReempacados] = useState<string>('');
   const [precioVenta, setPrecioVenta] = useState<string>('');
 
-  // Filter only active lotes
-  const lotesActivos = lotes.filter((l) => l.estado === 'ACTIVO');
+  // Filter only active lotes WITH stock
+  const lotesConStock = lotes.filter((l) => l.estado === 'ACTIVO' && Number(l.stockDisponibleKg) > 0);
 
   // Find selected client and lote for price resolution
   const selectedCliente = clientes.find((c) => c.id === clienteId);
-  const selectedLote = lotesActivos.find((l) => l.id === loteId);
+  const selectedLote = lotesConStock.find((l) => l.id === loteId);
 
   const isMayorista = selectedCliente?.tipo === TipoCliente.MAYORISTA;
   const isDobleCremaLote = selectedLote ? isDobleCrema(selectedLote.producto) : false;
@@ -67,8 +69,9 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
   const isBlockMode = effectiveVentaTipo === 'BLOQUES';
 
   // Convert UI input to kg for submission
+  const totalBloques = (parseInt(bloquesEnteros) || 0) + (parseInt(bloquesTajados) || 0);
   const cantidadVendidaKg = isBlockMode
-    ? String(parseFloat(cantidadInput || '0') * DOBLE_CREMA_BLOCK_KG || 0)
+    ? String(totalBloques * DOBLE_CREMA_BLOCK_KG || 0)
     : cantidadInput;
 
   // Resolve the selling price based on client type and product
@@ -76,7 +79,6 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
     if (!selectedCliente || !selectedLote) return null;
 
     if (selectedCliente.tipo === TipoCliente.MAYORISTA) {
-      // Mayorista uses custom price if available
       if (selectedLote.producto === TipoProducto.DOBLE_CREMA && selectedCliente.precioDobleCrema) {
         return Number(selectedCliente.precioDobleCrema);
       }
@@ -84,8 +86,7 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
         return Number(selectedCliente.precioSemisalado);
       }
     }
-    // Minorista or Mayorista without custom price: use lote's base price as reference
-    return null; // Must enter manually
+    return null;
   })();
 
   // Auto-fill price when client/lote selection resolves a price
@@ -97,36 +98,62 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
 
   // Lote filter: Mayorista should only see DC lotes
   const filteredLotes = isMayorista
-    ? lotesActivos.filter((l) => isDobleCrema(l.producto))
-    : lotesActivos;
+    ? lotesConStock.filter((l) => isDobleCrema(l.producto))
+    : lotesConStock;
 
   // Clear quantity when changing type
   function handleClienteChange(v: string) {
     setClienteId(v);
     setCantidadInput('');
+    setBloquesEnteros('');
+    setBloquesTajados('');
+    setBloquesReempacados('');
     setPrecioVenta('');
   }
 
   function handleLoteChange(v: string) {
     setLoteId(v);
     setCantidadInput('');
+    setBloquesEnteros('');
+    setBloquesTajados('');
+    setBloquesReempacados('');
     setPrecioVenta('');
   }
 
   function handleVentaTipoChange(tipo: VentaTipo) {
     setVentaTipo(tipo);
     setCantidadInput('');
+    setBloquesEnteros('');
+    setBloquesTajados('');
+    setBloquesReempacados('');
   }
 
   async function action(formData: FormData) {
     // Client-side validation for block mode
     if (isBlockMode) {
-      const bloques = parseFloat(cantidadInput);
-      if (isNaN(bloques) || !Number.isInteger(bloques) || bloques <= 0) {
-        toast.error('Ingrese la cantidad de bloques enteros');
+      const enteros = parseInt(bloquesEnteros) || 0;
+      const tajados = parseInt(bloquesTajados) || 0;
+      if (enteros + tajados <= 0) {
+        toast.error('Ingrese al menos un bloque');
+        return;
+      }
+      if (selectedLote) {
+        if (enteros > selectedLote.bloquesEnteros) {
+          toast.error(`Solo hay ${selectedLote.bloquesEnteros} bloques enteros disponibles`);
+          return;
+        }
+        if (tajados > selectedLote.bloquesTajados) {
+          toast.error(`Solo hay ${selectedLote.bloquesTajados} bloques tajados disponibles`);
+          return;
+        }
+      }
+      const reempacados = parseInt(bloquesReempacados) || 0;
+      if (reempacados > enteros + tajados) {
+        toast.error('Los reempacados no pueden superar los bloques vendidos');
         return;
       }
     }
+
     formData.set('cantidadVendidaKg', cantidadVendidaKg);
     formData.set('ventaTipo', effectiveVentaTipo);
     formData.set('bloquesReempacados', bloquesReempacados || '0');
@@ -139,6 +166,8 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
       setLoteId('');
       setCantidadInput('');
       setVentaTipo('GRANEL');
+      setBloquesEnteros('');
+      setBloquesTajados('');
       setBloquesReempacados('');
       setPrecioVenta('');
     } else {
@@ -152,7 +181,7 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
         <PlusIcon className="size-4" />
         Registrar Venta
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Registrar Venta</DialogTitle>
           <DialogDescription>
@@ -183,7 +212,7 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
             )}
           </div>
 
-          {/* Lote — filtered by client type */}
+          {/* Lote — filtered by client type and stock */}
           <div className="space-y-2">
             <Label htmlFor="loteId">Lote</Label>
             <Select name="loteId" value={loteId} onValueChange={(v) => v !== null && handleLoteChange(v)}>
@@ -194,7 +223,7 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
                 {filteredLotes.map((l) => (
                   <SelectItem key={l.id} value={l.id}>
                     {isDobleCrema(l.producto)
-                      ? `${l.producto === 'DOBLE_CREMA' ? 'Doble Crema' : 'Semisalado'} — ${l.bloquesEnteros} bloques disp. (${Number(l.stockDisponibleKg).toLocaleString('es-AR')} kg)`
+                      ? `${l.producto === 'DOBLE_CREMA' ? 'Doble Crema' : 'Semisalado'} — ${l.bloquesEnteros} ent. / ${l.bloquesTajados} taj. (${Number(l.stockDisponibleKg).toLocaleString('es-AR')} kg)`
                       : `${l.producto === 'DOBLE_CREMA' ? 'Doble Crema' : 'Semisalado'} — ${Number(l.stockDisponibleKg).toLocaleString('es-AR')} kg disp.`
                     }
                   </SelectItem>
@@ -231,67 +260,105 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
             </div>
           )}
 
-          {/* Cantidad — changes label/step based on mode */}
-          <div className="space-y-2">
-            <Label htmlFor="cantidadVendidaKg">
-              {isBlockMode ? 'Cantidad de Bloques' : 'Cantidad (Kg)'}
-            </Label>
-            <Input
-              id="cantidadVendidaKg"
-              name="cantidadVendidaKg"
-              type="number"
-              step={isBlockMode ? '1' : '0.01'}
-              min={isBlockMode ? '1' : '0.01'}
-              placeholder={isBlockMode ? 'Ej: 2' : '0'}
-              value={cantidadInput}
-              onChange={(e) => setCantidadInput(e.target.value)}
-              required
-            />
-            {selectedLote && isBlockMode && (
-              <>
+          {/* Block mode: enteros + tajados inputs */}
+          {isBlockMode && selectedLote && (
+            <>
+              <div className="rounded-lg bg-muted/50 p-3 space-y-1">
+                <p className="text-sm font-medium">Stock del lote</p>
                 <p className="text-xs text-muted-foreground">
-                  Bloques disponibles: {selectedLote.bloquesEnteros}
+                  Bloques enteros: {selectedLote.bloquesEnteros} | Bloques tajados: {selectedLote.bloquesTajados} | Total: {Number(selectedLote.stockDisponibleKg).toLocaleString('es-AR')} kg
                 </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="bloquesEnteros">Bloques Enteros</Label>
+                  <Input
+                    id="bloquesEnteros"
+                    type="number"
+                    step="1"
+                    min="0"
+                    max={String(selectedLote.bloquesEnteros)}
+                    placeholder="0"
+                    value={bloquesEnteros}
+                    onChange={(e) => setBloquesEnteros(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Disp.: {selectedLote.bloquesEnteros}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bloquesTajados">Bloques Tajados</Label>
+                  <Input
+                    id="bloquesTajados"
+                    type="number"
+                    step="1"
+                    min="0"
+                    max={String(selectedLote.bloquesTajados)}
+                    placeholder="0"
+                    value={bloquesTajados}
+                    onChange={(e) => setBloquesTajados(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Disp.: {selectedLote.bloquesTajados}
+                  </p>
+                </div>
+              </div>
+              {totalBloques > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  1 bloque = {DOBLE_CREMA_BLOCK_KG} kg
+                  Total: {totalBloques} bloques = {(totalBloques * DOBLE_CREMA_BLOCK_KG).toLocaleString('es-AR')} kg
                 </p>
-              </>
-            )}
-            {selectedLote && isDobleCremaLote && !isBlockMode && (
-              <p className="text-xs text-muted-foreground">
-                Stock disponible: {Number(selectedLote.stockDisponibleKg).toLocaleString('es-AR')} kg ({bloquesCompletos(Number(selectedLote.stockDisponibleKg))} bloques completos)
-              </p>
-            )}
-            {selectedLote && !isDobleCremaLote && (
-              <p className="text-xs text-muted-foreground">
-                Stock disponible: {Number(selectedLote.stockDisponibleKg).toLocaleString('es-AR')} kg
-              </p>
-            )}
-            {isBlockMode && cantidadInput && !isNaN(parseFloat(cantidadInput)) && (
-              <p className="text-xs text-muted-foreground">
-                Equivalente: {(parseFloat(cantidadInput) * DOBLE_CREMA_BLOCK_KG).toLocaleString('es-AR')} kg
-              </p>
-            )}
-          </div>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="bloquesReempacados">Bloques Reempacados</Label>
+                <Input
+                  id="bloquesReempacados"
+                  name="bloquesReempacados"
+                  type="number"
+                  step="1"
+                  min="0"
+                  max={String(totalBloques || '0')}
+                  placeholder="0"
+                  value={bloquesReempacados}
+                  onChange={(e) => setBloquesReempacados(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Cada bloque reempacado descuenta 1 empaque del inventario
+                </p>
+              </div>
+              <input type="hidden" name="cantidadVendidaKg" value={cantidadVendidaKg} />
+              <input type="hidden" name="ventaTipo" value={effectiveVentaTipo} />
+            </>
+          )}
 
-          {/* Bloques Reempacados — only for block mode */}
-          {isBlockMode && (
+          {/* Granel mode: kg input */}
+          {!isBlockMode && (
             <div className="space-y-2">
-              <Label htmlFor="bloquesReempacados">Bloques Reempacados</Label>
+              <Label htmlFor="cantidadVendidaKg">Cantidad (Kg)</Label>
               <Input
-                id="bloquesReempacados"
-                name="bloquesReempacados"
+                id="cantidadVendidaKg"
+                name="cantidadVendidaKg"
                 type="number"
-                step="1"
-                min="0"
-                max={cantidadInput || undefined}
+                step="0.01"
+                min="0.01"
                 placeholder="0"
-                value={bloquesReempacados}
-                onChange={(e) => setBloquesReempacados(e.target.value)}
+                value={cantidadInput}
+                onChange={(e) => setCantidadInput(e.target.value)}
+                required
               />
-              <p className="text-xs text-muted-foreground">
-                Cada bloque reempacado descuenta 1 empaque del inventario
-              </p>
+              {selectedLote && isDobleCremaLote && (
+                <p className="text-xs text-muted-foreground">
+                  Stock disponible: {Number(selectedLote.stockDisponibleKg).toLocaleString('es-AR')} kg ({bloquesCompletos(Number(selectedLote.stockDisponibleKg))} bloques completos)
+                </p>
+              )}
+              {selectedLote && !isDobleCremaLote && (
+                <p className="text-xs text-muted-foreground">
+                  Stock disponible: {Number(selectedLote.stockDisponibleKg).toLocaleString('es-AR')} kg
+                </p>
+              )}
+              <input type="hidden" name="ventaTipo" value={effectiveVentaTipo} />
+              <input type="hidden" name="bloquesReempacados" value="0" />
             </div>
           )}
 

@@ -18,6 +18,8 @@ export interface VentaProps {
   domiciliario?: string;
   ventaTipo?: VentaTipo;
   bloquesReempacados?: number;
+  bloquesEnterosVendidos?: number;
+  bloquesTajadosVendidos?: number;
   costoEmpaques?: string;
 }
 
@@ -35,6 +37,8 @@ export class Venta {
   readonly domiciliario: string;
   readonly ventaTipo: VentaTipo;
   readonly bloquesReempacados: number;
+  readonly bloquesEnterosVendidos: number;
+  readonly bloquesTajadosVendidos: number;
   readonly costoEmpaques: Dinero;
 
   constructor(props: VentaProps) {
@@ -48,6 +52,8 @@ export class Venta {
     this.domiciliario = props.domiciliario ?? '';
     this.ventaTipo = props.ventaTipo ?? 'GRANEL';
     this.bloquesReempacados = props.bloquesReempacados ?? 0;
+    this.bloquesEnterosVendidos = props.bloquesEnterosVendidos ?? 0;
+    this.bloquesTajadosVendidos = props.bloquesTajadosVendidos ?? 0;
     this.costoEmpaques = new Dinero(props.costoEmpaques ?? '0');
 
     // Costo aplicado por Kg (from the Lote's costoRealCalculadoKg)
