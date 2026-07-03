@@ -38,10 +38,13 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
   const [producto, setProducto] = useState<string>('');
   const [proveedorId, setProveedorId] = useState<string>('');
 
+  // Only show active proveedores in the dropdown
+  const activeProveedores = proveedores.filter((p) => !p.deletedAt);
+
   // Map proveedor IDs to names for Select display
   const proveedorLabels = useMemo(() => {
     const map = new Map<string, string>();
-    for (const p of proveedores) {
+    for (const p of activeProveedores) {
       map.set(p.id, p.nombre);
     }
     return map;
@@ -136,7 +139,7 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
                 <SelectValue placeholder="Seleccione proveedor">{proveedorId ? (proveedorLabels.get(proveedorId) ?? proveedorId) : 'Seleccione proveedor'}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {proveedores.map((p) => (
+                {activeProveedores.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.nombre}
                   </SelectItem>

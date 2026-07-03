@@ -40,9 +40,9 @@ export function RegistrarTajadoDialog({ lotes }: RegistrarTajadoDialogProps) {
   const [precioPorBloque, setPrecioPorBloque] = useState<string>('1500');
   const [tajador, setTajador] = useState<string>('');
 
-  // Filter DC lotes with bloquesEnteros > 0 and ACTIVO
+  // Filter DC lotes with bloquesEnteros > 0, ACTIVO, and not deleted
   const availableLotes = lotes.filter(
-    (l) => l.producto === 'DOBLE_CREMA' && l.bloquesEnteros > 0 && l.estado === 'ACTIVO'
+    (l) => l.producto === 'DOBLE_CREMA' && l.bloquesEnteros > 0 && l.estado === 'ACTIVO' && !l.deletedAt
   );
 
   // Map lote IDs to labels for Select display

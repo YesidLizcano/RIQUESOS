@@ -45,13 +45,14 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
   const [bloquesReempacados, setBloquesReempacados] = useState<string>('');
   const [precioVenta, setPrecioVenta] = useState<string>('');
 
-  // Filter only active lotes WITH stock
-  const lotesConStock = lotes.filter((l) => l.estado === 'ACTIVO' && Number(l.stockDisponibleKg) > 0);
+  // Filter only active (non-deleted) clientes and active lotes WITH stock
+  const activeClientes = clientes.filter((c) => !c.deletedAt);
+  const lotesConStock = lotes.filter((l) => l.estado === 'ACTIVO' && Number(l.stockDisponibleKg) > 0 && !l.deletedAt);
 
   // Maps for Select display (UUID → label)
   const clienteLabels = useMemo(() => {
     const map = new Map<string, string>();
-    for (const c of clientes) {
+    for (const c of activeClientes) {
       map.set(c.id, `${c.nombre} (${tipoClienteLabel[c.tipo as TipoCliente] ?? c.tipo})`);
     }
     return map;
@@ -68,8 +69,8 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
     return map;
   }, [lotesConStock]);
 
-  // Find selected client and lote for price resolution
-  const selectedCliente = clientes.find((c) => c.id === clienteId);
+  // Find selected client and lote for price resolution (from active lists)
+  const selectedCliente = activeClientes.find((c) => c.id === clienteId);
   const selectedLote = lotesConStock.find((l) => l.id === loteId);
 
   const isMayorista = selectedCliente?.tipo === TipoCliente.MAYORISTA;
@@ -222,7 +223,7 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
                 <SelectValue placeholder="Seleccione cliente">{clienteId ? (clienteLabels.get(clienteId) ?? 'Seleccione cliente') : 'Seleccione cliente'}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {clientes.map((c) => (
+                {activeClientes.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.nombre} ({tipoClienteLabel[c.tipo as TipoCliente] ?? c.tipo})
                   </SelectItem>
