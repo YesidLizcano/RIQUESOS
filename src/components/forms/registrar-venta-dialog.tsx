@@ -142,8 +142,8 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
           toast.error(`Solo hay ${selectedLote.bloquesEnteros} bloques enteros disponibles`);
           return;
         }
-        if (tajados > selectedLote.bloquesTajados) {
-          toast.error(`Solo hay ${selectedLote.bloquesTajados} bloques tajados disponibles`);
+        if (tajados > selectedLote.bloquesTajadosDisponibles) {
+          toast.error(`Solo hay ${selectedLote.bloquesTajadosDisponibles} bloques tajados disponibles`);
           return;
         }
       }
@@ -223,7 +223,7 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
                 {filteredLotes.map((l) => (
                   <SelectItem key={l.id} value={l.id}>
                     {isDobleCrema(l.producto)
-                      ? `${l.producto === 'DOBLE_CREMA' ? 'Doble Crema' : 'Semisalado'} — ${l.bloquesEnteros} ent. / ${l.bloquesTajados} taj. (${Number(l.stockDisponibleKg).toLocaleString('es-AR')} kg)`
+                      ? `${l.producto === 'DOBLE_CREMA' ? 'Doble Crema' : 'Semisalado'} — ${l.bloquesEnteros} ent. / ${l.bloquesTajadosDisponibles} taj. (${Number(l.stockDisponibleKg).toLocaleString('es-AR')} kg)`
                       : `${l.producto === 'DOBLE_CREMA' ? 'Doble Crema' : 'Semisalado'} — ${Number(l.stockDisponibleKg).toLocaleString('es-AR')} kg disp.`
                     }
                   </SelectItem>
@@ -266,7 +266,7 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
               <div className="rounded-lg bg-muted/50 p-3 space-y-1">
                 <p className="text-sm font-medium">Stock del lote</p>
                 <p className="text-xs text-muted-foreground">
-                  Bloques enteros: {selectedLote.bloquesEnteros} | Bloques tajados: {selectedLote.bloquesTajados} | Total: {Number(selectedLote.stockDisponibleKg).toLocaleString('es-AR')} kg
+                  Bloques enteros: {selectedLote.bloquesEnteros} | Bloques tajados: {selectedLote.bloquesTajadosDisponibles} | Total: {Number(selectedLote.stockDisponibleKg).toLocaleString('es-AR')} kg
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -294,14 +294,14 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
                     type="number"
                     step="1"
                     min="0"
-                    max={String(selectedLote.bloquesTajados)}
+                    max={String(selectedLote.bloquesTajadosDisponibles)}
                     placeholder="0"
                     value={bloquesTajados}
                     onChange={(e) => setBloquesTajados(e.target.value)}
                     required
                   />
                   <p className="text-xs text-muted-foreground">
-                    Disp.: {selectedLote.bloquesTajados}
+                    Disp.: {selectedLote.bloquesTajadosDisponibles}
                   </p>
                 </div>
               </div>

@@ -128,11 +128,11 @@ export function createLoteColumns(
         const producto = row.original.producto;
         if (isDobleCrema(producto)) {
           const enteros = row.original.bloquesEnteros;
-          const tajados = row.original.bloquesTajados;
-          const fabrica = row.original.bloquesTajadosDeFabrica;
+          const tajadosDisp = row.original.bloquesTajadosDisponibles;
+          const total = enteros + tajadosDisp;
           return (
             <span>
-              {enteros + tajados + fabrica} bloques ({kg.toLocaleString('es-AR')} kg)
+              {total} bloques ({kg.toLocaleString('es-AR')} kg)
             </span>
           );
         }
@@ -190,12 +190,12 @@ export function createLoteColumns(
         const stockText = isDobleCrema(producto)
           ? (() => {
               const enteros = row.original.bloquesEnteros;
-              const tajados = row.original.bloquesTajados;
-              if (enteros > 0 && tajados > 0) {
-                return `${enteros} completos + ${tajados} tajados (${stockValue.toLocaleString('es-AR')} kg)`;
+              const tajadosDisp = row.original.bloquesTajadosDisponibles;
+              if (enteros > 0 && tajadosDisp > 0) {
+                return `${enteros} completos + ${tajadosDisp} tajados (${stockValue.toLocaleString('es-AR')} kg)`;
               }
-              if (tajados > 0) {
-                return `${tajados} tajados (${stockValue.toLocaleString('es-AR')} kg)`;
+              if (tajadosDisp > 0) {
+                return `${tajadosDisp} tajados (${stockValue.toLocaleString('es-AR')} kg)`;
               }
               return `${enteros} bloques (${stockValue.toLocaleString('es-AR')} kg)`;
             })()

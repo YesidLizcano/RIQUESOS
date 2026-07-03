@@ -41,6 +41,8 @@ export interface LoteResponse {
   bloquesEnteros: number;
   bloquesTajados: number;
   bloquesTajadosDeFabrica: number;
+  /** Computed: total tajados available for sale (internal + de fábrica) */
+  bloquesTajadosDisponibles: number;
   estado: string;
   version: number;
   deletedAt: string | null;

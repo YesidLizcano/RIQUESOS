@@ -84,20 +84,28 @@ export class PrismaVentaRepo implements VentaRepository {
             // Block deduction: decrement bloquesEnteros and bloquesTajados
             const bloquesEnterosVendidos = venta.bloquesEnterosVendidos ?? 0;
             const bloquesTajadosVendidos = venta.bloquesTajadosVendidos ?? 0;
+            const tajadosDisponibles = lote.bloquesTajados + lote.bloquesTajadosDeFabrica;
 
             if (bloquesEnterosVendidos > lote.bloquesEnteros) {
               throw new Error(
                 `Insufficient whole blocks: available ${lote.bloquesEnteros}, requested ${bloquesEnterosVendidos}`
               );
             }
-            if (bloquesTajadosVendidos > lote.bloquesTajados) {
+            if (bloquesTajadosVendidos > tajadosDisponibles) {
               throw new Error(
-                `Insufficient cut blocks: available ${lote.bloquesTajados}, requested ${bloquesTajadosVendidos}`
+                `Insufficient cut blocks: available ${tajadosDisponibles}, requested ${bloquesTajadosVendidos}`
               );
             }
 
+            // Deduct tajados from bloquesTajadosDeFabrica first, then bloquesTajados
+            let remainingTajados = bloquesTajadosVendidos;
+            const fromFabrica = Math.min(remainingTajados, lote.bloquesTajadosDeFabrica);
+            remainingTajados -= fromFabrica;
+            const fromInternos = remainingTajados;
+
             loteUpdateData.bloquesEnteros = lote.bloquesEnteros - bloquesEnterosVendidos;
-            loteUpdateData.bloquesTajados = lote.bloquesTajados - bloquesTajadosVendidos;
+            loteUpdateData.bloquesTajadosDeFabrica = lote.bloquesTajadosDeFabrica - fromFabrica;
+            loteUpdateData.bloquesTajados = lote.bloquesTajados - fromInternos;
           } else if ((lote.producto as string) === TipoProducto.DOBLE_CREMA) {
             // Granel (kg) deduction for Doble Crema: recalculate bloquesEnteros
             // Partial kg sales can reduce complete block count

@@ -43,6 +43,7 @@ function loteToResponse(lote: import('@/domain/entities/Lote').Lote): LoteRespon
     bloquesEnteros: lote.bloquesEnteros,
     bloquesTajados: lote.bloquesTajados,
     bloquesTajadosDeFabrica: lote.bloquesTajadosDeFabrica,
+    bloquesTajadosDisponibles: lote.bloquesTajados + lote.bloquesTajadosDeFabrica,
     estado: lote.estado,
     version: lote.version,
     deletedAt: lote.deletedAt?.toISOString() ?? null,
