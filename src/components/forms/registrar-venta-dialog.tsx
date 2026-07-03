@@ -46,8 +46,8 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
   const [precioVenta, setPrecioVenta] = useState<string>('');
 
   // Filter only active (non-deleted) clientes and active lotes WITH stock
-  const activeClientes = clientes.filter((c) => !c.deletedAt);
-  const lotesConStock = lotes.filter((l) => l.estado === 'ACTIVO' && Number(l.stockDisponibleKg) > 0 && !l.deletedAt);
+  const activeClientes = useMemo(() => clientes.filter((c) => !c.deletedAt), [clientes]);
+  const lotesConStock = useMemo(() => lotes.filter((l) => l.estado === 'ACTIVO' && Number(l.stockDisponibleKg) > 0 && !l.deletedAt), [lotes]);
 
   // Maps for Select display (UUID → label)
   const clienteLabels = useMemo(() => {
@@ -56,7 +56,7 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
       map.set(c.id, `${c.nombre} (${tipoClienteLabel[c.tipo as TipoCliente] ?? c.tipo})`);
     }
     return map;
-  }, [clientes]);
+  }, [activeClientes]);
 
   const loteLabels = useMemo(() => {
     const map = new Map<string, string>();

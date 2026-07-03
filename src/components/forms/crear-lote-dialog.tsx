@@ -39,7 +39,7 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
   const [proveedorId, setProveedorId] = useState<string>('');
 
   // Only show active proveedores in the dropdown
-  const activeProveedores = proveedores.filter((p) => !p.deletedAt);
+  const activeProveedores = useMemo(() => proveedores.filter((p) => !p.deletedAt), [proveedores]);
 
   // Map proveedor IDs to names for Select display
   const proveedorLabels = useMemo(() => {
