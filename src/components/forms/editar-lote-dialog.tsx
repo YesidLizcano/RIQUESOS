@@ -4,8 +4,7 @@ import { useState, useMemo } from 'react';
 import { useRefresh } from '@/components/refresh-context';
 import { modificarLote } from '@/presentation/actions/lotes';
 import { toast } from 'sonner';
-import { TipoProducto } from '@/domain/enums';
-import { DOBLE_CREMA_BLOCK_KG } from '@/domain/constants';
+import { DOBLE_CREMA_BLOCK_KG, isDobleCrema } from '@/domain/constants';
 import type { LoteResponse } from '@/presentation/dtos';
 import {
   Dialog,
@@ -26,11 +25,23 @@ interface EditarLoteDialogProps {
 
 export function EditarLoteDialog({ lote, open, onOpenChange }: EditarLoteDialogProps) {
   const refreshData = useRefresh();
+  const isDobleCremaLote = isDobleCrema(lote.producto);
+
+  // For Doble Crema, display and edit in bloques; convert to/from kg
+  const initialCantidad = isDobleCremaLote
+    ? String(Math.floor(Number(lote.cantidadCompradaKg) / DOBLE_CREMA_BLOCK_KG))
+    : lote.cantidadCompradaKg;
+
   const [precioCompraBaseKg, setPrecioCompraBaseKg] = useState(lote.precioCompraBaseKg);
-  const [cantidadCompradaKg, setCantidadCompradaKg] = useState(lote.cantidadCompradaKg);
+  const [cantidadInput, setCantidadInput] = useState(initialCantidad);
   const [costoFlete, setCostoFlete] = useState(lote.costoFlete);
   const [costoTajado, setCostoTajado] = useState(lote.costoTajado);
   const [costoEmpaques, setCostoEmpaques] = useState(lote.costoEmpaques);
+
+  // Convert UI input to kg value for submission
+  const cantidadCompradaKg = isDobleCremaLote
+    ? String(parseFloat(cantidadInput || '0') * DOBLE_CREMA_BLOCK_KG || 0)
+    : cantidadInput;
 
   const costoRealCalculadoKg = useMemo(() => {
     const cantidad = parseFloat(cantidadCompradaKg);
@@ -47,16 +58,15 @@ export function EditarLoteDialog({ lote, open, onOpenChange }: EditarLoteDialogP
 
   async function action(formData: FormData) {
     // Client-side validation: Doble Crema block constraint
-    if (lote.producto === TipoProducto.DOBLE_CREMA) {
-      const cantidad = parseFloat(cantidadCompradaKg);
-      if (!isNaN(cantidad)) {
-        const remainder = Number((cantidad / DOBLE_CREMA_BLOCK_KG).toFixed(6)) % 1;
-        if (Math.abs(remainder) >= 0.001) {
-          toast.error('Para Doble Crema, la cantidad debe ser múltiplo de 2.5 kg');
-          return;
-        }
+    if (isDobleCremaLote) {
+      const bloques = parseFloat(cantidadInput);
+      if (!isNaN(bloques) && !Number.isInteger(bloques)) {
+        toast.error('Para Doble Crema, ingrese bloques enteros');
+        return;
       }
     }
+    // Set the kg value into the form data
+    formData.set('cantidadCompradaKg', cantidadCompradaKg);
     const result = await modificarLote(formData);
     if (result.success) {
       toast.success('Lote actualizado exitosamente');
@@ -99,20 +109,28 @@ export function EditarLoteDialog({ lote, open, onOpenChange }: EditarLoteDialogP
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-cantidadCompradaKg">Cantidad Comprada (Kg)</Label>
+            <Label htmlFor="edit-cantidadCompradaKg">
+              {isDobleCremaLote ? 'Bloques' : 'Cantidad Comprada (Kg)'}
+            </Label>
             <Input
               id="edit-cantidadCompradaKg"
               name="cantidadCompradaKg"
               type="number"
-              step="0.01"
-              min="0.01"
-              value={cantidadCompradaKg}
-              onChange={(e) => setCantidadCompradaKg(e.target.value)}
+              step={isDobleCremaLote ? '1' : '0.01'}
+              min={isDobleCremaLote ? '1' : '0.01'}
+              placeholder={isDobleCremaLote ? 'Ej: 10' : '0'}
+              value={cantidadInput}
+              onChange={(e) => setCantidadInput(e.target.value)}
               required
             />
-            {lote.producto === TipoProducto.DOBLE_CREMA && (
+            {isDobleCremaLote && (
               <p className="text-xs text-muted-foreground">
-                Doble Crema: múltiplo de 2.5 kg
+                1 bloque = 2.5 kg
+              </p>
+            )}
+            {isDobleCremaLote && cantidadInput && !isNaN(parseFloat(cantidadInput)) && (
+              <p className="text-xs text-muted-foreground">
+                Equivalente: {(parseFloat(cantidadInput) * DOBLE_CREMA_BLOCK_KG).toLocaleString('es-AR')} kg
               </p>
             )}
           </div>

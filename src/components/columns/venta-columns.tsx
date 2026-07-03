@@ -2,6 +2,12 @@
 
 import { ColumnDef } from '@tanstack/react-table';
 import type { VentaResponse } from '@/presentation/dtos';
+import { bloquesCompletos, isDobleCrema } from '@/domain/constants';
+
+/** Check if a kg value is a whole number of blocks (within floating-point tolerance) */
+function isWholeBlocks(kg: number): boolean {
+  return Math.abs(kg / 2.5 - Math.round(kg / 2.5)) < 0.001;
+}
 
 export function createVentaColumns(
   clienteMap?: Map<string, string>
@@ -41,9 +47,16 @@ export function createVentaColumns(
     },
     {
       accessorKey: 'cantidadVendidaKg',
-      header: 'Cantidad (Kg)',
+      header: 'Cantidad',
       enableGlobalFilter: false,
-      cell: ({ row }) => Number(row.getValue('cantidadVendidaKg')).toLocaleString('es-AR'),
+      cell: ({ row }) => {
+        const kg = Number(row.getValue('cantidadVendidaKg'));
+        const producto = (row.original as VentaResponse & { producto?: string }).producto;
+        if (producto && isDobleCrema(producto) && isWholeBlocks(kg)) {
+          return `${kg.toLocaleString('es-AR')} kg (${bloquesCompletos(kg)} bloque${bloquesCompletos(kg) === 1 ? '' : 's'})`;
+        }
+        return `${kg.toLocaleString('es-AR')} kg`;
+      },
     },
     {
       accessorKey: 'precioVentaKg',

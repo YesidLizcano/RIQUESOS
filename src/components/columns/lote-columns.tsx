@@ -10,6 +10,7 @@ import { DeleteConfirmDialog } from '@/components/forms/delete-confirm-dialog';
 import { eliminarLote, restaurarLote } from '@/presentation/actions/lotes';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import { bloquesCompletos, kgParciales, isDobleCrema } from '@/domain/constants';
 
 export interface AlertaInfo {
   stockSeverity?: 'warning' | 'critical';
@@ -120,9 +121,16 @@ export function createLoteColumns(
     },
     {
       accessorKey: 'cantidadCompradaKg',
-      header: 'Cant. Comprada (Kg)',
+      header: 'Cant. Comprada',
       enableGlobalFilter: false,
-      cell: ({ row }) => Number(row.getValue('cantidadCompradaKg')).toLocaleString('es-AR'),
+      cell: ({ row }) => {
+        const kg = Number(row.getValue('cantidadCompradaKg'));
+        const producto = row.original.producto;
+        if (isDobleCrema(producto)) {
+          return `${kg.toLocaleString('es-AR')} kg (${bloquesCompletos(kg)} bloques)`;
+        }
+        return `${kg.toLocaleString('es-AR')} kg`;
+      },
     },
     {
       accessorKey: 'precioCompraBaseKg',
@@ -138,17 +146,29 @@ export function createLoteColumns(
     },
     {
       accessorKey: 'stockDisponibleKg',
-      header: 'Stock Disp. (Kg)',
+      header: 'Stock Disp.',
       enableGlobalFilter: false,
       cell: ({ row }) => {
         const stockValue = Number(row.getValue('stockDisponibleKg'));
+        const producto = row.original.producto;
         const info = alertMap?.get(row.original.id);
         const severity = info?.stockSeverity;
+
+        const stockText = isDobleCrema(producto)
+          ? (() => {
+              const bloques = bloquesCompletos(stockValue);
+              const parcial = kgParciales(stockValue);
+              if (parcial > 0) {
+                return `${stockValue.toLocaleString('es-AR')} kg (${bloques} bloques + ${parcial} kg parcial)`;
+              }
+              return `${stockValue.toLocaleString('es-AR')} kg (${bloques} bloques)`;
+            })()
+          : `${stockValue.toLocaleString('es-AR')} kg`;
 
         if (severity === 'critical') {
           return (
             <div className="flex items-center gap-1.5">
-              <span>{stockValue.toLocaleString('es-AR')}</span>
+              <span>{stockText}</span>
               <Badge variant="destructive">Crítico</Badge>
             </div>
           );
@@ -156,12 +176,12 @@ export function createLoteColumns(
         if (severity === 'warning') {
           return (
             <div className="flex items-center gap-1.5">
-              <span>{stockValue.toLocaleString('es-AR')}</span>
+              <span>{stockText}</span>
               <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Bajo</Badge>
             </div>
           );
         }
-        return stockValue.toLocaleString('es-AR');
+        return stockText;
       },
     },
     {

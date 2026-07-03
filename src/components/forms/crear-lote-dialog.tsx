@@ -5,7 +5,7 @@ import { useRefresh } from '@/components/refresh-context';
 import { crearLote } from '@/presentation/actions/lotes';
 import { toast } from 'sonner';
 import { TipoProducto } from '@/domain/enums';
-import { DOBLE_CREMA_BLOCK_KG } from '@/domain/constants';
+import { DOBLE_CREMA_BLOCK_KG, isDobleCrema } from '@/domain/constants';
 import type { ProveedorResponse } from '@/presentation/dtos';
 import {
   Dialog,
@@ -36,11 +36,18 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
   const [open, setOpen] = useState(false);
   const [producto, setProducto] = useState<string>('');
   const [proveedorId, setProveedorId] = useState<string>('');
-  const [cantidadCompradaKg, setCantidadCompradaKg] = useState<string>('');
+  const [cantidadInput, setCantidadInput] = useState<string>('');
   const [precioCompraBaseKg, setPrecioCompraBaseKg] = useState<string>('');
   const [costoFlete, setCostoFlete] = useState<string>('');
   const [costoTajado, setCostoTajado] = useState<string>('');
   const [costoEmpaques, setCostoEmpaques] = useState<string>('');
+
+  const isDobleCremaSelected = isDobleCrema(producto);
+
+  // Convert UI input to kg value for submission
+  const cantidadCompradaKg = isDobleCremaSelected
+    ? String(parseFloat(cantidadInput || '0') * DOBLE_CREMA_BLOCK_KG || 0)
+    : cantidadInput;
 
   // Compute costo real calculado preview
   const costoRealCalculadoKg = (() => {
@@ -58,16 +65,15 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
 
   async function action(formData: FormData) {
     // Client-side validation: Doble Crema block constraint
-    if (producto === TipoProducto.DOBLE_CREMA) {
-      const cantidad = parseFloat(cantidadCompradaKg);
-      if (!isNaN(cantidad)) {
-        const remainder = Number((cantidad / DOBLE_CREMA_BLOCK_KG).toFixed(6)) % 1;
-        if (Math.abs(remainder) >= 0.001) {
-          toast.error('Para Doble Crema, la cantidad debe ser múltiplo de 2.5 kg');
-          return;
-        }
+    if (isDobleCrema(producto)) {
+      const bloques = parseFloat(cantidadInput);
+      if (!isNaN(bloques) && !Number.isInteger(bloques)) {
+        toast.error('Para Doble Crema, ingrese bloques enteros');
+        return;
       }
     }
+    // Set the kg value into the form data
+    formData.set('cantidadCompradaKg', cantidadCompradaKg);
     const result = await crearLote(formData);
     if (result.success) {
       toast.success('Lote creado exitosamente');
@@ -75,7 +81,7 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
       setOpen(false);
       setProducto('');
       setProveedorId('');
-      setCantidadCompradaKg('');
+      setCantidadInput('');
       setPrecioCompraBaseKg('');
       setCostoFlete('');
       setCostoTajado('');
@@ -101,7 +107,7 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
         <form action={action} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="producto">Tipo de Producto</Label>
-            <Select name="producto" value={producto} onValueChange={(v) => v !== null && setProducto(v)}>
+            <Select name="producto" value={producto} onValueChange={(v) => { if (v !== null) { setProducto(v); setCantidadInput(''); } }}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Seleccione producto" />
               </SelectTrigger>
@@ -129,21 +135,28 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="cantidadCompradaKg">Cantidad Comprada (Kg)</Label>
+            <Label htmlFor="cantidadCompradaKg">
+              {isDobleCremaSelected ? 'Bloques' : 'Cantidad Comprada (Kg)'}
+            </Label>
             <Input
               id="cantidadCompradaKg"
               name="cantidadCompradaKg"
               type="number"
-              step="0.01"
-              min="0.01"
-              placeholder="0"
-              value={cantidadCompradaKg}
-              onChange={(e) => setCantidadCompradaKg(e.target.value)}
+              step={isDobleCremaSelected ? '1' : '0.01'}
+              min={isDobleCremaSelected ? '1' : '0.01'}
+              placeholder={isDobleCremaSelected ? 'Ej: 10' : '0'}
+              value={cantidadInput}
+              onChange={(e) => setCantidadInput(e.target.value)}
               required
             />
-            {producto === TipoProducto.DOBLE_CREMA && (
+            {isDobleCremaSelected && (
               <p className="text-xs text-muted-foreground">
-                Doble Crema: múltiplo de 2.5 kg
+                1 bloque = 2.5 kg
+              </p>
+            )}
+            {isDobleCremaSelected && cantidadInput && !isNaN(parseFloat(cantidadInput)) && (
+              <p className="text-xs text-muted-foreground">
+                Equivalente: {(parseFloat(cantidadInput) * DOBLE_CREMA_BLOCK_KG).toLocaleString('es-AR')} kg
               </p>
             )}
           </div>
