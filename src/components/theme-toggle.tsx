@@ -35,7 +35,7 @@ export function ThemeToggle() {
 
   return (
     <Tooltip>
-      <TooltipTrigger>
+      <TooltipTrigger render={<span />}>
         <Button
           variant="ghost"
           size="icon"
