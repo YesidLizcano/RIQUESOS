@@ -53,12 +53,26 @@ export function createVentaColumns(
       enableGlobalFilter: false,
       cell: ({ row }) => {
         const kg = Number(row.getValue('cantidadVendidaKg'));
-        const producto = (row.original as VentaResponse & { producto?: string }).producto;
-        const ventaTipo = (row.original as VentaResponse).ventaTipo;
-        // Show block info for BLOQUES ventas or DC quantities that are whole blocks
-        if (ventaTipo === 'BLOQUES' && isWholeBlocks(kg)) {
-          return `${bloquesCompletos(kg)} bloque${bloquesCompletos(kg) === 1 ? '' : 's'} (${kg.toLocaleString('es-AR')} kg)`;
+        const venta = row.original as VentaResponse & { producto?: string };
+        const producto = venta.producto;
+        const ventaTipo = venta.ventaTipo;
+
+        // Block mode: show enteros/tajados breakdown
+        if (ventaTipo === 'BLOQUES' && producto && isDobleCrema(producto)) {
+          const enteros = venta.bloquesEnterosVendidos ?? 0;
+          const tajados = venta.bloquesTajadosVendidos ?? 0;
+          const parts: string[] = [];
+          if (enteros > 0) parts.push(`${enteros} ent.`);
+          if (tajados > 0) parts.push(`${tajados} taj.`);
+          const blockLabel = parts.length > 0 ? parts.join(' + ') : `${bloquesCompletos(kg)} bloques`;
+          return (
+            <span>
+              {blockLabel} ({kg.toLocaleString('es-AR')} kg)
+            </span>
+          );
         }
+
+        // Granel DC: show kg and block equivalent
         if (producto && isDobleCrema(producto) && isWholeBlocks(kg)) {
           return `${kg.toLocaleString('es-AR')} kg (${bloquesCompletos(kg)} bloque${bloquesCompletos(kg) === 1 ? '' : 's'})`;
         }
