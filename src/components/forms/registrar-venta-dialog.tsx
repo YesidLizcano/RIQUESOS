@@ -96,8 +96,9 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
     }
   }, [resolvedPrice]);
 
-  // Lote filter: Mayorista should only see DC lotes
-  const filteredLotes = isMayorista
+  // Lote filter: Mayorista in BLOQUES mode should only see DC lotes.
+  // Everyone can see all lotes in GRANEL mode (semisalado is always GRANEL).
+  const filteredLotes = isMayorista && isBlockMode
     ? lotesConStock.filter((l) => isDobleCrema(l.producto))
     : lotesConStock;
 
