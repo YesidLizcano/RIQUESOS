@@ -157,6 +157,8 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
     formData.set('cantidadVendidaKg', cantidadVendidaKg);
     formData.set('ventaTipo', effectiveVentaTipo);
     formData.set('bloquesReempacados', bloquesReempacados || '0');
+    formData.set('bloquesEnterosVendidos', isBlockMode ? (parseInt(bloquesEnteros) || 0).toString() : '0');
+    formData.set('bloquesTajadosVendidos', isBlockMode ? (parseInt(bloquesTajados) || 0).toString() : '0');
     const result = await registrarVenta(formData);
     if (result.success) {
       toast.success('Venta registrada exitosamente');
