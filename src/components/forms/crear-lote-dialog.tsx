@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRefresh } from '@/components/refresh-context';
 import { crearLote } from '@/presentation/actions/lotes';
 import { toast } from 'sonner';
 import { TipoProducto } from '@/domain/enums';
+import { tipoProductoLabel } from '@/domain/labels';
 import { DOBLE_CREMA_BLOCK_KG, isDobleCrema } from '@/domain/constants';
 import type { ProveedorResponse } from '@/presentation/dtos';
 import {
@@ -36,6 +37,15 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
   const [open, setOpen] = useState(false);
   const [producto, setProducto] = useState<string>('');
   const [proveedorId, setProveedorId] = useState<string>('');
+
+  // Map proveedor IDs to names for Select display
+  const proveedorLabels = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of proveedores) {
+      map.set(p.id, p.nombre);
+    }
+    return map;
+  }, [proveedores]);
   const [bloquesEnteros, setBloquesEnteros] = useState<string>('');
   const [bloquesTajadosDeFabrica, setBloquesTajadosDeFabrica] = useState<string>('');
   const [cantidadInput, setCantidadInput] = useState<string>('');
@@ -110,7 +120,7 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
             <Label htmlFor="producto">Tipo de Producto</Label>
             <Select name="producto" value={producto} onValueChange={(v) => { if (v !== null) { setProducto(v); setBloquesEnteros(''); setBloquesTajadosDeFabrica(''); setCantidadInput(''); setPrecioPorBloque(''); setPrecioCompraBaseKg(''); } }}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Seleccione producto" />
+                <SelectValue placeholder="Seleccione producto">{producto ? (tipoProductoLabel[producto as TipoProducto] ?? producto) : 'Seleccione producto'}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={TipoProducto.DOBLE_CREMA}>Doble Crema</SelectItem>
@@ -123,7 +133,7 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
             <Label htmlFor="proveedorId">Proveedor</Label>
             <Select name="proveedorId" value={proveedorId} onValueChange={(v) => v !== null && setProveedorId(v)}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Seleccione proveedor" />
+                <SelectValue placeholder="Seleccione proveedor">{proveedorId ? (proveedorLabels.get(proveedorId) ?? proveedorId) : 'Seleccione proveedor'}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {proveedores.map((p) => (

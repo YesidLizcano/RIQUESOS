@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRefresh } from '@/components/refresh-context';
 import { registrarVenta } from '@/presentation/actions/ventas';
 import { toast } from 'sonner';
@@ -47,6 +47,26 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
 
   // Filter only active lotes WITH stock
   const lotesConStock = lotes.filter((l) => l.estado === 'ACTIVO' && Number(l.stockDisponibleKg) > 0);
+
+  // Maps for Select display (UUID → label)
+  const clienteLabels = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of clientes) {
+      map.set(c.id, `${c.nombre} (${tipoClienteLabel[c.tipo as TipoCliente] ?? c.tipo})`);
+    }
+    return map;
+  }, [clientes]);
+
+  const loteLabels = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const l of lotesConStock) {
+      const label = isDobleCrema(l.producto)
+        ? `${tipoProductoLabel[l.producto as TipoProducto] ?? l.producto} — ${l.bloquesEnteros} ent. / ${l.bloquesTajadosDisponibles} taj. (${Number(l.stockDisponibleKg).toLocaleString('es-AR')} kg)`
+        : `${tipoProductoLabel[l.producto as TipoProducto] ?? l.producto} — ${Number(l.stockDisponibleKg).toLocaleString('es-AR')} kg disp.`;
+      map.set(l.id, label);
+    }
+    return map;
+  }, [lotesConStock]);
 
   // Find selected client and lote for price resolution
   const selectedCliente = clientes.find((c) => c.id === clienteId);
@@ -199,7 +219,7 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
             <Label htmlFor="clienteId">Cliente</Label>
             <Select name="clienteId" value={clienteId} onValueChange={(v) => v !== null && handleClienteChange(v)}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Seleccione cliente" />
+                <SelectValue placeholder="Seleccione cliente">{clienteId ? (clienteLabels.get(clienteId) ?? 'Seleccione cliente') : 'Seleccione cliente'}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {clientes.map((c) => (
@@ -221,7 +241,7 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
             <Label htmlFor="loteId">Lote</Label>
             <Select name="loteId" value={loteId} onValueChange={(v) => v !== null && handleLoteChange(v)}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Seleccione lote" />
+                <SelectValue placeholder="Seleccione lote">{loteId ? (loteLabels.get(loteId) ?? 'Seleccione lote') : 'Seleccione lote'}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {filteredLotes.map((l) => (

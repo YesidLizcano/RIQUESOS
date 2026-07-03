@@ -45,6 +45,15 @@ export function RegistrarTajadoDialog({ lotes }: RegistrarTajadoDialogProps) {
     (l) => l.producto === 'DOBLE_CREMA' && l.bloquesEnteros > 0 && l.estado === 'ACTIVO'
   );
 
+  // Map lote IDs to labels for Select display
+  const loteLabels = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const l of availableLotes) {
+      map.set(l.id, `${tipoProductoLabel[l.producto as TipoProducto] ?? l.producto} — ${l.bloquesEnteros} bloques enteros (${Number(l.cantidadCompradaKg).toLocaleString('es-AR')} kg)`);
+    }
+    return map;
+  }, [availableLotes]);
+
   const selectedLote = lotes.find((l) => l.id === loteId);
   const maxBloques = selectedLote?.bloquesEnteros ?? 0;
 
@@ -87,7 +96,7 @@ export function RegistrarTajadoDialog({ lotes }: RegistrarTajadoDialogProps) {
             <Label htmlFor="loteId">Lote (Doble Crema)</Label>
             <Select name="loteId" value={loteId} onValueChange={(v) => { if (v !== null) { setLoteId(v); setCantidadBloques(''); } }}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Seleccione un lote" />
+                <SelectValue placeholder="Seleccione un lote">{loteId ? (loteLabels.get(loteId) ?? 'Seleccione un lote') : 'Seleccione un lote'}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {availableLotes.map((l) => (

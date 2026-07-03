@@ -5,6 +5,7 @@ import { useRefresh } from '@/components/refresh-context';
 import { crearCliente } from '@/presentation/actions/clientes';
 import { toast } from 'sonner';
 import { TipoCliente } from '@/domain/enums';
+import { tipoClienteLabel } from '@/domain/labels';
 import type { ClienteResponse } from '@/presentation/dtos';
 import {
   Dialog,
@@ -76,7 +77,7 @@ export function CrearClienteDialog({}: CrearClienteDialogProps) {
             <Label htmlFor="tipo">Tipo de Cliente</Label>
             <Select name="tipo" value={tipo} onValueChange={(v) => v !== null && setTipo(v)}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Seleccione tipo" />
+                <SelectValue placeholder="Seleccione tipo">{tipo ? (tipoClienteLabel[tipo as TipoCliente] ?? tipo) : 'Seleccione tipo'}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={TipoCliente.MAYORISTA}>Mayorista</SelectItem>
