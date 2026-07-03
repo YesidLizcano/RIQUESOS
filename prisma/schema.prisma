@@ -155,7 +155,6 @@ model Usuario {
   deletedAt    DateTime?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
-  auditLogs    AuditLog[]
 }
 
 model AuditLog {
@@ -166,8 +165,6 @@ model AuditLog {
   userId      String?
   changes     String?
   createdAt   DateTime @default(now())
-
-  user Usuario? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([entityType, entityId])
   @@index([action])
