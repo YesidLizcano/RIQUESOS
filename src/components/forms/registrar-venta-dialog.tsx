@@ -39,6 +39,7 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
   const [loteId, setLoteId] = useState<string>('');
   const [cantidadInput, setCantidadInput] = useState<string>('');
   const [ventaTipo, setVentaTipo] = useState<VentaTipo>('GRANEL');
+  const [bloquesReempacados, setBloquesReempacados] = useState<string>('');
 
   // Filter only active lotes
   const lotesActivos = lotes.filter((l) => l.estado === 'ACTIVO');
@@ -118,6 +119,7 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
     }
     formData.set('cantidadVendidaKg', cantidadVendidaKg);
     formData.set('ventaTipo', effectiveVentaTipo);
+    formData.set('bloquesReempacados', bloquesReempacados || '0');
     const result = await registrarVenta(formData);
     if (result.success) {
       toast.success('Venta registrada exitosamente');
@@ -127,6 +129,7 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
       setLoteId('');
       setCantidadInput('');
       setVentaTipo('GRANEL');
+      setBloquesReempacados('');
     } else {
       toast.error(result.error || 'Error al registrar venta');
     }
@@ -259,6 +262,27 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
               </p>
             )}
           </div>
+
+          {/* Bloques Reempacados — only for block mode */}
+          {isBlockMode && (
+            <div className="space-y-2">
+              <Label htmlFor="bloquesReempacados">Bloques Reempacados</Label>
+              <Input
+                id="bloquesReempacados"
+                name="bloquesReempacados"
+                type="number"
+                step="1"
+                min="0"
+                max={cantidadInput || undefined}
+                placeholder="0"
+                value={bloquesReempacados}
+                onChange={(e) => setBloquesReempacados(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Cada bloque reempacado descuenta 1 empaque del inventario
+              </p>
+            </div>
+          )}
 
           {/* Precio */}
           <div className="space-y-2">

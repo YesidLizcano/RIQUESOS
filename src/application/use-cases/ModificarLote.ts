@@ -10,6 +10,7 @@ export interface ModificarLoteInput {
   id: string;
   version: number;
   precioCompraBaseKg?: string;
+  precioPorBloque?: string;
   cantidadCompradaKg?: string;
   costoFlete?: string;
   costoTajado?: string;
@@ -40,8 +41,15 @@ export class ModificarLote {
       }
     }
 
+    // For Doble Crema: if precioPorBloque is provided, recalculate precioCompraBaseKg
+    let precioCompraBaseKg = input.precioCompraBaseKg ?? existing.precioCompraBaseKg.value;
+    if (existing.producto === TipoProducto.DOBLE_CREMA && input.precioPorBloque !== undefined) {
+      precioCompraBaseKg = String(Number(input.precioPorBloque) / DOBLE_CREMA_BLOCK_KG);
+    }
+
     const updated = existing.updateCosts({
-      precioCompraBaseKg: input.precioCompraBaseKg,
+      precioCompraBaseKg,
+      precioPorBloque: input.precioPorBloque,
       cantidadCompradaKg: input.cantidadCompradaKg,
       costoFlete: input.costoFlete,
       costoTajado: input.costoTajado,

@@ -21,6 +21,8 @@ export class PrismaVentaRepo implements VentaRepository {
         valorDomicilio: new Prisma.Decimal(venta.valorDomicilio.value),
         domiciliario: venta.domiciliario,
         ventaTipo: venta.ventaTipo,
+        bloquesReempacados: venta.bloquesReempacados,
+        costoEmpaques: new Prisma.Decimal(venta.costoEmpaques.value),
       },
     });
     return this.toEntity(created);
@@ -36,7 +38,9 @@ export class PrismaVentaRepo implements VentaRepository {
     loteId: string,
     cantidadKg: string,
     expectedVersion: number,
-    ventaTipo: VentaTipo = 'GRANEL'
+    ventaTipo: VentaTipo = 'GRANEL',
+    empaqueId?: string,
+    bloquesReempacados?: number
   ): Promise<Venta> {
     const maxRetries = 3;
     let lastError: Error | null = null;
@@ -120,8 +124,27 @@ export class PrismaVentaRepo implements VentaRepository {
               valorDomicilio: new Prisma.Decimal(venta.valorDomicilio.value),
               domiciliario: venta.domiciliario,
               ventaTipo: venta.ventaTipo,
+              bloquesReempacados: venta.bloquesReempacados,
+              costoEmpaques: new Prisma.Decimal(venta.costoEmpaques.value),
             },
           });
+
+          // 5. Deduct empaque stock if bloquesReempacados > 0
+          if (empaqueId && bloquesReempacados && bloquesReempacados > 0) {
+            const empaque = await tx.empaque.findUnique({ where: { id: empaqueId } });
+            if (!empaque) {
+              throw new Error(`Empaque not found: ${empaqueId}`);
+            }
+            if (empaque.stock < bloquesReempacados) {
+              throw new Error(`Stock insuficiente de empaques: disponible ${empaque.stock}, solicitado ${bloquesReempacados}`);
+            }
+            await tx.empaque.update({
+              where: { id: empaqueId },
+              data: {
+                stock: empaque.stock - bloquesReempacados,
+              },
+            });
+          }
 
           return this.toEntity(createdVenta);
         });
@@ -201,6 +224,8 @@ export class PrismaVentaRepo implements VentaRepository {
       valorDomicilio: record.valorDomicilio.toString(),
       domiciliario: record.domiciliario,
       ventaTipo: (record.ventaTipo as 'BLOQUES' | 'GRANEL') ?? 'GRANEL',
+      bloquesReempacados: record.bloquesReempacados ?? 0,
+      costoEmpaques: record.costoEmpaques?.toString() ?? '0',
     });
   }
 }

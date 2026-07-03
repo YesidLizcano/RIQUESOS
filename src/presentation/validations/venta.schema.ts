@@ -10,6 +10,7 @@ export const registrarVentaSchema = z.object({
   valorDomicilio: z.coerce.number().nonnegative('El valor del domicilio no puede ser negativo').optional().default(0),
   domiciliario: z.string().optional(),
   ventaTipo: z.enum(['BLOQUES', 'GRANEL']).optional().default('GRANEL'),
+  bloquesReempacados: z.coerce.number().int().nonnegative('Los bloques reempacados no pueden ser negativos').optional().default(0),
 }).refine(
   // Block constraint: BLOQUES mode requires integer block count (multiple of 2.5 kg)
   (data) => {
@@ -20,4 +21,14 @@ export const registrarVentaSchema = z.object({
     return true;
   },
   { message: 'La cantidad debe ser múltiplo de 2.5 kg para venta por bloques', path: ['cantidadVendidaKg'] }
+).refine(
+  // Reempacado constraint: can't reempacar more blocks than sold
+  (data) => {
+    if (data.ventaTipo === 'BLOQUES' && data.bloquesReempacados > 0) {
+      const maxBloques = Math.floor(data.cantidadVendidaKg / DOBLE_CREMA_BLOCK_KG);
+      return data.bloquesReempacados <= maxBloques;
+    }
+    return true;
+  },
+  { message: 'No se pueden reempacar más bloques de los vendidos', path: ['bloquesReempacados'] }
 );

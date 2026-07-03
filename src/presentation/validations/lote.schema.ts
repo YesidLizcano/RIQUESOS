@@ -7,7 +7,8 @@ export const crearLoteSchema = z.object({
   producto: z.nativeEnum(TipoProducto, { message: 'Seleccione un tipo de producto' }),
   proveedorId: z.string().min(1, 'Seleccione un proveedor'),
   cantidadCompradaKg: z.coerce.number().nonnegative('La cantidad no puede ser negativa').optional().default(0),
-  precioCompraBaseKg: z.coerce.number().nonnegative('El precio no puede ser negativo'),
+  precioCompraBaseKg: z.coerce.number().nonnegative('El precio no puede ser negativo').optional().default(0),
+  precioPorBloque: z.coerce.number().nonnegative('El precio por bloque no puede ser negativo').optional().default(0),
   costoFlete: z.coerce.number().nonnegative('El flete no puede ser negativo').optional().default(0),
   costoEmpaques: z.coerce.number().nonnegative('Los empaques no pueden ser negativos').optional().default(0),
   bloquesEnteros: z.coerce.number().int().nonnegative('Los bloques enteros no pueden ser negativos').optional().default(0),
@@ -23,12 +24,35 @@ export const crearLoteSchema = z.object({
     message: 'Para Doble Crema debe ingresar al menos un bloque. Para Semisalado, la cantidad debe ser mayor a 0.',
     path: ['bloquesEnteros'],
   }
+).refine(
+  (data) => {
+    if (data.producto === TipoProducto.DOBLE_CREMA) {
+      return data.precioPorBloque > 0;
+    }
+    return true;
+  },
+  {
+    message: 'Para Doble Crema, el precio por bloque es obligatorio',
+    path: ['precioPorBloque'],
+  }
+).refine(
+  (data) => {
+    if (data.producto === TipoProducto.SEMISALADO) {
+      return data.precioCompraBaseKg > 0;
+    }
+    return true;
+  },
+  {
+    message: 'Para Semisalado, el precio base por kg es obligatorio',
+    path: ['precioCompraBaseKg'],
+  }
 );
 
 export const actualizarLoteSchema = z.object({
   id: z.string().min(1, 'ID es obligatorio'),
   version: z.coerce.number().int().min(1, 'Version es obligatoria'),
   precioCompraBaseKg: z.coerce.number().nonnegative('El precio no puede ser negativo').optional(),
+  precioPorBloque: z.coerce.number().nonnegative('El precio por bloque no puede ser negativo').optional(),
   cantidadCompradaKg: z.coerce.number().positive('La cantidad debe ser mayor a 0').optional(),
   costoFlete: z.coerce.number().nonnegative('El flete no puede ser negativo').optional(),
   costoEmpaques: z.coerce.number().nonnegative('Los empaques no pueden ser negativos').optional(),

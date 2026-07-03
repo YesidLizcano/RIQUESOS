@@ -48,6 +48,19 @@ async function main() {
   });
 
   console.log(`Proveedores upserted: ${proveedor1.nombre}, ${proveedor2.nombre}`);
+
+  // Upsert default empaque
+  const empaqueDefault = await prisma.empaque.upsert({
+    where: { tipo: 'Bolsa' },
+    update: { stock: 100, precio: 500 },
+    create: {
+      tipo: 'Bolsa',
+      stock: 100,
+      precio: 500,
+    },
+  });
+
+  console.log(`Empaque upserted: ${empaqueDefault.tipo} (stock: ${empaqueDefault.stock}, precio: ${empaqueDefault.precio})`);
   console.log('Seed complete.');
 }
 

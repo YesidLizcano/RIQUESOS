@@ -10,6 +10,7 @@ export interface RegistrarVentaRequest {
   valorDomicilio?: string;
   domiciliario?: string;
   ventaTipo?: VentaTipo;
+  bloquesReempacados?: number;
 }
 
 export interface VentaResponse {
@@ -25,6 +26,8 @@ export interface VentaResponse {
   valorDomicilio: string;
   domiciliario: string;
   ventaTipo: VentaTipo;
+  bloquesReempacados: number;
+  costoEmpaques: string;
 }
 
 export interface VentaListResponse {

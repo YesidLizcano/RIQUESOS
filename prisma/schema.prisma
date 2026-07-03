@@ -60,6 +60,7 @@ model Lote {
   bloquesEnteros         Int          @default(0)
   bloquesTajados         Int          @default(0)
   bloquesTajadosDeFabrica Int         @default(0)
+  precioPorBloque       Decimal      @default("0")
   estado                 EstadoLote   @default(ACTIVO)
   version                Int          @default(1)
   deletedAt              DateTime?
@@ -100,6 +101,18 @@ model Cliente {
   @@index([deletedAt])
 }
 
+model Empaque {
+  id        String   @id @default(uuid())
+  tipo      String   @unique
+  stock     Int      @default(0)
+  precio    Decimal  @default("0")
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([deletedAt])
+}
+
 model Venta {
   id               String    @id @default(uuid())
   fecha            DateTime  @default(now())
@@ -115,6 +128,8 @@ model Venta {
   valorDomicilio   Decimal   @default("0")
   domiciliario     String    @default("")
   ventaTipo        VentaTipo @default(GRANEL)
+  bloquesReempacados Int      @default(0)
+  costoEmpaques     Decimal  @default("0")
   createdAt        DateTime  @default(now())
 }
 

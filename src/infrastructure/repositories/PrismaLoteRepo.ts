@@ -43,6 +43,7 @@ export class PrismaLoteRepo implements LoteRepository {
       proveedorId: lote.proveedorId,
       cantidadCompradaKg: new Prisma.Decimal(lote.cantidadCompradaKg.value),
       precioCompraBaseKg: new Prisma.Decimal(lote.precioCompraBaseKg.value),
+      precioPorBloque: new Prisma.Decimal(lote.precioPorBloque.value),
       costoFlete: new Prisma.Decimal(lote.costoFlete.value),
       costoTajado: new Prisma.Decimal(lote.costoTajado.value),
       costoEmpaques: new Prisma.Decimal(lote.costoEmpaques.value),
@@ -126,6 +127,7 @@ export class PrismaLoteRepo implements LoteRepository {
       where: { id, version: expectedVersion },
       data: {
         precioCompraBaseKg: new Prisma.Decimal(lote.precioCompraBaseKg.value),
+        precioPorBloque: new Prisma.Decimal(lote.precioPorBloque.value),
         cantidadCompradaKg: new Prisma.Decimal(lote.cantidadCompradaKg.value),
         costoFlete: new Prisma.Decimal(lote.costoFlete.value),
         costoTajado: new Prisma.Decimal(lote.costoTajado.value),
@@ -207,6 +209,7 @@ export class PrismaLoteRepo implements LoteRepository {
       proveedorId: record.proveedorId,
       cantidadCompradaKg: record.cantidadCompradaKg.toString(),
       precioCompraBaseKg: record.precioCompraBaseKg.toString(),
+      precioPorBloque: record.precioPorBloque.toString(),
       costoFlete: record.costoFlete.toString(),
       costoTajado: record.costoTajado.toString(),
       costoEmpaques: record.costoEmpaques.toString(),

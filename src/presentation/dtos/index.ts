@@ -10,3 +10,4 @@ export type { LoginRequest, AuthResponse } from './auth.dto';
 export type { AuditLogEntry, AuditLogResponse } from './audit-log.dto';
 export { AlertaTipo, AlertaSeveridad } from './alerta.dto';
 export type { AlertaLoteResponse, AlertasResultResponse } from './alerta.dto';
+export type { CrearEmpaqueRequest, ActualizarEmpaqueRequest, EmpaqueResponse, EmpaqueListResponse } from './empaque.dto';

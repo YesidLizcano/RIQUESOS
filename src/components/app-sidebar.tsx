@@ -9,6 +9,7 @@ import {
   Users,
   Receipt,
   Truck,
+  PackageOpen,
   LogOut,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -33,6 +34,7 @@ const navItems = [
   { label: 'Ventas', href: '/ventas', icon: ShoppingCart },
   { label: 'Clientes', href: '/clientes', icon: Users },
   { label: 'Proveedores', href: '/proveedores', icon: Truck },
+  { label: 'Empaques', href: '/empaques', icon: PackageOpen },
   { label: 'Gastos Fijos', href: '/gastos', icon: Receipt },
 ];
 

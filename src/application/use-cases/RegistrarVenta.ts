@@ -9,6 +9,7 @@ import { DOBLE_CREMA_BLOCK_KG } from '../../domain/constants';
 import type { VentaRepository } from '../../domain/ports/VentaRepository';
 import type { LoteRepository } from '../../domain/ports/LoteRepository';
 import type { ClienteRepository } from '../../domain/ports/ClienteRepository';
+import type { EmpaqueRepository } from '../../domain/ports/EmpaqueRepository';
 
 export interface RegistrarVentaInput {
   clienteId: string;
@@ -18,6 +19,7 @@ export interface RegistrarVentaInput {
   valorDomicilio?: string;
   domiciliario?: string;
   ventaTipo?: VentaTipo;
+  bloquesReempacados?: number;
 }
 
 export interface RegistrarVentaOutput {
@@ -31,11 +33,13 @@ export class RegistrarVenta {
   constructor(
     private readonly ventaRepo: VentaRepository,
     private readonly loteRepo: LoteRepository,
-    private readonly clienteRepo: ClienteRepository
+    private readonly clienteRepo: ClienteRepository,
+    private readonly empaqueRepo?: EmpaqueRepository
   ) {}
 
   async execute(input: RegistrarVentaInput): Promise<RegistrarVentaOutput> {
     const ventaTipo: VentaTipo = input.ventaTipo ?? 'GRANEL';
+    const bloquesReempacados = input.bloquesReempacados ?? 0;
 
     // 1. Validate Cliente exists
     const cliente = await this.clienteRepo.findById(input.clienteId);
@@ -67,11 +71,33 @@ export class RegistrarVenta {
       }
     }
 
-    // 3. Resolve price based on cliente type
+    // 3. Resolve empaque for reempacado
+    let empaqueId: string | undefined;
+    let costoEmpaques = '0';
+
+    if (bloquesReempacados > 0 && ventaTipo === 'BLOQUES') {
+      if (!this.empaqueRepo) {
+        throw new Error('EmpaqueRepository is required when bloquesReempacados > 0');
+      }
+      // Find the first active empaque (default "Bolsa" type)
+      const empaques = await this.empaqueRepo.findAll();
+      if (empaques.length === 0) {
+        throw new Error('No hay empaques disponibles en inventario');
+      }
+      const empaque = empaques[0]; // Use the first available empaque
+      if (empaque.stock < bloquesReempacados) {
+        throw new Error(`Stock insuficiente de empaques: disponible ${empaque.stock}, solicitado ${bloquesReempacados}`);
+      }
+      empaqueId = empaque.id;
+      // Calculate empaque cost
+      costoEmpaques = empaque.precio.multiply(bloquesReempacados).value;
+    }
+
+    // 4. Resolve price based on cliente type
     const standardPrice = new Dinero(input.standardPricePerKg);
     const precioVentaKg = cliente.resolvePrecio(lote.producto, standardPrice);
 
-    // 4. Create Venta entity (validates and calculates financials)
+    // 5. Create Venta entity (validates and calculates financials)
     const venta = new Venta({
       clienteId: input.clienteId,
       loteId: input.loteId,
@@ -81,9 +107,11 @@ export class RegistrarVenta {
       valorDomicilio: input.valorDomicilio,
       domiciliario: input.domiciliario,
       ventaTipo,
+      bloquesReempacados,
+      costoEmpaques,
     });
 
-    // 5. Register atomically with retry on concurrency conflict
+    // 6. Register atomically with retry on concurrency conflict
     let lastError: Error | null = null;
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
@@ -98,7 +126,9 @@ export class RegistrarVenta {
           input.loteId,
           input.cantidadVendidaKg,
           lote.version,
-          ventaTipo
+          ventaTipo,
+          empaqueId,
+          bloquesReempacados
         );
 
         // Re-fetch lote after transaction to return updated state

@@ -6,6 +6,7 @@ export interface CrearLoteRequest {
   proveedorId: string;
   cantidadCompradaKg: string;
   precioCompraBaseKg: string;
+  precioPorBloque?: string;
   costoFlete?: string;
   costoTajado?: string;
   costoEmpaques?: string;
@@ -17,6 +18,7 @@ export interface ActualizarLoteRequest {
   id: string;
   version: number;
   precioCompraBaseKg?: string;
+  precioPorBloque?: string;
   cantidadCompradaKg?: string;
   costoFlete?: string;
   costoTajado?: string;
@@ -30,6 +32,7 @@ export interface LoteResponse {
   proveedorId: string;
   cantidadCompradaKg: string;
   precioCompraBaseKg: string;
+  precioPorBloque: string;
   costoFlete: string;
   costoTajado: string;
   costoEmpaques: string;

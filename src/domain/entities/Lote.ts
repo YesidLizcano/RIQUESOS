@@ -12,6 +12,7 @@ export interface LoteProps {
   proveedorId: string;
   cantidadCompradaKg: string;
   precioCompraBaseKg: string;
+  precioPorBloque?: string;
   costoFlete?: string;
   costoTajado?: string;
   costoEmpaques?: string;
@@ -31,6 +32,7 @@ export class Lote {
   readonly proveedorId: string;
   readonly cantidadCompradaKg: Kilogramo;
   readonly precioCompraBaseKg: Dinero;
+  readonly precioPorBloque: Dinero;
   readonly costoFlete: Dinero;
   readonly costoTajado: Dinero;
   readonly costoEmpaques: Dinero;
@@ -59,6 +61,7 @@ export class Lote {
     // For DOBLE_CREMA creation, the use case calculates it from bloques
     this.cantidadCompradaKg = new Kilogramo(props.cantidadCompradaKg);
     this.precioCompraBaseKg = new Dinero(props.precioCompraBaseKg);
+    this.precioPorBloque = new Dinero(props.precioPorBloque ?? '0');
     this.costoFlete = new Dinero(props.costoFlete ?? '0');
     this.costoTajado = new Dinero(props.costoTajado ?? '0');
     this.costoEmpaques = new Dinero(props.costoEmpaques ?? '0');
@@ -134,6 +137,7 @@ export class Lote {
       proveedorId: this.proveedorId,
       cantidadCompradaKg: this.cantidadCompradaKg.value,
       precioCompraBaseKg: this.precioCompraBaseKg.value,
+      precioPorBloque: this.precioPorBloque.value,
       costoFlete: this.costoFlete.value,
       costoTajado: nuevoCostoTajado.value,
       costoEmpaques: this.costoEmpaques.value,
@@ -179,6 +183,7 @@ export class Lote {
       proveedorId: this.proveedorId,
       cantidadCompradaKg: this.cantidadCompradaKg.value,
       precioCompraBaseKg: this.precioCompraBaseKg.value,
+      precioPorBloque: this.precioPorBloque.value,
       costoFlete: this.costoFlete.value,
       costoTajado: this.costoTajado.value,
       costoEmpaques: this.costoEmpaques.value,
@@ -235,6 +240,7 @@ export class Lote {
       proveedorId: this.proveedorId,
       cantidadCompradaKg: this.cantidadCompradaKg.value,
       precioCompraBaseKg: this.precioCompraBaseKg.value,
+      precioPorBloque: this.precioPorBloque.value,
       costoFlete: this.costoFlete.value,
       costoTajado: this.costoTajado.value,
       costoEmpaques: this.costoEmpaques.value,
@@ -259,6 +265,7 @@ export class Lote {
       proveedorId: this.proveedorId,
       cantidadCompradaKg: this.cantidadCompradaKg.value,
       precioCompraBaseKg: this.precioCompraBaseKg.value,
+      precioPorBloque: this.precioPorBloque.value,
       costoFlete: this.costoFlete.value,
       costoTajado: this.costoTajado.value,
       costoEmpaques: this.costoEmpaques.value,
@@ -278,6 +285,7 @@ export class Lote {
    */
   updateCosts(params: {
     precioCompraBaseKg?: string;
+    precioPorBloque?: string;
     cantidadCompradaKg?: string;
     costoFlete?: string;
     costoTajado?: string;
@@ -290,6 +298,7 @@ export class Lote {
       proveedorId: this.proveedorId,
       cantidadCompradaKg: params.cantidadCompradaKg ?? this.cantidadCompradaKg.value,
       precioCompraBaseKg: params.precioCompraBaseKg ?? this.precioCompraBaseKg.value,
+      precioPorBloque: params.precioPorBloque ?? this.precioPorBloque.value,
       costoFlete: params.costoFlete ?? this.costoFlete.value,
       costoTajado: params.costoTajado ?? this.costoTajado.value,
       costoEmpaques: params.costoEmpaques ?? this.costoEmpaques.value,
@@ -311,6 +320,7 @@ export class Lote {
       proveedorId: this.proveedorId,
       cantidadCompradaKg: this.cantidadCompradaKg.value,
       precioCompraBaseKg: this.precioCompraBaseKg.value,
+      precioPorBloque: this.precioPorBloque.value,
       costoFlete: this.costoFlete.value,
       costoTajado: this.costoTajado.value,
       costoEmpaques: this.costoEmpaques.value,
@@ -332,6 +342,7 @@ export class Lote {
       proveedorId: this.proveedorId,
       cantidadCompradaKg: this.cantidadCompradaKg.value,
       precioCompraBaseKg: this.precioCompraBaseKg.value,
+      precioPorBloque: this.precioPorBloque.value,
       costoFlete: this.costoFlete.value,
       costoTajado: this.costoTajado.value,
       costoEmpaques: this.costoEmpaques.value,

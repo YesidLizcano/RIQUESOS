@@ -34,6 +34,7 @@ function loteToResponse(lote: import('@/domain/entities/Lote').Lote): LoteRespon
     proveedorId: lote.proveedorId,
     cantidadCompradaKg: lote.cantidadCompradaKg.value,
     precioCompraBaseKg: lote.precioCompraBaseKg.value,
+    precioPorBloque: lote.precioPorBloque.value,
     costoFlete: lote.costoFlete.value,
     costoTajado: lote.costoTajado.value,
     costoEmpaques: lote.costoEmpaques.value,
@@ -60,6 +61,7 @@ export async function crearLote(formData: FormData) {
     producto: parsed.data.producto,
     proveedorId: parsed.data.proveedorId,
     precioCompraBaseKg: String(parsed.data.precioCompraBaseKg),
+    precioPorBloque: parsed.data.precioPorBloque !== undefined ? String(parsed.data.precioPorBloque) : undefined,
     costoFlete: parsed.data.costoFlete ? String(parsed.data.costoFlete) : undefined,
     costoEmpaques: parsed.data.costoEmpaques ? String(parsed.data.costoEmpaques) : undefined,
     // For Doble Crema: bloques are provided, cantidadCompradaKg is calculated
@@ -102,6 +104,7 @@ export async function modificarLote(formData: FormData) {
     id: parsed.data.id,
     version: parsed.data.version,
     precioCompraBaseKg: parsed.data.precioCompraBaseKg !== undefined ? String(parsed.data.precioCompraBaseKg) : undefined,
+    precioPorBloque: parsed.data.precioPorBloque !== undefined ? String(parsed.data.precioPorBloque) : undefined,
     cantidadCompradaKg: parsed.data.cantidadCompradaKg !== undefined ? String(parsed.data.cantidadCompradaKg) : undefined,
     costoFlete: parsed.data.costoFlete !== undefined ? String(parsed.data.costoFlete) : undefined,
     costoEmpaques: parsed.data.costoEmpaques !== undefined ? String(parsed.data.costoEmpaques) : undefined,

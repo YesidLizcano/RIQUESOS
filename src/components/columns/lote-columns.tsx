@@ -10,7 +10,7 @@ import { DeleteConfirmDialog } from '@/components/forms/delete-confirm-dialog';
 import { eliminarLote, restaurarLote } from '@/presentation/actions/lotes';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
-import { bloquesCompletos, kgParciales, isDobleCrema } from '@/domain/constants';
+import { bloquesCompletos, kgParciales, isDobleCrema, DOBLE_CREMA_BLOCK_KG } from '@/domain/constants';
 
 export interface AlertaInfo {
   stockSeverity?: 'warning' | 'critical';
@@ -141,9 +141,21 @@ export function createLoteColumns(
     },
     {
       accessorKey: 'precioCompraBaseKg',
-      header: 'Precio Base/Kg',
+      header: 'Precio',
       enableGlobalFilter: false,
-      cell: ({ row }) => `$${Number(row.getValue('precioCompraBaseKg')).toLocaleString('es-AR')}`,
+      cell: ({ row }) => {
+        const producto = row.original.producto;
+        const precioBase = Number(row.getValue('precioCompraBaseKg'));
+        const precioBloque = Number(row.original.precioPorBloque);
+        if (isDobleCrema(producto) && precioBloque > 0) {
+          return (
+            <span>
+              ${precioBloque.toLocaleString('es-AR')}/bloque (${precioBase.toLocaleString('es-AR', { minimumFractionDigits: 2 })}/kg)
+            </span>
+          );
+        }
+        return `$${precioBase.toLocaleString('es-AR')}/kg`;
+      },
     },
     {
       accessorKey: 'costoRealCalculadoKg',

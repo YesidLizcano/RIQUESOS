@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { useRefresh } from '@/components/refresh-context';
 import { modificarLote } from '@/presentation/actions/lotes';
 import { toast } from 'sonner';
-import { isDobleCrema } from '@/domain/constants';
+import { isDobleCrema, DOBLE_CREMA_BLOCK_KG } from '@/domain/constants';
 import type { LoteResponse } from '@/presentation/dtos';
 import {
   Dialog,
@@ -27,13 +27,19 @@ export function EditarLoteDialog({ lote, open, onOpenChange }: EditarLoteDialogP
   const refreshData = useRefresh();
   const isDobleCremaLote = isDobleCrema(lote.producto);
 
+  const [precioPorBloque, setPrecioPorBloque] = useState(lote.precioPorBloque);
   const [precioCompraBaseKg, setPrecioCompraBaseKg] = useState(lote.precioCompraBaseKg);
   const [costoFlete, setCostoFlete] = useState(lote.costoFlete);
   const [costoEmpaques, setCostoEmpaques] = useState(lote.costoEmpaques);
 
+  // For DC: derive precioCompraBaseKg from precioPorBloque
+  const effectivePrecioBaseKg = isDobleCremaLote
+    ? (parseFloat(precioPorBloque) || 0) / DOBLE_CREMA_BLOCK_KG
+    : parseFloat(precioCompraBaseKg) || 0;
+
   const costoRealCalculadoKg = useMemo(() => {
     const cantidad = parseFloat(lote.cantidadCompradaKg);
-    const precioBase = parseFloat(precioCompraBaseKg);
+    const precioBase = effectivePrecioBaseKg;
     const flete = parseFloat(costoFlete) || 0;
     const tajado = parseFloat(lote.costoTajado) || 0;
     const empaques = parseFloat(costoEmpaques) || 0;
@@ -42,7 +48,7 @@ export function EditarLoteDialog({ lote, open, onOpenChange }: EditarLoteDialogP
 
     const costoTotal = (precioBase * cantidad) + flete + tajado + empaques;
     return costoTotal / cantidad;
-  }, [lote.cantidadCompradaKg, lote.costoTajado, precioCompraBaseKg, costoFlete, costoEmpaques]);
+  }, [lote.cantidadCompradaKg, lote.costoTajado, effectivePrecioBaseKg, costoFlete, costoEmpaques, isDobleCremaLote, precioPorBloque, precioCompraBaseKg]);
 
   async function action(formData: FormData) {
     const result = await modificarLote(formData);
@@ -120,19 +126,41 @@ export function EditarLoteDialog({ lote, open, onOpenChange }: EditarLoteDialogP
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="edit-precioCompraBaseKg">Precio Compra Base ($/Kg)</Label>
-            <Input
-              id="edit-precioCompraBaseKg"
-              name="precioCompraBaseKg"
-              type="number"
-              step="0.01"
-              min="0"
-              value={precioCompraBaseKg}
-              onChange={(e) => setPrecioCompraBaseKg(e.target.value)}
-              required
-            />
-          </div>
+          {isDobleCremaLote ? (
+            <div className="space-y-2">
+              <Label htmlFor="edit-precioPorBloque">Precio por Bloque ($)</Label>
+              <Input
+                id="edit-precioPorBloque"
+                name="precioPorBloque"
+                type="number"
+                step="0.01"
+                min="0"
+                value={precioPorBloque}
+                onChange={(e) => setPrecioPorBloque(e.target.value)}
+                required
+              />
+              {precioPorBloque && !isNaN(parseFloat(precioPorBloque)) && parseFloat(precioPorBloque) > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Equivale a ${(effectivePrecioBaseKg).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/kg
+                </p>
+              )}
+              <input type="hidden" name="precioCompraBaseKg" value={String(effectivePrecioBaseKg)} />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="edit-precioCompraBaseKg">Precio Compra Base ($/Kg)</Label>
+              <Input
+                id="edit-precioCompraBaseKg"
+                name="precioCompraBaseKg"
+                type="number"
+                step="0.01"
+                min="0"
+                value={precioCompraBaseKg}
+                onChange={(e) => setPrecioCompraBaseKg(e.target.value)}
+                required
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="edit-costoFlete">Costo Flete ($)</Label>

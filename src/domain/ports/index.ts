@@ -7,3 +7,4 @@ export type { ProveedorRepository } from './ProveedorRepository';
 export type { UsuarioRepository } from './UsuarioRepository';
 export type { AuditLogRepository } from './AuditLogRepository';
 export type { TajadoRepository } from './TajadoRepository';
+export type { EmpaqueRepository } from './EmpaqueRepository';

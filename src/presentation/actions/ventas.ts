@@ -7,6 +7,7 @@ import { requireSession } from './auth';
 import { PrismaVentaRepo } from '@/infrastructure/repositories/PrismaVentaRepo';
 import { PrismaLoteRepo } from '@/infrastructure/repositories/PrismaLoteRepo';
 import { PrismaClienteRepo } from '@/infrastructure/repositories/PrismaClienteRepo';
+import { PrismaEmpaqueRepo } from '@/infrastructure/repositories/PrismaEmpaqueRepo';
 import { RegistrarVenta } from '@/application/use-cases/RegistrarVenta';
 import { registrarVentaSchema } from '@/presentation/validations/venta.schema';
 import type { RegistrarVentaRequest, VentaResponse, VentaTipo } from '../dtos';
@@ -16,7 +17,8 @@ async function getRegistrarVentaUseCase() {
   const ventaRepo = new PrismaVentaRepo();
   const loteRepo = new PrismaLoteRepo();
   const clienteRepo = new PrismaClienteRepo();
-  return new RegistrarVenta(ventaRepo, loteRepo, clienteRepo);
+  const empaqueRepo = new PrismaEmpaqueRepo();
+  return new RegistrarVenta(ventaRepo, loteRepo, clienteRepo, empaqueRepo);
 }
 
 function ventaToResponse(venta: import('@/domain/entities/Venta').Venta): VentaResponse {
@@ -33,6 +35,8 @@ function ventaToResponse(venta: import('@/domain/entities/Venta').Venta): VentaR
     valorDomicilio: venta.valorDomicilio.value,
     domiciliario: venta.domiciliario,
     ventaTipo: venta.ventaTipo,
+    bloquesReempacados: venta.bloquesReempacados,
+    costoEmpaques: venta.costoEmpaques.value,
   };
 }
 
@@ -52,6 +56,7 @@ export async function registrarVenta(formData: FormData) {
     valorDomicilio: parsed.data.valorDomicilio ? String(parsed.data.valorDomicilio) : undefined,
     domiciliario: parsed.data.domiciliario || undefined,
     ventaTipo: (parsed.data.ventaTipo as VentaTipo) ?? 'GRANEL',
+    bloquesReempacados: parsed.data.bloquesReempacados ?? 0,
   };
 
   try {

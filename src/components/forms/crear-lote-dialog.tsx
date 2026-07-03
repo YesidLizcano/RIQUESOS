@@ -39,6 +39,7 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
   const [bloquesEnteros, setBloquesEnteros] = useState<string>('');
   const [bloquesTajadosDeFabrica, setBloquesTajadosDeFabrica] = useState<string>('');
   const [cantidadInput, setCantidadInput] = useState<string>('');
+  const [precioPorBloque, setPrecioPorBloque] = useState<string>('');
   const [precioCompraBaseKg, setPrecioCompraBaseKg] = useState<string>('');
   const [costoFlete, setCostoFlete] = useState<string>('');
   const [costoEmpaques, setCostoEmpaques] = useState<string>('');
@@ -51,10 +52,15 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
     ? String(totalBloques * DOBLE_CREMA_BLOCK_KG || 0)
     : cantidadInput;
 
+  // For DC: derived precioCompraBaseKg from precioPorBloque
+  const effectivePrecioBaseKg = isDobleCremaSelected
+    ? (parseFloat(precioPorBloque) || 0) / DOBLE_CREMA_BLOCK_KG
+    : parseFloat(precioCompraBaseKg) || 0;
+
   // Compute costo real calculado preview
   const costoRealCalculadoKg = (() => {
     const cantidad = parseFloat(cantidadCompradaKg);
-    const precioBase = parseFloat(precioCompraBaseKg);
+    const precioBase = effectivePrecioBaseKg;
     const flete = parseFloat(costoFlete) || 0;
     const empaques = parseFloat(costoEmpaques) || 0;
 
@@ -75,6 +81,7 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
       setBloquesEnteros('');
       setBloquesTajadosDeFabrica('');
       setCantidadInput('');
+      setPrecioPorBloque('');
       setPrecioCompraBaseKg('');
       setCostoFlete('');
       setCostoEmpaques('');
@@ -99,7 +106,7 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
         <form action={action} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="producto">Tipo de Producto</Label>
-            <Select name="producto" value={producto} onValueChange={(v) => { if (v !== null) { setProducto(v); setBloquesEnteros(''); setBloquesTajadosDeFabrica(''); setCantidadInput(''); } }}>
+            <Select name="producto" value={producto} onValueChange={(v) => { if (v !== null) { setProducto(v); setBloquesEnteros(''); setBloquesTajadosDeFabrica(''); setCantidadInput(''); setPrecioPorBloque(''); setPrecioCompraBaseKg(''); } }}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Seleccione producto" />
               </SelectTrigger>
@@ -185,20 +192,43 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
             </div>
           ) : null}
 
-          <div className="space-y-2">
-            <Label htmlFor="precioCompraBaseKg">Precio Compra Base ($/Kg)</Label>
-            <Input
-              id="precioCompraBaseKg"
-              name="precioCompraBaseKg"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0.00"
-              value={precioCompraBaseKg}
-              onChange={(e) => setPrecioCompraBaseKg(e.target.value)}
-              required
-            />
-          </div>
+          {isDobleCremaSelected ? (
+            <div className="space-y-2">
+              <Label htmlFor="precioPorBloque">Precio por Bloque ($)</Label>
+              <Input
+                id="precioPorBloque"
+                name="precioPorBloque"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={precioPorBloque}
+                onChange={(e) => setPrecioPorBloque(e.target.value)}
+                required
+              />
+              {precioPorBloque && !isNaN(parseFloat(precioPorBloque)) && parseFloat(precioPorBloque) > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Equivale a ${(effectivePrecioBaseKg).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/kg
+                </p>
+              )}
+              <input type="hidden" name="precioCompraBaseKg" value={isDobleCremaSelected ? String(effectivePrecioBaseKg) : precioCompraBaseKg} />
+            </div>
+          ) : producto === TipoProducto.SEMISALADO ? (
+            <div className="space-y-2">
+              <Label htmlFor="precioCompraBaseKg">Precio Compra Base ($/Kg)</Label>
+              <Input
+                id="precioCompraBaseKg"
+                name="precioCompraBaseKg"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={precioCompraBaseKg}
+                onChange={(e) => setPrecioCompraBaseKg(e.target.value)}
+                required
+              />
+            </div>
+          ) : null}
 
           <div className="space-y-2">
             <Label htmlFor="costoFlete">Costo Flete ($)</Label>

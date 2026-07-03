@@ -18,6 +18,8 @@ export interface VentaRepository {
     loteId: string,
     cantidadKg: string,
     expectedVersion: number,
-    ventaTipo?: VentaTipo
+    ventaTipo?: VentaTipo,
+    empaqueId?: string,
+    bloquesReempacados?: number
   ): Promise<Venta>;
 }

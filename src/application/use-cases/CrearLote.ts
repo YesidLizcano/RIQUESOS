@@ -11,6 +11,7 @@ export interface CrearLoteInput {
   proveedorId: string;
   cantidadCompradaKg: string;
   precioCompraBaseKg: string;
+  precioPorBloque?: string;
   costoFlete?: string;
   costoEmpaques?: string;
   bloquesEnteros?: number;
@@ -46,12 +47,17 @@ export class CrearLote {
         throw new Error('Para Doble Crema, debe ingresar al menos un bloque');
       }
 
+      const precioPorBloque = input.precioPorBloque ?? '0';
+      // precioCompraBaseKg is derived from precioPorBloque / DOBLE_CREMA_BLOCK_KG
+      const precioCompraBaseKg = String(Number(precioPorBloque) / DOBLE_CREMA_BLOCK_KG);
+
       const cantidadKg = (bloquesEnteros + bloquesTajadosDeFabrica) * DOBLE_CREMA_BLOCK_KG;
       loteProps = {
         producto: input.producto,
         proveedorId: input.proveedorId,
         cantidadCompradaKg: String(cantidadKg),
-        precioCompraBaseKg: input.precioCompraBaseKg,
+        precioCompraBaseKg,
+        precioPorBloque,
         costoFlete: input.costoFlete,
         costoEmpaques: input.costoEmpaques,
         bloquesEnteros,
@@ -59,7 +65,7 @@ export class CrearLote {
         bloquesTajados: 0, // Initially no bloques tajados
       };
     } else {
-      // Semisalado: quantity input in Kg
+      // Semisalado: quantity input in Kg, no precioPorBloque
       if (!input.cantidadCompradaKg || Number(input.cantidadCompradaKg) <= 0) {
         throw new Error('Para Semisalado, la cantidad en Kg es obligatoria');
       }
@@ -68,6 +74,7 @@ export class CrearLote {
         proveedorId: input.proveedorId,
         cantidadCompradaKg: input.cantidadCompradaKg,
         precioCompraBaseKg: input.precioCompraBaseKg,
+        precioPorBloque: '0',
         costoFlete: input.costoFlete,
         costoEmpaques: input.costoEmpaques,
         bloquesEnteros: 0,

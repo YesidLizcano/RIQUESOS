@@ -17,6 +17,8 @@ export interface VentaProps {
   valorDomicilio?: string;
   domiciliario?: string;
   ventaTipo?: VentaTipo;
+  bloquesReempacados?: number;
+  costoEmpaques?: string;
 }
 
 export class Venta {
@@ -32,6 +34,8 @@ export class Venta {
   readonly valorDomicilio: Dinero;
   readonly domiciliario: string;
   readonly ventaTipo: VentaTipo;
+  readonly bloquesReempacados: number;
+  readonly costoEmpaques: Dinero;
 
   constructor(props: VentaProps) {
     this.id = props.id ?? '';
@@ -43,6 +47,8 @@ export class Venta {
     this.valorDomicilio = new Dinero(props.valorDomicilio ?? '0');
     this.domiciliario = props.domiciliario ?? '';
     this.ventaTipo = props.ventaTipo ?? 'GRANEL';
+    this.bloquesReempacados = props.bloquesReempacados ?? 0;
+    this.costoEmpaques = new Dinero(props.costoEmpaques ?? '0');
 
     // Costo aplicado por Kg (from the Lote's costoRealCalculadoKg)
     this.costoAplicado = new Dinero(props.costoAplicadoKg).multiply(this.cantidadVendidaKg.value);
