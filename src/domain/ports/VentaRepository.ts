@@ -1,7 +1,7 @@
 // Port: VentaRepository — interface only, no infrastructure imports
 // Venta is immutable — no delete or softDelete method is provided.
 // Once a Venta is created, it cannot be removed or marked as deleted.
-import { Venta } from '../entities/Venta';
+import { Venta, type VentaTipo } from '../entities/Venta';
 
 export interface VentaRepository {
   save(venta: Venta): Promise<Venta>;
@@ -17,6 +17,7 @@ export interface VentaRepository {
     venta: Venta,
     loteId: string,
     cantidadKg: string,
-    expectedVersion: number
+    expectedVersion: number,
+    ventaTipo?: VentaTipo
   ): Promise<Venta>;
 }

@@ -1,6 +1,6 @@
 // Use Case: RegistrarVenta — atomic registration, price resolution, concurrency retry
 // Application layer: can import from Domain but NOT from Infrastructure
-import { Venta } from '../../domain/entities/Venta';
+import { Venta, type VentaTipo } from '../../domain/entities/Venta';
 import { Lote } from '../../domain/entities/Lote';
 import { Dinero } from '../../domain/value-objects/Dinero';
 import { Kilogramo } from '../../domain/value-objects/Kilogramo';
@@ -17,6 +17,7 @@ export interface RegistrarVentaInput {
   standardPricePerKg: string; // standard price for the product type
   valorDomicilio?: string;
   domiciliario?: string;
+  ventaTipo?: VentaTipo;
 }
 
 export interface RegistrarVentaOutput {
@@ -34,6 +35,8 @@ export class RegistrarVenta {
   ) {}
 
   async execute(input: RegistrarVentaInput): Promise<RegistrarVentaOutput> {
+    const ventaTipo: VentaTipo = input.ventaTipo ?? 'GRANEL';
+
     // 1. Validate Cliente exists
     const cliente = await this.clienteRepo.findById(input.clienteId);
     if (!cliente) {
@@ -46,11 +49,20 @@ export class RegistrarVenta {
       throw new Error(`Lote not found: ${input.loteId}`);
     }
 
-    // 2b. Doble Crema + Mayorista block constraint
-    if (lote.producto === TipoProducto.DOBLE_CREMA && cliente.tipo === TipoCliente.MAYORISTA) {
+    // 2b. Validate ventaTipo against client and product rules
+    if (lote.producto === TipoProducto.DOBLE_CREMA && ventaTipo === 'BLOQUES') {
       const cantidad = Number(input.cantidadVendidaKg);
-      const remainder = Number((cantidad / DOBLE_CREMA_BLOCK_KG).toFixed(6)) % 1;
-      if (Math.abs(remainder) >= 0.001) {
+      const bloques = cantidad / DOBLE_CREMA_BLOCK_KG;
+      if (!Number.isInteger(bloques)) {
+        throw new Error('Para venta por bloques, la cantidad debe ser múltiplo de 2.5 kg');
+      }
+    }
+
+    // Doble Crema + Mayorista block constraint (legacy validation)
+    if (lote.producto === TipoProducto.DOBLE_CREMA && cliente.tipo === TipoCliente.MAYORISTA && ventaTipo === 'BLOQUES') {
+      const cantidad = Number(input.cantidadVendidaKg);
+      const bloques = cantidad / DOBLE_CREMA_BLOCK_KG;
+      if (!Number.isInteger(bloques)) {
         throw new Error('Para Doble Crema mayorista, la cantidad debe ser múltiplo de 2.5 kg');
       }
     }
@@ -68,6 +80,7 @@ export class RegistrarVenta {
       costoAplicadoKg: lote.costoRealCalculadoKg.value,
       valorDomicilio: input.valorDomicilio,
       domiciliario: input.domiciliario,
+      ventaTipo,
     });
 
     // 5. Register atomically with retry on concurrency conflict
@@ -84,7 +97,8 @@ export class RegistrarVenta {
           venta,
           input.loteId,
           input.cantidadVendidaKg,
-          lote.version
+          lote.version,
+          ventaTipo
         );
 
         // Re-fetch lote after transaction to return updated state

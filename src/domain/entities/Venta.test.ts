@@ -85,6 +85,23 @@ describe('Venta', () => {
     });
   });
 
+  describe('constructor — ventaTipo', () => {
+    it('should default ventaTipo to GRANEL when not provided', () => {
+      const venta = new Venta(validProps);
+      expect(venta.ventaTipo).toBe('GRANEL');
+    });
+
+    it('should accept BLOQUES ventaTipo', () => {
+      const venta = new Venta({ ...validProps, ventaTipo: 'BLOQUES' });
+      expect(venta.ventaTipo).toBe('BLOQUES');
+    });
+
+    it('should accept GRANEL ventaTipo explicitly', () => {
+      const venta = new Venta({ ...validProps, ventaTipo: 'GRANEL' });
+      expect(venta.ventaTipo).toBe('GRANEL');
+    });
+  });
+
   describe('immutability', () => {
     it('should have readonly properties', () => {
       const venta = new Venta(validProps);

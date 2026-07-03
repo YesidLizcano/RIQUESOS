@@ -52,6 +52,11 @@ export function createVentaColumns(
       cell: ({ row }) => {
         const kg = Number(row.getValue('cantidadVendidaKg'));
         const producto = (row.original as VentaResponse & { producto?: string }).producto;
+        const ventaTipo = (row.original as VentaResponse).ventaTipo;
+        // Show block info for BLOQUES ventas or DC quantities that are whole blocks
+        if (ventaTipo === 'BLOQUES' && isWholeBlocks(kg)) {
+          return `${bloquesCompletos(kg)} bloque${bloquesCompletos(kg) === 1 ? '' : 's'} (${kg.toLocaleString('es-AR')} kg)`;
+        }
         if (producto && isDobleCrema(producto) && isWholeBlocks(kg)) {
           return `${kg.toLocaleString('es-AR')} kg (${bloquesCompletos(kg)} bloque${bloquesCompletos(kg) === 1 ? '' : 's'})`;
         }

@@ -6,7 +6,7 @@ import { registrarVenta } from '@/presentation/actions/ventas';
 import { toast } from 'sonner';
 import { TipoProducto, TipoCliente } from '@/domain/enums';
 import { DOBLE_CREMA_BLOCK_KG, bloquesCompletos, isDobleCrema } from '@/domain/constants';
-import type { ClienteResponse, LoteResponse } from '@/presentation/dtos';
+import type { ClienteResponse, LoteResponse, VentaTipo } from '@/presentation/dtos';
 import {
   Dialog,
   DialogContent,
@@ -38,6 +38,7 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
   const [clienteId, setClienteId] = useState<string>('');
   const [loteId, setLoteId] = useState<string>('');
   const [cantidadInput, setCantidadInput] = useState<string>('');
+  const [ventaTipo, setVentaTipo] = useState<VentaTipo>('GRANEL');
 
   // Filter only active lotes
   const lotesActivos = lotes.filter((l) => l.estado === 'ACTIVO');
@@ -46,12 +47,24 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
   const selectedCliente = clientes.find((c) => c.id === clienteId);
   const selectedLote = lotesActivos.find((l) => l.id === loteId);
 
-  // Determine block mode: Doble Crema + Mayorista = bloques input
-  const isDobleCremaLote = selectedLote ? isDobleCrema(selectedLote.producto) : false;
   const isMayorista = selectedCliente?.tipo === TipoCliente.MAYORISTA;
-  const isBlockMode = isDobleCremaLote && isMayorista;
+  const isDobleCremaLote = selectedLote ? isDobleCrema(selectedLote.producto) : false;
 
-  // Convert UI input to kg value for submission
+  // Auto-determine venta tipo based on client and product
+  // Mayorista + DC → force BLOQUES (hide selector)
+  // Minorista + DC → show selector (BLOQUES or GRANEL)
+  // Semisalado → force GRANEL (hide selector)
+  const showTipoSelector = !isMayorista && isDobleCremaLote && !!selectedCliente && !!selectedLote;
+  const effectiveVentaTipo: VentaTipo = (() => {
+    if (!selectedCliente || !selectedLote) return 'GRANEL';
+    if (isMayorista && isDobleCremaLote) return 'BLOQUES';
+    if (!isDobleCremaLote) return 'GRANEL';
+    return ventaTipo; // Minorista + DC: user choice
+  })();
+
+  const isBlockMode = effectiveVentaTipo === 'BLOQUES';
+
+  // Convert UI input to kg for submission
   const cantidadVendidaKg = isBlockMode
     ? String(parseFloat(cantidadInput || '0') * DOBLE_CREMA_BLOCK_KG || 0)
     : cantidadInput;
@@ -73,7 +86,12 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
     return null; // Must enter manually
   })();
 
-  // Clear cantidad when switching between block/kg modes
+  // Lote filter: Mayorista should only see DC lotes
+  const filteredLotes = isMayorista
+    ? lotesActivos.filter((l) => isDobleCrema(l.producto))
+    : lotesActivos;
+
+  // Clear quantity when changing type
   function handleClienteChange(v: string) {
     setClienteId(v);
     setCantidadInput('');
@@ -84,17 +102,22 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
     setCantidadInput('');
   }
 
+  function handleVentaTipoChange(tipo: VentaTipo) {
+    setVentaTipo(tipo);
+    setCantidadInput('');
+  }
+
   async function action(formData: FormData) {
-    // Client-side validation: Doble Crema + Mayorista block constraint
+    // Client-side validation for block mode
     if (isBlockMode) {
       const bloques = parseFloat(cantidadInput);
-      if (!isNaN(bloques) && !Number.isInteger(bloques)) {
-        toast.error('Para Doble Crema mayorista, ingrese bloques enteros');
+      if (isNaN(bloques) || !Number.isInteger(bloques) || bloques <= 0) {
+        toast.error('Ingrese la cantidad de bloques enteros');
         return;
       }
     }
-    // Set the kg value into the form data
     formData.set('cantidadVendidaKg', cantidadVendidaKg);
+    formData.set('ventaTipo', effectiveVentaTipo);
     const result = await registrarVenta(formData);
     if (result.success) {
       toast.success('Venta registrada exitosamente');
@@ -103,6 +126,7 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
       setClienteId('');
       setLoteId('');
       setCantidadInput('');
+      setVentaTipo('GRANEL');
     } else {
       toast.error(result.error || 'Error al registrar venta');
     }
@@ -122,6 +146,8 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
           </DialogDescription>
         </DialogHeader>
         <form action={action} className="space-y-4">
+
+          {/* Cliente */}
           <div className="space-y-2">
             <Label htmlFor="clienteId">Cliente</Label>
             <Select name="clienteId" value={clienteId} onValueChange={(v) => v !== null && handleClienteChange(v)}>
@@ -131,13 +157,19 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
               <SelectContent>
                 {clientes.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
-                    {c.nombre} ({c.tipo})
+                    {c.nombre} ({c.tipo === 'MAYORISTA' ? 'Mayorista' : 'Minorista'})
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {isMayorista && (
+              <p className="text-xs text-blue-600 dark:text-blue-400">
+                Cliente mayorista — venta por bloques
+              </p>
+            )}
           </div>
 
+          {/* Lote — filtered by client type */}
           <div className="space-y-2">
             <Label htmlFor="loteId">Lote</Label>
             <Select name="loteId" value={loteId} onValueChange={(v) => v !== null && handleLoteChange(v)}>
@@ -145,11 +177,11 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
                 <SelectValue placeholder="Seleccione lote" />
               </SelectTrigger>
               <SelectContent>
-                {lotesActivos.map((l) => (
+                {filteredLotes.map((l) => (
                   <SelectItem key={l.id} value={l.id}>
                     {isDobleCrema(l.producto)
-                      ? `${l.producto === 'DOBLE_CREMA' ? 'Doble Crema' : 'Semisalado'} — ${bloquesCompletos(Number(l.stockDisponibleKg))} bloques disp.`
-                      : `${l.producto === 'DOBLE_CREMA' ? 'Doble Crema' : 'Semisalado'} — ${Number(l.stockDisponibleKg).toLocaleString('es-AR')} Kg disp.`
+                      ? `${l.producto === 'DOBLE_CREMA' ? 'Doble Crema' : 'Semisalado'} — ${l.bloquesEnteros} bloques disp. (${Number(l.stockDisponibleKg).toLocaleString('es-AR')} kg)`
+                      : `${l.producto === 'DOBLE_CREMA' ? 'Doble Crema' : 'Semisalado'} — ${Number(l.stockDisponibleKg).toLocaleString('es-AR')} kg disp.`
                     }
                   </SelectItem>
                 ))}
@@ -157,9 +189,38 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
             </Select>
           </div>
 
+          {/* Tipo de Venta — only for Minorista + Doble Crema */}
+          {showTipoSelector && (
+            <div className="space-y-2">
+              <Label>Tipo de Venta</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={ventaTipo === 'BLOQUES' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleVentaTipoChange('BLOQUES')}
+                >
+                  Por Bloques
+                </Button>
+                <Button
+                  type="button"
+                  variant={ventaTipo === 'GRANEL' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleVentaTipoChange('GRANEL')}
+                >
+                  Al Granel (Kg)
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {ventaTipo === 'BLOQUES' ? 'Venta por bloques enteros de 2.5 kg' : 'Venta por peso, cualquier cantidad'}
+              </p>
+            </div>
+          )}
+
+          {/* Cantidad — changes label/step based on mode */}
           <div className="space-y-2">
             <Label htmlFor="cantidadVendidaKg">
-              {isBlockMode ? 'Bloques' : 'Cantidad Vendida (Kg)'}
+              {isBlockMode ? 'Cantidad de Bloques' : 'Cantidad (Kg)'}
             </Label>
             <Input
               id="cantidadVendidaKg"
@@ -175,10 +236,10 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
             {selectedLote && isBlockMode && (
               <>
                 <p className="text-xs text-muted-foreground">
-                  Bloques disponibles: {bloquesCompletos(Number(selectedLote.stockDisponibleKg))}
+                  Bloques disponibles: {selectedLote.bloquesEnteros}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  1 bloque = 2.5 kg
+                  1 bloque = {DOBLE_CREMA_BLOCK_KG} kg
                 </p>
               </>
             )}
@@ -189,7 +250,7 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
             )}
             {selectedLote && !isDobleCremaLote && (
               <p className="text-xs text-muted-foreground">
-                Stock disponible: {Number(selectedLote.stockDisponibleKg).toLocaleString('es-AR')} Kg
+                Stock disponible: {Number(selectedLote.stockDisponibleKg).toLocaleString('es-AR')} kg
               </p>
             )}
             {isBlockMode && cantidadInput && !isNaN(parseFloat(cantidadInput)) && (
@@ -199,6 +260,7 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
             )}
           </div>
 
+          {/* Precio */}
           <div className="space-y-2">
             <Label htmlFor="standardPricePerKg">Precio de Venta ($/Kg)</Label>
             <Input
@@ -216,8 +278,14 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
                 Precio sugerido según tipo de cliente: ${resolvedPrice.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
               </p>
             )}
+            {isBlockMode && (
+              <p className="text-xs text-muted-foreground">
+                El precio es por kilogramo — el total se calcula automáticamente
+              </p>
+            )}
           </div>
 
+          {/* Domicilio */}
           <div className="space-y-2">
             <Label htmlFor="valorDomicilio">Valor Domicilio ($)</Label>
             <Input

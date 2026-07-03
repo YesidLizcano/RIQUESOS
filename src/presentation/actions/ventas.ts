@@ -9,7 +9,7 @@ import { PrismaLoteRepo } from '@/infrastructure/repositories/PrismaLoteRepo';
 import { PrismaClienteRepo } from '@/infrastructure/repositories/PrismaClienteRepo';
 import { RegistrarVenta } from '@/application/use-cases/RegistrarVenta';
 import { registrarVentaSchema } from '@/presentation/validations/venta.schema';
-import type { RegistrarVentaRequest, VentaResponse } from '../dtos';
+import type { RegistrarVentaRequest, VentaResponse, VentaTipo } from '../dtos';
 import { logger } from '@/infrastructure/pino-logger';
 
 async function getRegistrarVentaUseCase() {
@@ -32,6 +32,7 @@ function ventaToResponse(venta: import('@/domain/entities/Venta').Venta): VentaR
     gananciaBruta: venta.gananciaBruta.value,
     valorDomicilio: venta.valorDomicilio.value,
     domiciliario: venta.domiciliario,
+    ventaTipo: venta.ventaTipo,
   };
 }
 
@@ -50,13 +51,14 @@ export async function registrarVenta(formData: FormData) {
     standardPricePerKg: String(parsed.data.standardPricePerKg),
     valorDomicilio: parsed.data.valorDomicilio ? String(parsed.data.valorDomicilio) : undefined,
     domiciliario: parsed.data.domiciliario || undefined,
+    ventaTipo: (parsed.data.ventaTipo as VentaTipo) ?? 'GRANEL',
   };
 
   try {
     const useCase = await getRegistrarVentaUseCase();
     const { venta } = await useCase.execute(request);
     revalidatePath('/ventas');
-    logger.info({ ventaId: venta.id, loteId: venta.loteId, cantidad: venta.cantidadVendidaKg.value }, 'Venta registered successfully');
+    logger.info({ ventaId: venta.id, loteId: venta.loteId, cantidad: venta.cantidadVendidaKg.value, ventaTipo: venta.ventaTipo }, 'Venta registered successfully');
     return { success: true, venta: ventaToResponse(venta) };
   } catch (error) {
     logger.warn({ err: error }, 'Venta registration failed');

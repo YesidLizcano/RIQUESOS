@@ -141,6 +141,128 @@ describe('Lote', () => {
       expect(result.cantidadCompradaKg.value).toBe('100');
       expect(result.costoRealCalculadoKg.value).toBe('3000');
     });
+
+    it('should recalculate bloquesEnteros for DC lote after granel deduction', () => {
+      // 100 kg = 40 blocks. Deduct 1.5 kg → 98.5 kg → 39 complete blocks
+      const lote = new Lote({
+        ...validProps,
+        cantidadCompradaKg: '100',
+        stockDisponibleKg: '100',
+        bloquesEnteros: 40,
+        precioCompraBaseKg: '3000',
+      });
+      const result = lote.deductStock(new Kilogramo('1.5'));
+      expect(result.stockDisponibleKg.value).toBe('98.5');
+      expect(result.bloquesEnteros).toBe(39); // floor(98.5 / 2.5) = 39
+    });
+
+    it('should not change bloquesEnteros for SEMISALADO lote after deduction', () => {
+      const lote = new Lote({
+        proveedorId: 'prov-1',
+        producto: TipoProducto.SEMISALADO,
+        cantidadCompradaKg: '50',
+        stockDisponibleKg: '50',
+        precioCompraBaseKg: '4000',
+      });
+      const result = lote.deductStock(new Kilogramo('10'));
+      expect(result.stockDisponibleKg.value).toBe('40');
+      expect(result.bloquesEnteros).toBe(0);
+    });
+  });
+
+  describe('deductStockByBlocks', () => {
+    it('should deduct blocks and stock for DC lote', () => {
+      const lote = new Lote({
+        ...validProps,
+        cantidadCompradaKg: '100',
+        stockDisponibleKg: '100',
+        bloquesEnteros: 40,
+        precioCompraBaseKg: '3000',
+      });
+      const result = lote.deductStockByBlocks(3);
+      expect(result.bloquesEnteros).toBe(37);
+      expect(result.stockDisponibleKg.value).toBe('92.5'); // 100 - 3*2.5
+      expect(result.estado).toBe(EstadoLote.ACTIVO);
+    });
+
+    it('should transition to AGOTADO when all blocks deducted', () => {
+      const lote = new Lote({
+        ...validProps,
+        cantidadCompradaKg: '7.5',
+        stockDisponibleKg: '7.5',
+        bloquesEnteros: 3,
+        precioCompraBaseKg: '3000',
+      });
+      const result = lote.deductStockByBlocks(3);
+      expect(result.bloquesEnteros).toBe(0);
+      expect(result.stockDisponibleKg.value).toBe('0');
+      expect(result.estado).toBe(EstadoLote.AGOTADO);
+    });
+
+    it('should reject block deduction on SEMISALADO lote', () => {
+      const lote = new Lote({
+        proveedorId: 'prov-1',
+        producto: TipoProducto.SEMISALADO,
+        cantidadCompradaKg: '50',
+        stockDisponibleKg: '50',
+        precioCompraBaseKg: '4000',
+      });
+      expect(() => lote.deductStockByBlocks(1)).toThrow(
+        'Block deduction is only valid for Doble Crema lotes'
+      );
+    });
+
+    it('should reject deduction with zero blocks', () => {
+      const lote = new Lote({
+        ...validProps,
+        cantidadCompradaKg: '100',
+        stockDisponibleKg: '100',
+        bloquesEnteros: 40,
+        precioCompraBaseKg: '3000',
+      });
+      expect(() => lote.deductStockByBlocks(0)).toThrow(
+        'Block quantity must be greater than 0'
+      );
+    });
+
+    it('should reject deduction exceeding available blocks', () => {
+      const lote = new Lote({
+        ...validProps,
+        cantidadCompradaKg: '100',
+        stockDisponibleKg: '100',
+        bloquesEnteros: 40,
+        precioCompraBaseKg: '3000',
+      });
+      expect(() => lote.deductStockByBlocks(41)).toThrow(
+        'Insufficient blocks'
+      );
+    });
+
+    it('should reject non-integer block quantity', () => {
+      const lote = new Lote({
+        ...validProps,
+        cantidadCompradaKg: '100',
+        stockDisponibleKg: '100',
+        bloquesEnteros: 40,
+        precioCompraBaseKg: '3000',
+      });
+      expect(() => lote.deductStockByBlocks(2.5)).toThrow(
+        'Block quantity must be a whole number'
+      );
+    });
+
+    it('should reject deduction from AGOTADO lote', () => {
+      const lote = new Lote({
+        ...validProps,
+        estado: EstadoLote.AGOTADO,
+        stockDisponibleKg: '0',
+        bloquesEnteros: 0,
+        precioCompraBaseKg: '3000',
+      });
+      expect(() => lote.deductStockByBlocks(1)).toThrow(
+        'Cannot deduct stock from an AGOTADO Lote'
+      );
+    });
   });
 
   describe('markAsAgotado', () => {

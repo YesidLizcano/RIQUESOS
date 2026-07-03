@@ -1,8 +1,9 @@
 // Infrastructure: PrismaVentaRepo — $transaction for atomic sale + stock deduction with retry
 import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
-import { Venta } from '../../domain/entities/Venta';
-import { EstadoLote } from '../../domain/enums';
+import { Venta, type VentaTipo } from '../../domain/entities/Venta';
+import { EstadoLote, TipoProducto } from '../../domain/enums';
+import { DOBLE_CREMA_BLOCK_KG } from '../../domain/constants';
 import type { VentaRepository } from '../../domain/ports/VentaRepository';
 import { ConcurrencyError } from '../../domain/errors/ConcurrencyError';
 
@@ -19,6 +20,7 @@ export class PrismaVentaRepo implements VentaRepository {
         gananciaBruta: new Prisma.Decimal(venta.gananciaBruta.value),
         valorDomicilio: new Prisma.Decimal(venta.valorDomicilio.value),
         domiciliario: venta.domiciliario,
+        ventaTipo: venta.ventaTipo,
       },
     });
     return this.toEntity(created);
@@ -27,13 +29,14 @@ export class PrismaVentaRepo implements VentaRepository {
   /**
    * Register a Venta atomically: create the Venta record AND deduct stock from the Lote.
    * Uses Prisma $transaction for atomicity and optimistic locking (version field) on the Lote.
-   * Retries on ConcurrencyError up to maxRetries times.
+   * Handles block-based deduction for BLOQUES mode and kg-based deduction for GRANEL mode.
    */
   async registrarVentaAtomico(
     venta: Venta,
     loteId: string,
     cantidadKg: string,
-    expectedVersion: number
+    expectedVersion: number,
+    ventaTipo: VentaTipo = 'GRANEL'
   ): Promise<Venta> {
     const maxRetries = 3;
     let lastError: Error | null = null;
@@ -60,17 +63,42 @@ export class PrismaVentaRepo implements VentaRepository {
             );
           }
 
-          // 2. Optimistic locking: check version and update stock
+          // 2. Calculate new stock and block counts
           const newStock = currentStock.minus(cantidad);
           const newEstado = newStock.isZero() ? EstadoLote.AGOTADO : lote.estado;
 
+          // Build the Lote update data based on ventaTipo and product type
+          const loteUpdateData: Prisma.LoteUpdateManyMutationInput = {
+            stockDisponibleKg: newStock,
+            estado: newEstado as EstadoLote,
+            version: { increment: 1 },
+          };
+
+          if (ventaTipo === 'BLOQUES' && (lote.producto as string) === TipoProducto.DOBLE_CREMA) {
+            // Block deduction: decrement bloquesEnteros by the number of blocks sold
+            const cantidadBloques = Number(cantidadKg) / DOBLE_CREMA_BLOCK_KG;
+            if (!Number.isInteger(cantidadBloques)) {
+              throw new Error('Block quantity must be an integer for BLOQUES venta');
+            }
+            const currentBloques = lote.bloquesEnteros;
+            if (currentBloques < cantidadBloques) {
+              throw new Error(
+                `Insufficient blocks: available ${currentBloques}, requested ${cantidadBloques}`
+              );
+            }
+            loteUpdateData.bloquesEnteros = currentBloques - cantidadBloques;
+          } else if ((lote.producto as string) === TipoProducto.DOBLE_CREMA) {
+            // Granel (kg) deduction for Doble Crema: recalculate bloquesEnteros
+            // Partial kg sales can reduce complete block count
+            const newBloquesEnteros = Math.floor(Number(newStock) / DOBLE_CREMA_BLOCK_KG);
+            loteUpdateData.bloquesEnteros = newBloquesEnteros;
+          }
+          // For Semisalado: no block fields to update
+
+          // 3. Optimistic locking: update Lote with version check
           const updateResult = await tx.lote.updateMany({
             where: { id: loteId, version: expectedVersion },
-            data: {
-              stockDisponibleKg: newStock,
-              estado: newEstado as EstadoLote,
-              version: { increment: 1 },
-            },
+            data: loteUpdateData,
           });
 
           if (updateResult.count === 0) {
@@ -79,7 +107,7 @@ export class PrismaVentaRepo implements VentaRepository {
             );
           }
 
-          // 3. Create the Venta record
+          // 4. Create the Venta record
           const createdVenta = await tx.venta.create({
             data: {
               clienteId: venta.clienteId,
@@ -91,6 +119,7 @@ export class PrismaVentaRepo implements VentaRepository {
               gananciaBruta: new Prisma.Decimal(venta.gananciaBruta.value),
               valorDomicilio: new Prisma.Decimal(venta.valorDomicilio.value),
               domiciliario: venta.domiciliario,
+              ventaTipo: venta.ventaTipo,
             },
           });
 
@@ -171,6 +200,7 @@ export class PrismaVentaRepo implements VentaRepository {
         .toString(),
       valorDomicilio: record.valorDomicilio.toString(),
       domiciliario: record.domiciliario,
+      ventaTipo: (record.ventaTipo as 'BLOQUES' | 'GRANEL') ?? 'GRANEL',
     });
   }
 }

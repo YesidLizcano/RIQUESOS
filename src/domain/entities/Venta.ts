@@ -4,6 +4,8 @@
 import { Dinero } from '../value-objects/Dinero';
 import { Kilogramo } from '../value-objects/Kilogramo';
 
+export type VentaTipo = 'BLOQUES' | 'GRANEL';
+
 export interface VentaProps {
   id?: string;
   fecha?: Date;
@@ -14,6 +16,7 @@ export interface VentaProps {
   costoAplicadoKg: string;
   valorDomicilio?: string;
   domiciliario?: string;
+  ventaTipo?: VentaTipo;
 }
 
 export class Venta {
@@ -28,6 +31,7 @@ export class Venta {
   readonly gananciaBruta: Dinero;
   readonly valorDomicilio: Dinero;
   readonly domiciliario: string;
+  readonly ventaTipo: VentaTipo;
 
   constructor(props: VentaProps) {
     this.id = props.id ?? '';
@@ -38,6 +42,7 @@ export class Venta {
     this.precioVentaKg = new Dinero(props.precioVentaKg);
     this.valorDomicilio = new Dinero(props.valorDomicilio ?? '0');
     this.domiciliario = props.domiciliario ?? '';
+    this.ventaTipo = props.ventaTipo ?? 'GRANEL';
 
     // Costo aplicado por Kg (from the Lote's costoRealCalculadoKg)
     this.costoAplicado = new Dinero(props.costoAplicadoKg).multiply(this.cantidadVendidaKg.value);

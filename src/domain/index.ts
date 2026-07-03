@@ -7,7 +7,7 @@ export { Proveedor, type ProveedorProps } from './entities/Proveedor';
 export { Lote, type LoteProps } from './entities/Lote';
 export { Tajado, type TajadoProps } from './entities/Tajado';
 export { Cliente, type ClienteProps } from './entities/Cliente';
-export { Venta, type VentaProps } from './entities/Venta';
+export { Venta, type VentaProps, type VentaTipo } from './entities/Venta';
 export { GastoFijo, type GastoFijoProps } from './entities/GastoFijo';
 export { Usuario, type UsuarioProps } from './entities/Usuario';
 export { ConcurrencyError } from './errors/ConcurrencyError';

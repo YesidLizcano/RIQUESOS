@@ -148,7 +148,8 @@ export class Lote {
   }
 
   /**
-   * Deduct stock from this Lote. Returns a new Lote with reduced stock.
+   * Deduct stock from this Lote by kilograms (for granel/partial sales).
+   * For Doble Crema lotes, recalculates bloquesEnteros after deduction.
    * Automatically transitions to AGOTADO if stock reaches zero.
    */
   deductStock(cantidad: Kilogramo): Lote {
@@ -164,6 +165,13 @@ export class Lote {
     const newStock = this.stockDisponibleKg.subtract(cantidad);
     const newEstado = newStock.isZero() ? EstadoLote.AGOTADO : this.estado;
 
+    // For Doble Crema, recalculate bloquesEnteros after stock deduction
+    // Partial kg sales can reduce the number of complete blocks available
+    let newBloquesEnteros = this.bloquesEnteros;
+    if (this.producto === TipoProducto.DOBLE_CREMA) {
+      newBloquesEnteros = Math.floor(Number(newStock.value) / 2.5);
+    }
+
     return new Lote({
       id: this.id,
       producto: this.producto,
@@ -175,7 +183,63 @@ export class Lote {
       costoTajado: this.costoTajado.value,
       costoEmpaques: this.costoEmpaques.value,
       stockDisponibleKg: newStock.value,
-      bloquesEnteros: this.bloquesEnteros,
+      bloquesEnteros: newBloquesEnteros,
+      bloquesTajados: this.bloquesTajados,
+      bloquesTajadosDeFabrica: this.bloquesTajadosDeFabrica,
+      estado: newEstado,
+      version: this.version,
+      deletedAt: this.deletedAt,
+    });
+  }
+
+  /**
+   * Deduct stock from this Lote by whole blocks (for mayorista block sales).
+   * Only valid for Doble Crema lotes.
+   * Decrements bloquesEnteros by the block count and stockDisponibleKg by the kg equivalent.
+   * Automatically transitions to AGOTADO if stock reaches zero.
+   */
+  deductStockByBlocks(cantidadBloques: number): Lote {
+    if (this.producto !== TipoProducto.DOBLE_CREMA) {
+      throw new Error('Block deduction is only valid for Doble Crema lotes');
+    }
+    if (this.estado === EstadoLote.AGOTADO) {
+      throw new Error('Cannot deduct stock from an AGOTADO Lote');
+    }
+    if (cantidadBloques <= 0) {
+      throw new Error('Block quantity must be greater than 0');
+    }
+    if (!Number.isInteger(cantidadBloques)) {
+      throw new Error('Block quantity must be a whole number');
+    }
+    if (this.bloquesEnteros < cantidadBloques) {
+      throw new Error(
+        `Insufficient blocks: requested ${cantidadBloques}, available ${this.bloquesEnteros}`
+      );
+    }
+
+    const kgDeducted = new Kilogramo(String(cantidadBloques * 2.5));
+    if (kgDeducted.greaterThan(this.stockDisponibleKg)) {
+      throw new Error(
+        `Insufficient stock: requested ${kgDeducted.value} Kg (${cantidadBloques} blocks), available ${this.stockDisponibleKg.value} Kg`
+      );
+    }
+
+    const newStock = this.stockDisponibleKg.subtract(kgDeducted);
+    const newBloquesEnteros = this.bloquesEnteros - cantidadBloques;
+    const newEstado = newStock.isZero() ? EstadoLote.AGOTADO : this.estado;
+
+    return new Lote({
+      id: this.id,
+      producto: this.producto,
+      fechaIngreso: this.fechaIngreso,
+      proveedorId: this.proveedorId,
+      cantidadCompradaKg: this.cantidadCompradaKg.value,
+      precioCompraBaseKg: this.precioCompraBaseKg.value,
+      costoFlete: this.costoFlete.value,
+      costoTajado: this.costoTajado.value,
+      costoEmpaques: this.costoEmpaques.value,
+      stockDisponibleKg: newStock.value,
+      bloquesEnteros: newBloquesEnteros,
       bloquesTajados: this.bloquesTajados,
       bloquesTajadosDeFabrica: this.bloquesTajadosDeFabrica,
       estado: newEstado,

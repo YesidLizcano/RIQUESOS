@@ -1,5 +1,7 @@
 // DTO: Venta request/response types for Presentation → Application boundary
 
+export type VentaTipo = 'BLOQUES' | 'GRANEL';
+
 export interface RegistrarVentaRequest {
   clienteId: string;
   loteId: string;
@@ -7,6 +9,7 @@ export interface RegistrarVentaRequest {
   standardPricePerKg: string;
   valorDomicilio?: string;
   domiciliario?: string;
+  ventaTipo?: VentaTipo;
 }
 
 export interface VentaResponse {
@@ -21,6 +24,7 @@ export interface VentaResponse {
   gananciaBruta: string;
   valorDomicilio: string;
   domiciliario: string;
+  ventaTipo: VentaTipo;
 }
 
 export interface VentaListResponse {
