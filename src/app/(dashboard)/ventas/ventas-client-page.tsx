@@ -27,7 +27,9 @@ const ventaExportMap = [
   { key: 'cantidadVendidaKg', header: 'Cantidad (Kg)', format: (v: unknown) => Number(v) },
   { key: 'bloquesEnterosVendidos', header: 'Bloques Enteros' },
   { key: 'bloquesTajadosVendidos', header: 'Bloques Tajados' },
+  { key: 'bloquesReempacados', header: 'Reempacados' },
   { key: 'precioVentaKg', header: 'Precio/Kg', format: (v: unknown) => Number(v) },
+  { key: 'valorDomicilio', header: 'Domicilio ($)', format: (v: unknown) => Number(v) },
   { key: 'ingresoTotal', header: 'Ingreso Total', format: (v: unknown) => Number(v) },
   { key: 'gananciaBruta', header: 'Ganancia Bruta', format: (v: unknown) => Number(v) },
 ];

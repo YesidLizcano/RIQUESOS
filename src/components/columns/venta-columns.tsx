@@ -86,6 +86,28 @@ export function createVentaColumns(
       cell: ({ row }) => `$${Number(row.getValue('precioVentaKg')).toLocaleString('es-AR')}`,
     },
     {
+      accessorKey: 'valorDomicilio',
+      header: 'Domicilio',
+      enableGlobalFilter: false,
+      cell: ({ row }) => {
+        const valor = Number(row.getValue('valorDomicilio'));
+        if (valor === 0) return '—';
+        return `$${valor.toLocaleString('es-AR')}`;
+      },
+    },
+    {
+      accessorKey: 'bloquesReempacados',
+      header: 'Reempacados',
+      enableGlobalFilter: false,
+      cell: ({ row }) => {
+        const venta = row.original as VentaResponse & { producto?: string };
+        if (!venta.producto || !isDobleCrema(venta.producto)) return '—';
+        const reempacados = venta.bloquesReempacados ?? 0;
+        if (reempacados === 0) return '—';
+        return `${reempacados}`;
+      },
+    },
+    {
       accessorKey: 'ingresoTotal',
       header: 'Ingreso Total',
       enableGlobalFilter: false,
