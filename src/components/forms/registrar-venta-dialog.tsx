@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRefresh } from '@/components/refresh-context';
 import { registrarVenta } from '@/presentation/actions/ventas';
 import { toast } from 'sonner';
@@ -40,6 +40,7 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
   const [cantidadInput, setCantidadInput] = useState<string>('');
   const [ventaTipo, setVentaTipo] = useState<VentaTipo>('GRANEL');
   const [bloquesReempacados, setBloquesReempacados] = useState<string>('');
+  const [precioVenta, setPrecioVenta] = useState<string>('');
 
   // Filter only active lotes
   const lotesActivos = lotes.filter((l) => l.estado === 'ACTIVO');
@@ -87,6 +88,13 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
     return null; // Must enter manually
   })();
 
+  // Auto-fill price when client/lote selection resolves a price
+  useEffect(() => {
+    if (resolvedPrice !== null) {
+      setPrecioVenta(String(resolvedPrice));
+    }
+  }, [resolvedPrice]);
+
   // Lote filter: Mayorista should only see DC lotes
   const filteredLotes = isMayorista
     ? lotesActivos.filter((l) => isDobleCrema(l.producto))
@@ -96,11 +104,13 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
   function handleClienteChange(v: string) {
     setClienteId(v);
     setCantidadInput('');
+    setPrecioVenta('');
   }
 
   function handleLoteChange(v: string) {
     setLoteId(v);
     setCantidadInput('');
+    setPrecioVenta('');
   }
 
   function handleVentaTipoChange(tipo: VentaTipo) {
@@ -130,6 +140,7 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
       setCantidadInput('');
       setVentaTipo('GRANEL');
       setBloquesReempacados('');
+      setPrecioVenta('');
     } else {
       toast.error(result.error || 'Error al registrar venta');
     }
@@ -294,7 +305,8 @@ export function RegistrarVentaDialog({ clientes, lotes }: RegistrarVentaDialogPr
               step="0.01"
               min="0"
               placeholder="0.00"
-              defaultValue={resolvedPrice !== null ? resolvedPrice : undefined}
+              value={precioVenta}
+              onChange={(e) => setPrecioVenta(e.target.value)}
               required
             />
             {resolvedPrice !== null && (
