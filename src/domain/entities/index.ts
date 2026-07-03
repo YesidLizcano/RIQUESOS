@@ -13,3 +13,5 @@ export { Usuario } from './Usuario';
 export type { UsuarioProps } from './Usuario';
 export { AuditLog } from './AuditLog';
 export type { AuditLogProps } from './AuditLog';
+export { Tajado } from './Tajado';
+export type { TajadoProps } from './Tajado';

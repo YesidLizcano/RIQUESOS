@@ -157,4 +157,143 @@ describe('Lote', () => {
       expect(result.stockDisponibleKg.value).toBe('100');
     });
   });
+
+  describe('constructor — bloques fields for Doble Crema', () => {
+    it('should store bloques fields for DOBLE_CREMA', () => {
+      const lote = new Lote({
+        ...validProps,
+        cantidadCompradaKg: '100', // Calculated by use case: 40 * 2.5
+        bloquesEnteros: 40,
+        bloquesTajadosDeFabrica: 0,
+        precioCompraBaseKg: '3000',
+      });
+      expect(lote.cantidadCompradaKg.value).toBe('100');
+      expect(lote.bloquesEnteros).toBe(40);
+      expect(lote.bloquesTajados).toBe(0);
+      expect(lote.bloquesTajadosDeFabrica).toBe(0);
+    });
+
+    it('should store bloquesEnteros and bloquesTajadosDeFabrica for DC lote', () => {
+      const lote = new Lote({
+        ...validProps,
+        cantidadCompradaKg: '30', // Calculated by use case: (10 + 2) * 2.5
+        bloquesEnteros: 10,
+        bloquesTajadosDeFabrica: 2,
+        precioCompraBaseKg: '3000',
+      });
+      expect(lote.cantidadCompradaKg.value).toBe('30');
+      expect(lote.bloquesEnteros).toBe(10);
+      expect(lote.bloquesTajadosDeFabrica).toBe(2);
+    });
+
+    it('should default bloques fields to 0 for Semisalado', () => {
+      const lote = new Lote({
+        proveedorId: 'prov-1',
+        producto: TipoProducto.SEMISALADO,
+        cantidadCompradaKg: '50',
+        precioCompraBaseKg: '4000',
+      });
+      expect(lote.bloquesEnteros).toBe(0);
+      expect(lote.bloquesTajados).toBe(0);
+      expect(lote.bloquesTajadosDeFabrica).toBe(0);
+    });
+  });
+
+  describe('registrarTajado', () => {
+    it('should decrement bloquesEnteros and increment bloquesTajados', () => {
+      const lote = new Lote({
+        ...validProps,
+        cantidadCompradaKg: '100',
+        bloquesEnteros: 40,
+        bloquesTajadosDeFabrica: 0,
+        precioCompraBaseKg: '3000',
+      });
+      const result = lote.registrarTajado(5, '1500');
+      expect(result.bloquesEnteros).toBe(35);
+      expect(result.bloquesTajados).toBe(5);
+    });
+
+    it('should add tajado cost to costoTajado and recalculate costoRealCalculadoKg', () => {
+      const lote = new Lote({
+        ...validProps,
+        cantidadCompradaKg: '100',
+        bloquesEnteros: 40,
+        precioCompraBaseKg: '3000',
+        costoFlete: '10000',
+        costoEmpaques: '5000',
+      });
+      // cantidadCompradaKg = 100
+      // After tajado: costoTajado = 0 + 1500 * 10 = 15000
+      // costoReal = (3000 * 100 + 10000 + 15000 + 5000) / 100 = 3300
+      const result = lote.registrarTajado(10, '1500');
+      expect(result.costoTajado.value).toBe('15000');
+      expect(result.costoRealCalculadoKg.value).toBe('3300');
+    });
+
+    it('should accumulate tajado costs across multiple tajado operations', () => {
+      const lote = new Lote({
+        ...validProps,
+        cantidadCompradaKg: '100',
+        bloquesEnteros: 40,
+        precioCompraBaseKg: '3000',
+      });
+      const first = lote.registrarTajado(5, '1500');
+      expect(first.costoTajado.value).toBe('7500');
+      expect(first.bloquesEnteros).toBe(35);
+      expect(first.bloquesTajados).toBe(5);
+
+      const second = first.registrarTajado(3, '2000');
+      expect(second.costoTajado.value).toBe('13500');
+      expect(second.bloquesEnteros).toBe(32);
+      expect(second.bloquesTajados).toBe(8);
+    });
+
+    it('should not change cantidadCompradaKg or stockDisponibleKg', () => {
+      const lote = new Lote({
+        ...validProps,
+        cantidadCompradaKg: '100',
+        bloquesEnteros: 40,
+        precioCompraBaseKg: '3000',
+      });
+      const result = lote.registrarTajado(5, '1500');
+      expect(result.cantidadCompradaKg.value).toBe('100');
+      expect(result.stockDisponibleKg.value).toBe('100');
+    });
+
+    it('should reject tajado when bloquesEnteros is insufficient', () => {
+      const lote = new Lote({
+        ...validProps,
+        cantidadCompradaKg: '7.5',
+        bloquesEnteros: 3,
+        precioCompraBaseKg: '3000',
+      });
+      expect(() => lote.registrarTajado(5, '1500')).toThrow(
+        'No hay suficientes bloques enteros'
+      );
+    });
+
+    it('should reject tajado on SEMISALADO lote', () => {
+      const lote = new Lote({
+        proveedorId: 'prov-1',
+        producto: TipoProducto.SEMISALADO,
+        cantidadCompradaKg: '50',
+        precioCompraBaseKg: '4000',
+      });
+      expect(() => lote.registrarTajado(1, '1500')).toThrow(
+        'Solo se puede registrar tajado en lotes de Doble Crema'
+      );
+    });
+
+    it('should reject tajado with zero or negative bloques', () => {
+      const lote = new Lote({
+        ...validProps,
+        cantidadCompradaKg: '100',
+        bloquesEnteros: 40,
+        precioCompraBaseKg: '3000',
+      });
+      expect(() => lote.registrarTajado(0, '1500')).toThrow(
+        'La cantidad de bloques debe ser mayor a 0'
+      );
+    });
+  });
 });

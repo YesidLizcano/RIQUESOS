@@ -9,6 +9,7 @@ export interface LoteRepository {
   save(lote: Lote): Promise<Lote>;
   deductStock(id: string, cantidadKg: string, expectedVersion: number): Promise<Lote>;
   updateCosts(id: string, lote: Lote, expectedVersion: number): Promise<Lote>;
+  updateBlocks(id: string, lote: Lote, expectedVersion: number): Promise<Lote>;
   softDelete(id: string): Promise<void>;
   restore(id: string): Promise<void>;
   findAllIncludeDeleted(): Promise<Lote[]>;

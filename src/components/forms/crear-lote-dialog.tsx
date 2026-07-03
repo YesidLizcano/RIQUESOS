@@ -36,17 +36,19 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
   const [open, setOpen] = useState(false);
   const [producto, setProducto] = useState<string>('');
   const [proveedorId, setProveedorId] = useState<string>('');
+  const [bloquesEnteros, setBloquesEnteros] = useState<string>('');
+  const [bloquesTajadosDeFabrica, setBloquesTajadosDeFabrica] = useState<string>('');
   const [cantidadInput, setCantidadInput] = useState<string>('');
   const [precioCompraBaseKg, setPrecioCompraBaseKg] = useState<string>('');
   const [costoFlete, setCostoFlete] = useState<string>('');
-  const [costoTajado, setCostoTajado] = useState<string>('');
   const [costoEmpaques, setCostoEmpaques] = useState<string>('');
 
   const isDobleCremaSelected = isDobleCrema(producto);
 
-  // Convert UI input to kg value for submission
+  // Calculate total bloques and kg for Doble Crema preview
+  const totalBloques = (parseInt(bloquesEnteros) || 0) + (parseInt(bloquesTajadosDeFabrica) || 0);
   const cantidadCompradaKg = isDobleCremaSelected
-    ? String(parseFloat(cantidadInput || '0') * DOBLE_CREMA_BLOCK_KG || 0)
+    ? String(totalBloques * DOBLE_CREMA_BLOCK_KG || 0)
     : cantidadInput;
 
   // Compute costo real calculado preview
@@ -54,26 +56,15 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
     const cantidad = parseFloat(cantidadCompradaKg);
     const precioBase = parseFloat(precioCompraBaseKg);
     const flete = parseFloat(costoFlete) || 0;
-    const tajado = parseFloat(costoTajado) || 0;
     const empaques = parseFloat(costoEmpaques) || 0;
 
     if (!cantidad || cantidad <= 0 || isNaN(precioBase)) return null;
 
-    const costoTotal = (precioBase * cantidad) + flete + tajado + empaques;
+    const costoTotal = (precioBase * cantidad) + flete + empaques;
     return costoTotal / cantidad;
   })();
 
   async function action(formData: FormData) {
-    // Client-side validation: Doble Crema block constraint
-    if (isDobleCrema(producto)) {
-      const bloques = parseFloat(cantidadInput);
-      if (!isNaN(bloques) && !Number.isInteger(bloques)) {
-        toast.error('Para Doble Crema, ingrese bloques enteros');
-        return;
-      }
-    }
-    // Set the kg value into the form data
-    formData.set('cantidadCompradaKg', cantidadCompradaKg);
     const result = await crearLote(formData);
     if (result.success) {
       toast.success('Lote creado exitosamente');
@@ -81,10 +72,11 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
       setOpen(false);
       setProducto('');
       setProveedorId('');
+      setBloquesEnteros('');
+      setBloquesTajadosDeFabrica('');
       setCantidadInput('');
       setPrecioCompraBaseKg('');
       setCostoFlete('');
-      setCostoTajado('');
       setCostoEmpaques('');
     } else {
       toast.error(result.error || 'Error al crear lote');
@@ -107,7 +99,7 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
         <form action={action} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="producto">Tipo de Producto</Label>
-            <Select name="producto" value={producto} onValueChange={(v) => { if (v !== null) { setProducto(v); setCantidadInput(''); } }}>
+            <Select name="producto" value={producto} onValueChange={(v) => { if (v !== null) { setProducto(v); setBloquesEnteros(''); setBloquesTajadosDeFabrica(''); setCantidadInput(''); } }}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Seleccione producto" />
               </SelectTrigger>
@@ -134,32 +126,64 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="cantidadCompradaKg">
-              {isDobleCremaSelected ? 'Bloques' : 'Cantidad Comprada (Kg)'}
-            </Label>
-            <Input
-              id="cantidadCompradaKg"
-              name="cantidadCompradaKg"
-              type="number"
-              step={isDobleCremaSelected ? '1' : '0.01'}
-              min={isDobleCremaSelected ? '1' : '0.01'}
-              placeholder={isDobleCremaSelected ? 'Ej: 10' : '0'}
-              value={cantidadInput}
-              onChange={(e) => setCantidadInput(e.target.value)}
-              required
-            />
-            {isDobleCremaSelected && (
-              <p className="text-xs text-muted-foreground">
-                1 bloque = 2.5 kg
-              </p>
-            )}
-            {isDobleCremaSelected && cantidadInput && !isNaN(parseFloat(cantidadInput)) && (
-              <p className="text-xs text-muted-foreground">
-                Equivalente: {(parseFloat(cantidadInput) * DOBLE_CREMA_BLOCK_KG).toLocaleString('es-AR')} kg
-              </p>
-            )}
-          </div>
+          {isDobleCremaSelected ? (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="bloquesEnteros">Bloques Enteros</Label>
+                <Input
+                  id="bloquesEnteros"
+                  name="bloquesEnteros"
+                  type="number"
+                  step="1"
+                  min="0"
+                  placeholder="Ej: 10"
+                  value={bloquesEnteros}
+                  onChange={(e) => setBloquesEnteros(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bloquesTajadosDeFabrica">Bloques Tajados de Fábrica</Label>
+                <Input
+                  id="bloquesTajadosDeFabrica"
+                  name="bloquesTajadosDeFabrica"
+                  type="number"
+                  step="1"
+                  min="0"
+                  placeholder="Ej: 0"
+                  value={bloquesTajadosDeFabrica}
+                  onChange={(e) => setBloquesTajadosDeFabrica(e.target.value)}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  1 bloque = {DOBLE_CREMA_BLOCK_KG} kg
+                </p>
+                {totalBloques > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Total: {(totalBloques * DOBLE_CREMA_BLOCK_KG).toLocaleString('es-AR')} kg ({totalBloques} bloques)
+                  </p>
+                )}
+              </div>
+
+              <input type="hidden" name="cantidadCompradaKg" value={cantidadCompradaKg} />
+            </>
+          ) : producto === TipoProducto.SEMISALADO ? (
+            <div className="space-y-2">
+              <Label htmlFor="cantidadCompradaKg">Cantidad Comprada (Kg)</Label>
+              <Input
+                id="cantidadCompradaKg"
+                name="cantidadCompradaKg"
+                type="number"
+                step="0.01"
+                min="0.01"
+                placeholder="0"
+                value={cantidadInput}
+                onChange={(e) => setCantidadInput(e.target.value)}
+                required
+              />
+            </div>
+          ) : null}
 
           <div className="space-y-2">
             <Label htmlFor="precioCompraBaseKg">Precio Compra Base ($/Kg)</Label>
@@ -187,20 +211,6 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
               placeholder="0.00"
               value={costoFlete}
               onChange={(e) => setCostoFlete(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="costoTajado">Costo Tajado ($)</Label>
-            <Input
-              id="costoTajado"
-              name="costoTajado"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0.00"
-              value={costoTajado}
-              onChange={(e) => setCostoTajado(e.target.value)}
             />
           </div>
 

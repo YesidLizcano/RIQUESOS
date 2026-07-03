@@ -7,6 +7,7 @@ import { DataTable } from '@/components/data-table';
 import { DataTableToolbar, FilterConfig } from '@/components/data-table-toolbar';
 import { createLoteColumns, AlertaInfo } from '@/components/columns/lote-columns';
 import { CrearLoteDialog } from '@/components/forms/crear-lote-dialog';
+import { RegistrarTajadoDialog } from '@/components/forms/registrar-tajado-dialog';
 import { getLotes, getLotesIncludeDeleted } from '@/presentation/actions/lotes';
 import { useExportExcel } from '@/hooks/use-export-excel';
 import { RefreshContext } from '@/components/refresh-context';
@@ -151,6 +152,9 @@ export function LotesClientPage({ lotes, proveedores, alertas }: LotesClientPage
           <p className="text-muted-foreground">Gestión de lotes de queso</p>
         </div>
         <CrearLoteDialog proveedores={proveedores} />
+        {lotes.some((l) => l.producto === 'DOBLE_CREMA' && l.bloquesEnteros > 0 && l.estado === 'ACTIVO' && !l.deletedAt) && (
+          <RegistrarTajadoDialog lotes={lotes} />
+        )}
       </div>
 
       <Card>

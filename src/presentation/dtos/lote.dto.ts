@@ -9,6 +9,8 @@ export interface CrearLoteRequest {
   costoFlete?: string;
   costoTajado?: string;
   costoEmpaques?: string;
+  bloquesEnteros?: number;
+  bloquesTajadosDeFabrica?: number;
 }
 
 export interface ActualizarLoteRequest {
@@ -33,6 +35,9 @@ export interface LoteResponse {
   costoEmpaques: string;
   costoRealCalculadoKg: string;
   stockDisponibleKg: string;
+  bloquesEnteros: number;
+  bloquesTajados: number;
+  bloquesTajadosDeFabrica: number;
   estado: string;
   version: number;
   deletedAt: string | null;

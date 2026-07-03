@@ -6,4 +6,5 @@ export { PrismaVentaRepo } from './PrismaVentaRepo';
 export { PrismaGastoFijoRepo } from './PrismaGastoFijoRepo';
 export { PrismaUsuarioRepo } from './PrismaUsuarioRepo';
 export { PrismaAuditLogRepo } from './PrismaAuditLogRepo';
+export { PrismaTajadoRepo } from './PrismaTajadoRepo';
 export { ConcurrencyError } from '../../domain/errors/ConcurrencyError';

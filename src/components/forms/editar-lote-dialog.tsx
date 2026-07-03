@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { useRefresh } from '@/components/refresh-context';
 import { modificarLote } from '@/presentation/actions/lotes';
 import { toast } from 'sonner';
-import { DOBLE_CREMA_BLOCK_KG, isDobleCrema } from '@/domain/constants';
+import { isDobleCrema } from '@/domain/constants';
 import type { LoteResponse } from '@/presentation/dtos';
 import {
   Dialog,
@@ -27,46 +27,24 @@ export function EditarLoteDialog({ lote, open, onOpenChange }: EditarLoteDialogP
   const refreshData = useRefresh();
   const isDobleCremaLote = isDobleCrema(lote.producto);
 
-  // For Doble Crema, display and edit in bloques; convert to/from kg
-  const initialCantidad = isDobleCremaLote
-    ? String(Math.floor(Number(lote.cantidadCompradaKg) / DOBLE_CREMA_BLOCK_KG))
-    : lote.cantidadCompradaKg;
-
   const [precioCompraBaseKg, setPrecioCompraBaseKg] = useState(lote.precioCompraBaseKg);
-  const [cantidadInput, setCantidadInput] = useState(initialCantidad);
   const [costoFlete, setCostoFlete] = useState(lote.costoFlete);
-  const [costoTajado, setCostoTajado] = useState(lote.costoTajado);
   const [costoEmpaques, setCostoEmpaques] = useState(lote.costoEmpaques);
 
-  // Convert UI input to kg value for submission
-  const cantidadCompradaKg = isDobleCremaLote
-    ? String(parseFloat(cantidadInput || '0') * DOBLE_CREMA_BLOCK_KG || 0)
-    : cantidadInput;
-
   const costoRealCalculadoKg = useMemo(() => {
-    const cantidad = parseFloat(cantidadCompradaKg);
+    const cantidad = parseFloat(lote.cantidadCompradaKg);
     const precioBase = parseFloat(precioCompraBaseKg);
     const flete = parseFloat(costoFlete) || 0;
-    const tajado = parseFloat(costoTajado) || 0;
+    const tajado = parseFloat(lote.costoTajado) || 0;
     const empaques = parseFloat(costoEmpaques) || 0;
 
     if (!cantidad || cantidad <= 0 || isNaN(precioBase)) return null;
 
     const costoTotal = (precioBase * cantidad) + flete + tajado + empaques;
     return costoTotal / cantidad;
-  }, [cantidadCompradaKg, precioCompraBaseKg, costoFlete, costoTajado, costoEmpaques]);
+  }, [lote.cantidadCompradaKg, lote.costoTajado, precioCompraBaseKg, costoFlete, costoEmpaques]);
 
   async function action(formData: FormData) {
-    // Client-side validation: Doble Crema block constraint
-    if (isDobleCremaLote) {
-      const bloques = parseFloat(cantidadInput);
-      if (!isNaN(bloques) && !Number.isInteger(bloques)) {
-        toast.error('Para Doble Crema, ingrese bloques enteros');
-        return;
-      }
-    }
-    // Set the kg value into the form data
-    formData.set('cantidadCompradaKg', cantidadCompradaKg);
     const result = await modificarLote(formData);
     if (result.success) {
       toast.success('Lote actualizado exitosamente');
@@ -108,32 +86,39 @@ export function EditarLoteDialog({ lote, open, onOpenChange }: EditarLoteDialogP
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="edit-cantidadCompradaKg">
-              {isDobleCremaLote ? 'Bloques' : 'Cantidad Comprada (Kg)'}
-            </Label>
-            <Input
-              id="edit-cantidadCompradaKg"
-              name="cantidadCompradaKg"
-              type="number"
-              step={isDobleCremaLote ? '1' : '0.01'}
-              min={isDobleCremaLote ? '1' : '0.01'}
-              placeholder={isDobleCremaLote ? 'Ej: 10' : '0'}
-              value={cantidadInput}
-              onChange={(e) => setCantidadInput(e.target.value)}
-              required
-            />
-            {isDobleCremaLote && (
+          {isDobleCremaLote && (
+            <div className="rounded-lg bg-muted/50 p-3 space-y-1">
+              <p className="text-sm font-medium">Bloques</p>
               <p className="text-xs text-muted-foreground">
-                1 bloque = 2.5 kg
+                Enteros: {lote.bloquesEnteros} | Tajados: {lote.bloquesTajados} | De Fábrica: {lote.bloquesTajadosDeFabrica}
               </p>
-            )}
-            {isDobleCremaLote && cantidadInput && !isNaN(parseFloat(cantidadInput)) && (
               <p className="text-xs text-muted-foreground">
-                Equivalente: {(parseFloat(cantidadInput) * DOBLE_CREMA_BLOCK_KG).toLocaleString('es-AR')} kg
+                Gestión de bloques vía módulo de Tajado
               </p>
-            )}
-          </div>
+            </div>
+          )}
+
+          {!isDobleCremaLote && (
+            <div className="space-y-2">
+              <Label>Cantidad Comprada (Kg)</Label>
+              <Input
+                value={lote.cantidadCompradaKg}
+                disabled
+                className="bg-muted"
+              />
+            </div>
+          )}
+
+          {isDobleCremaLote && (
+            <div className="space-y-2">
+              <Label>Cantidad Comprada</Label>
+              <Input
+                value={`${Number(lote.cantidadCompradaKg).toLocaleString('es-AR')} kg`}
+                disabled
+                className="bg-muted"
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="edit-precioCompraBaseKg">Precio Compra Base ($/Kg)</Label>
@@ -163,16 +148,15 @@ export function EditarLoteDialog({ lote, open, onOpenChange }: EditarLoteDialogP
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-costoTajado">Costo Tajado ($)</Label>
+            <Label>Costo Tajado ($)</Label>
             <Input
-              id="edit-costoTajado"
-              name="costoTajado"
-              type="number"
-              step="0.01"
-              min="0"
-              value={costoTajado}
-              onChange={(e) => setCostoTajado(e.target.value)}
+              value={Number(lote.costoTajado).toLocaleString('es-AR')}
+              disabled
+              className="bg-muted"
             />
+            <p className="text-xs text-muted-foreground">
+              Se gestiona vía módulo de Tajado
+            </p>
           </div>
 
           <div className="space-y-2">

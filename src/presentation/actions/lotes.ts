@@ -39,6 +39,9 @@ function loteToResponse(lote: import('@/domain/entities/Lote').Lote): LoteRespon
     costoEmpaques: lote.costoEmpaques.value,
     costoRealCalculadoKg: lote.costoRealCalculadoKg.value,
     stockDisponibleKg: lote.stockDisponibleKg.value,
+    bloquesEnteros: lote.bloquesEnteros,
+    bloquesTajados: lote.bloquesTajados,
+    bloquesTajadosDeFabrica: lote.bloquesTajadosDeFabrica,
     estado: lote.estado,
     version: lote.version,
     deletedAt: lote.deletedAt?.toISOString() ?? null,
@@ -56,11 +59,20 @@ export async function crearLote(formData: FormData) {
   const request: CrearLoteRequest = {
     producto: parsed.data.producto,
     proveedorId: parsed.data.proveedorId,
-    cantidadCompradaKg: String(parsed.data.cantidadCompradaKg),
     precioCompraBaseKg: String(parsed.data.precioCompraBaseKg),
     costoFlete: parsed.data.costoFlete ? String(parsed.data.costoFlete) : undefined,
-    costoTajado: parsed.data.costoTajado ? String(parsed.data.costoTajado) : undefined,
     costoEmpaques: parsed.data.costoEmpaques ? String(parsed.data.costoEmpaques) : undefined,
+    // For Doble Crema: bloques are provided, cantidadCompradaKg is calculated
+    // For Semisalado: cantidadCompradaKg is provided directly
+    ...(parsed.data.producto === 'DOBLE_CREMA'
+      ? {
+          bloquesEnteros: parsed.data.bloquesEnteros ?? 0,
+          bloquesTajadosDeFabrica: parsed.data.bloquesTajadosDeFabrica ?? 0,
+          cantidadCompradaKg: '0', // Will be calculated by the use case
+        }
+      : {
+          cantidadCompradaKg: String(parsed.data.cantidadCompradaKg),
+        }),
   };
 
   try {
@@ -92,7 +104,6 @@ export async function modificarLote(formData: FormData) {
     precioCompraBaseKg: parsed.data.precioCompraBaseKg !== undefined ? String(parsed.data.precioCompraBaseKg) : undefined,
     cantidadCompradaKg: parsed.data.cantidadCompradaKg !== undefined ? String(parsed.data.cantidadCompradaKg) : undefined,
     costoFlete: parsed.data.costoFlete !== undefined ? String(parsed.data.costoFlete) : undefined,
-    costoTajado: parsed.data.costoTajado !== undefined ? String(parsed.data.costoTajado) : undefined,
     costoEmpaques: parsed.data.costoEmpaques !== undefined ? String(parsed.data.costoEmpaques) : undefined,
   };
 

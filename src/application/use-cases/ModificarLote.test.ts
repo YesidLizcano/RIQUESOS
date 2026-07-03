@@ -14,6 +14,7 @@ describe('ModificarLote', () => {
     save: vi.fn(),
     deductStock: vi.fn(),
     updateCosts: vi.fn(),
+    updateBlocks: vi.fn(),
     softDelete: vi.fn(),
     restore: vi.fn(),
     findAllIncludeDeleted: vi.fn(),

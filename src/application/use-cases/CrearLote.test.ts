@@ -16,6 +16,7 @@ describe('CrearLote', () => {
     save: vi.fn(),
     deductStock: vi.fn(),
     updateCosts: vi.fn(),
+    updateBlocks: vi.fn(),
     softDelete: vi.fn(),
     restore: vi.fn(),
     findAllIncludeDeleted: vi.fn(),
@@ -37,28 +38,56 @@ describe('CrearLote', () => {
     vi.clearAllMocks();
   });
 
-  it('should create a Lote with cost calculation', async () => {
+  it('should create a Doble Crema Lote with bloques and cost calculation', async () => {
     const proveedor = new Proveedor({ id: 'prov-1', nombre: 'Quesos SA' });
     (mockProveedorRepo.findById as ReturnType<typeof vi.fn>).mockResolvedValue(proveedor);
     (mockLoteRepo.save as ReturnType<typeof vi.fn>).mockImplementation(async (lote: Lote) => lote);
 
+    // 40 bloques enteros = 100 kg
     const result = await useCase.execute({
       producto: TipoProducto.DOBLE_CREMA,
       proveedorId: 'prov-1',
-      cantidadCompradaKg: '100',
+      cantidadCompradaKg: '0', // Ignored for DC when bloques provided
       precioCompraBaseKg: '3000',
       costoFlete: '50000',
-      costoTajado: '20000',
       costoEmpaques: '10000',
+      bloquesEnteros: 40,
+      bloquesTajadosDeFabrica: 0,
     });
 
-    expect(result.lote.costoRealCalculadoKg.value).toBe('3800');
+    // (3000 × 100 + 50000 + 0 + 10000) / 100 = 3600
+    expect(result.lote.costoRealCalculadoKg.value).toBe('3600');
+    expect(result.lote.cantidadCompradaKg.value).toBe('100');
+    expect(result.lote.bloquesEnteros).toBe(40);
+    expect(result.lote.bloquesTajados).toBe(0);
+    expect(result.lote.bloquesTajadosDeFabrica).toBe(0);
     expect(result.lote.producto).toBe(TipoProducto.DOBLE_CREMA);
     expect(result.lote.estado).toBe(EstadoLote.ACTIVO);
     expect(mockLoteRepo.save).toHaveBeenCalledOnce();
   });
 
-  it('should create a Lote with zero optional costs', async () => {
+  it('should create a Doble Crema Lote with both bloquesEnteros and bloquesTajadosDeFabrica', async () => {
+    const proveedor = new Proveedor({ id: 'prov-1', nombre: 'Quesos SA' });
+    (mockProveedorRepo.findById as ReturnType<typeof vi.fn>).mockResolvedValue(proveedor);
+    (mockLoteRepo.save as ReturnType<typeof vi.fn>).mockImplementation(async (lote: Lote) => lote);
+
+    // 10 enteros + 2 de fábrica = 12 bloques = 30 kg
+    const result = await useCase.execute({
+      producto: TipoProducto.DOBLE_CREMA,
+      proveedorId: 'prov-1',
+      cantidadCompradaKg: '0',
+      precioCompraBaseKg: '3000',
+      bloquesEnteros: 10,
+      bloquesTajadosDeFabrica: 2,
+    });
+
+    expect(result.lote.cantidadCompradaKg.value).toBe('30');
+    expect(result.lote.bloquesEnteros).toBe(10);
+    expect(result.lote.bloquesTajadosDeFabrica).toBe(2);
+    expect(result.lote.bloquesTajados).toBe(0);
+  });
+
+  it('should create a Semisalado Lote with cantidad in Kg', async () => {
     const proveedor = new Proveedor({ id: 'prov-1', nombre: 'Quesos SA' });
     (mockProveedorRepo.findById as ReturnType<typeof vi.fn>).mockResolvedValue(proveedor);
     (mockLoteRepo.save as ReturnType<typeof vi.fn>).mockImplementation(async (lote: Lote) => lote);
@@ -72,6 +101,9 @@ describe('CrearLote', () => {
 
     // (4000 × 50 + 0 + 0 + 0) / 50 = 4000
     expect(result.lote.costoRealCalculadoKg.value).toBe('4000');
+    expect(result.lote.bloquesEnteros).toBe(0);
+    expect(result.lote.bloquesTajados).toBe(0);
+    expect(result.lote.bloquesTajadosDeFabrica).toBe(0);
   });
 
   it('should throw if proveedor does not exist', async () => {
@@ -83,11 +115,12 @@ describe('CrearLote', () => {
         proveedorId: 'nonexistent',
         cantidadCompradaKg: '100',
         precioCompraBaseKg: '3000',
+        bloquesEnteros: 40,
       })
     ).rejects.toThrow('Proveedor not found: nonexistent');
   });
 
-  it('should throw if quantity is zero', async () => {
+  it('should throw if Doble Crema has zero bloques', async () => {
     const proveedor = new Proveedor({ id: 'prov-1', nombre: 'Quesos SA' });
     (mockProveedorRepo.findById as ReturnType<typeof vi.fn>).mockResolvedValue(proveedor);
 
@@ -97,7 +130,23 @@ describe('CrearLote', () => {
         proveedorId: 'prov-1',
         cantidadCompradaKg: '0',
         precioCompraBaseKg: '3000',
+        bloquesEnteros: 0,
+        bloquesTajadosDeFabrica: 0,
       })
-    ).rejects.toThrow('Lote cantidadCompradaKg cannot be zero');
+    ).rejects.toThrow('Para Doble Crema, debe ingresar al menos un bloque');
+  });
+
+  it('should throw if Semisalado has zero cantidadCompradaKg', async () => {
+    const proveedor = new Proveedor({ id: 'prov-1', nombre: 'Quesos SA' });
+    (mockProveedorRepo.findById as ReturnType<typeof vi.fn>).mockResolvedValue(proveedor);
+
+    await expect(
+      useCase.execute({
+        producto: TipoProducto.SEMISALADO,
+        proveedorId: 'prov-1',
+        cantidadCompradaKg: '0',
+        precioCompraBaseKg: '3000',
+      })
+    ).rejects.toThrow('Para Semisalado, la cantidad en Kg es obligatoria');
   });
 });

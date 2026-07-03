@@ -48,6 +48,9 @@ export class PrismaLoteRepo implements LoteRepository {
       costoEmpaques: new Prisma.Decimal(lote.costoEmpaques.value),
       costoRealCalculadoKg: new Prisma.Decimal(lote.costoRealCalculadoKg.value),
       stockDisponibleKg: new Prisma.Decimal(lote.stockDisponibleKg.value),
+      bloquesEnteros: lote.bloquesEnteros,
+      bloquesTajados: lote.bloquesTajados,
+      bloquesTajadosDeFabrica: lote.bloquesTajadosDeFabrica,
       estado: lote.estado as EstadoLote,
     };
 
@@ -145,6 +148,35 @@ export class PrismaLoteRepo implements LoteRepository {
     return this.toEntity(updated);
   }
 
+  /**
+   * Update block fields and cost fields with optimistic locking.
+   * Used by RegistrarTajado to update bloquesEnteros, bloquesTajados, costoTajado, and costoRealCalculadoKg.
+   */
+  async updateBlocks(id: string, lote: Lote, expectedVersion: number): Promise<Lote> {
+    const result = await prisma.lote.updateMany({
+      where: { id, version: expectedVersion },
+      data: {
+        bloquesEnteros: lote.bloquesEnteros,
+        bloquesTajados: lote.bloquesTajados,
+        costoTajado: new Prisma.Decimal(lote.costoTajado.value),
+        costoRealCalculadoKg: new Prisma.Decimal(lote.costoRealCalculadoKg.value),
+        version: { increment: 1 },
+      },
+    });
+
+    if (result.count === 0) {
+      throw new ConcurrencyError(
+        `Lote ${id} was modified by another transaction (expected version ${expectedVersion})`
+      );
+    }
+
+    const updated = await prisma.lote.findUnique({ where: { id } });
+    if (!updated) {
+      throw new Error(`Lote not found after update: ${id}`);
+    }
+    return this.toEntity(updated);
+  }
+
   async softDelete(id: string): Promise<void> {
     await prisma.lote.update({
       where: { id },
@@ -179,6 +211,9 @@ export class PrismaLoteRepo implements LoteRepository {
       costoTajado: record.costoTajado.toString(),
       costoEmpaques: record.costoEmpaques.toString(),
       stockDisponibleKg: record.stockDisponibleKg.toString(),
+      bloquesEnteros: record.bloquesEnteros,
+      bloquesTajados: record.bloquesTajados,
+      bloquesTajadosDeFabrica: record.bloquesTajadosDeFabrica,
       estado: record.estado as string as EstadoLote,
       version: record.version,
       deletedAt: record.deletedAt,

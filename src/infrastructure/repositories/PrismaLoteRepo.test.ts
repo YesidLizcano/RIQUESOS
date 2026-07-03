@@ -107,6 +107,9 @@ describe('PrismaLoteRepo — Integration', () => {
           costoEmpaques: 0,
           costoRealCalculadoKg: 3000,
           stockDisponibleKg: 50,
+          bloquesEnteros: 20,
+          bloquesTajados: 0,
+          bloquesTajadosDeFabrica: 0,
           estado: EstadoLote.ACTIVO,
         },
       });
@@ -122,6 +125,9 @@ describe('PrismaLoteRepo — Integration', () => {
           costoEmpaques: 0,
           costoRealCalculadoKg: 3500,
           stockDisponibleKg: 0,
+          bloquesEnteros: 0,
+          bloquesTajados: 0,
+          bloquesTajadosDeFabrica: 0,
           estado: EstadoLote.AGOTADO,
         },
       });

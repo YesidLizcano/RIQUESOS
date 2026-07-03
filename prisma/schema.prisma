@@ -40,26 +40,45 @@ model Proveedor {
 }
 
 model Lote {
-  id                   String       @id @default(uuid())
-  producto             TipoProducto
-  fechaIngreso         DateTime     @default(now())
-  proveedorId          String
-  proveedor            Proveedor    @relation(fields: [proveedorId], references: [id])
-  cantidadCompradaKg   Decimal      @default("0")
-  precioCompraBaseKg   Decimal      @default("0")
-  costoFlete           Decimal      @default("0")
-  costoTajado          Decimal      @default("0")
-  costoEmpaques        Decimal      @default("0")
-  costoRealCalculadoKg Decimal      @default("0")
-  stockDisponibleKg    Decimal      @default("0")
-  estado               EstadoLote   @default(ACTIVO)
-  version              Int          @default(1)
-  deletedAt            DateTime?
-  createdAt            DateTime     @default(now())
-  updatedAt            DateTime     @updatedAt
-  ventas               Venta[]
+  id                     String       @id @default(uuid())
+  producto               TipoProducto
+  fechaIngreso           DateTime     @default(now())
+  proveedorId            String
+  proveedor              Proveedor    @relation(fields: [proveedorId], references: [id])
+  cantidadCompradaKg     Decimal      @default("0")
+  precioCompraBaseKg     Decimal      @default("0")
+  costoFlete             Decimal      @default("0")
+  costoTajado            Decimal      @default("0")
+  costoEmpaques          Decimal      @default("0")
+  costoRealCalculadoKg   Decimal      @default("0")
+  stockDisponibleKg      Decimal      @default("0")
+  bloquesEnteros         Int          @default(0)
+  bloquesTajados         Int          @default(0)
+  bloquesTajadosDeFabrica Int         @default(0)
+  estado                 EstadoLote   @default(ACTIVO)
+  version                Int          @default(1)
+  deletedAt              DateTime?
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+  ventas                 Venta[]
+  tajados                Tajado[]
 
   @@index([deletedAt])
+}
+
+model Tajado {
+  id              String   @id @default(uuid())
+  loteId          String
+  lote            Lote     @relation(fields: [loteId], references: [id])
+  cantidadBloques Int
+  precioPorBloque Decimal  @default("1500")
+  tajador         String
+  costoTotal      Decimal  @default("0")
+  fecha           DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  @@index([loteId])
+  @@index([fecha])
 }
 
 model Cliente {

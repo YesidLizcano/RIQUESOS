@@ -1,6 +1,7 @@
 // Application use cases — barrel export
 export { AutenticarUsuario, type AuthResult } from './AutenticarUsuario';
 export { CrearLote, type CrearLoteInput, type CrearLoteOutput } from './CrearLote';
+export { RegistrarTajado, type RegistrarTajadoInput, type RegistrarTajadoOutput } from './RegistrarTajado';
 export { RegistrarVenta, type RegistrarVentaInput, type RegistrarVentaOutput } from './RegistrarVenta';
 export {
   GestionarClientes,
