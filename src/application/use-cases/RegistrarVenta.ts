@@ -70,8 +70,8 @@ export class RegistrarVenta {
       if (bloquesEnterosVendidos > lote.bloquesEnteros) {
         throw new Error(`Bloques enteros insuficientes: disponible ${lote.bloquesEnteros}, solicitado ${bloquesEnterosVendidos}`);
       }
-      if (bloquesTajadosVendidos > lote.bloquesTajados) {
-        throw new Error(`Bloques tajados insuficientes: disponible ${lote.bloquesTajados}, solicitado ${bloquesTajadosVendidos}`);
+      if (bloquesTajadosVendidos > lote.bloquesTajados + lote.bloquesTajadosDeFabrica) {
+        throw new Error(`Bloques tajados insuficientes: disponible ${lote.bloquesTajados + lote.bloquesTajadosDeFabrica}, solicitado ${bloquesTajadosVendidos}`);
       }
     }
 
