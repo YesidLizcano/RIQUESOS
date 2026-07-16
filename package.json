@@ -23,8 +23,7 @@
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
     "@base-ui/react": "^1.6.0",
-    "@next/swc-linux-x64-gnu": "^15.5.20",
-    "@prisma/client": "^6.13.0",
+"@prisma/client": "^6.13.0",
     "@tailwindcss/postcss": "^4.3.2",
     "@tanstack/react-table": "^8.21.3",
     "@types/pdfmake": "^0.3.3",
