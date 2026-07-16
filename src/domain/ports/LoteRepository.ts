@@ -3,14 +3,19 @@ import { Lote } from '../entities/Lote';
 
 export interface LoteRepository {
   findById(id: string): Promise<Lote | null>;
+  findByIds(ids: string[]): Promise<Lote[]>;
   findActive(): Promise<Lote[]>;
   findAll(): Promise<Lote[]>;
   findByProveedor(proveedorId: string): Promise<Lote[]>;
   save(lote: Lote): Promise<Lote>;
   deductStock(id: string, cantidadKg: string, expectedVersion: number): Promise<Lote>;
+  acumularRecortes(id: string, recortesKg: string, expectedVersion: number): Promise<Lote>;
   updateCosts(id: string, lote: Lote, expectedVersion: number): Promise<Lote>;
   updateBlocks(id: string, lote: Lote, expectedVersion: number): Promise<Lote>;
+  cerrarLote(id: string, lote: Lote, expectedVersion: number): Promise<Lote>;
   softDelete(id: string): Promise<void>;
   restore(id: string): Promise<void>;
   findAllIncludeDeleted(): Promise<Lote[]>;
+  /** Sum the cost of lotes where estadoPago = PENDIENTE */
+  sumCostoPendientePago(): Promise<{ total: string; count: number }>;
 }

@@ -1,88 +1,17 @@
 'use client';
 
-import { useState } from 'react';
-import { useRefresh } from '@/components/refresh-context';
 import { ColumnDef } from '@tanstack/react-table';
-import { Pencil, Trash2, RotateCcw } from 'lucide-react';
 import type { ClienteResponse } from '@/presentation/dtos';
 import { EditarClienteDialog } from '@/components/forms/editar-cliente-dialog';
-import { DeleteConfirmDialog } from '@/components/forms/delete-confirm-dialog';
+import { EntityActions } from '@/components/entity-actions';
 import { eliminarCliente, restaurarCliente } from '@/presentation/actions/clientes';
-import { toast } from 'sonner';
 import { TipoCliente } from '@/domain/enums';
 import { tipoClienteLabel } from '@/domain/labels';
-
-export function ClienteActions({ cliente }: { cliente: ClienteResponse }) {
-  const refreshData = useRefresh();
-  const [editOpen, setEditOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const isDeleted = cliente.deletedAt !== null;
-
-  async function handleDelete() {
-    const formData = new FormData();
-    formData.set('id', cliente.id);
-    const result = await eliminarCliente(formData);
-    if (result.success) {
-      toast.success('Cliente eliminado exitosamente');
-      refreshData();
-    } else {
-      toast.error(result.error || 'Error al eliminar cliente');
-    }
-  }
-
-  async function handleRestore() {
-    const formData = new FormData();
-    formData.set('id', cliente.id);
-    const result = await restaurarCliente(formData);
-    if (result.success) {
-      toast.success('Cliente restaurado exitosamente');
-      refreshData();
-    } else {
-      toast.error(result.error || 'Error al restaurar cliente');
-    }
-  }
-
-  if (isDeleted) {
-    return (
-      <button
-        onClick={() => { handleRestore(); }}
-        className="inline-flex items-center gap-1 rounded-md p-1.5 text-muted-foreground hover:text-green-600 hover:bg-green-50"
-        title="Restaurar"
-      >
-        <RotateCcw className="size-4" />
-      </button>
-    );
-  }
-
-  return (
-    <>
-      <button
-        onClick={() => setEditOpen(true)}
-        className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted"
-        title="Editar"
-      >
-        <Pencil className="size-4" />
-      </button>
-      <button
-        onClick={() => setDeleteOpen(true)}
-        className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-        title="Eliminar"
-      >
-        <Trash2 className="size-4" />
-      </button>
-      <EditarClienteDialog cliente={cliente} open={editOpen} onOpenChange={setEditOpen} />
-      <DeleteConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        entityName={`el cliente "${cliente.nombre}"`}
-        onConfirm={handleDelete}
-      />
-    </>
-  );
-}
+import { History } from 'lucide-react';
 
 export function createClienteColumns(
-  showDeleted?: boolean
+  showDeleted?: boolean,
+  onViewHistory?: (cliente: ClienteResponse) => void,
 ): ColumnDef<ClienteResponse, unknown>[] {
   return [
     {
@@ -110,28 +39,34 @@ export function createClienteColumns(
       },
     },
     {
-      accessorKey: 'precioDobleCrema',
-      header: 'Precio Doble Crema',
-      enableGlobalFilter: false,
-      cell: ({ row }) => {
-        const value = row.getValue('precioDobleCrema') as string | null;
-        return value ? `$${Number(value).toLocaleString('es-AR')}` : '—';
-      },
-    },
-    {
-      accessorKey: 'precioSemisalado',
-      header: 'Precio Semisalado',
-      enableGlobalFilter: false,
-      cell: ({ row }) => {
-        const value = row.getValue('precioSemisalado') as string | null;
-        return value ? `$${Number(value).toLocaleString('es-AR')}` : '—';
-      },
-    },
-    {
       id: 'actions',
       header: 'Acciones',
       enableGlobalFilter: false,
-      cell: ({ row }) => <ClienteActions cliente={row.original} />,
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1">
+          {onViewHistory && row.original.deletedAt === null && (
+            <button
+              onClick={() => onViewHistory(row.original)}
+              className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted"
+              title="Ver Historial"
+              aria-label="Ver Historial"
+            >
+              <History className="size-4" />
+            </button>
+          )}
+          <EntityActions
+            entityId={row.original.id}
+            entityName={`el cliente "${row.original.nombre}"`}
+            isDeleted={row.original.deletedAt !== null}
+            deleteAction={eliminarCliente}
+            restoreAction={restaurarCliente}
+            deleteToastLabel="Cliente"
+            renderEditDialog={(open, onOpenChange) => (
+              <EditarClienteDialog cliente={row.original} open={open} onOpenChange={onOpenChange} />
+            )}
+          />
+        </div>
+      ),
     },
   ];
 }

@@ -49,18 +49,85 @@ async function main() {
 
   console.log(`Proveedores upserted: ${proveedor1.nombre}, ${proveedor2.nombre}`);
 
-  // Upsert default empaque
-  const empaqueDefault = await prisma.empaque.upsert({
-    where: { tipo: 'Bolsa' },
-    update: { stock: 100, precio: 500 },
+  // Upsert system proveedor for recortes
+  const proveedorRecortes = await prisma.proveedor.upsert({
+    where: { id: 'proveedor-recortes-dc' },
+    update: { nombre: 'Recortes Doble Crema (Sistema)' },
     create: {
-      tipo: 'Bolsa',
-      stock: 100,
-      precio: 500,
+      id: 'proveedor-recortes-dc',
+      nombre: 'Recortes Doble Crema (Sistema)',
+      telefono: null,
     },
   });
 
-  console.log(`Empaque upserted: ${empaqueDefault.tipo} (stock: ${empaqueDefault.stock}, precio: ${empaqueDefault.precio})`);
+  console.log(`Proveedor recortes upserted: ${proveedorRecortes.nombre}`);
+
+  // Upsert permanent accumulation lot for recortes
+  const existingRecortesLot = await prisma.lote.findFirst({
+    where: { id: 'lote-recortes-dc-permanente', deletedAt: null },
+  });
+  if (!existingRecortesLot) {
+    await prisma.lote.create({
+      data: {
+        id: 'lote-recortes-dc-permanente',
+        producto: 'RECORTES_DOBLE_CREMA',
+        proveedorId: 'proveedor-recortes-dc',
+        cantidadCompradaKg: 0,
+        precioCompraBaseKg: 0,
+        stockDisponibleKg: 0,
+        estado: 'ACTIVO',
+        estadoPago: 'PAGADO',
+      },
+    });
+    console.log('Created permanent Recortes Doble Crema lot');
+  }
+
+  // Seed default insumos with initial CompraInsumo lots
+  const existingBolsa = await prisma.empaque.findFirst({ where: { categoria: 'BOLSA', deletedAt: null } });
+  if (!existingBolsa) {
+    const bolsa = await prisma.empaque.create({
+      data: {
+        tipo: 'Bolsa',
+        categoria: 'BOLSA',
+        stock: 100,
+        precio: 500,
+      },
+    });
+    await prisma.compraInsumo.create({
+      data: {
+        empaqueId: bolsa.id,
+        categoria: 'BOLSA',
+        cantidad: 100,
+        cantidadRestante: 100,
+        precioUnitario: 500,
+        costoTotal: 50000,
+      },
+    });
+    console.log('Created: Bolsa (stock: 100, precio: 500)');
+  }
+
+  const existingSeparador = await prisma.empaque.findFirst({ where: { categoria: 'SEPARADOR', deletedAt: null } });
+  if (!existingSeparador) {
+    const separador = await prisma.empaque.create({
+      data: {
+        tipo: 'Separador',
+        categoria: 'SEPARADOR',
+        stock: 50,
+        precio: 300,
+      },
+    });
+    await prisma.compraInsumo.create({
+      data: {
+        empaqueId: separador.id,
+        categoria: 'SEPARADOR',
+        cantidad: 50,
+        cantidadRestante: 50,
+        precioUnitario: 300,
+        costoTotal: 15000,
+      },
+    });
+    console.log('Created: Separador (stock: 50 kg, precio: 300)');
+  }
   console.log('Seed complete.');
 }
 

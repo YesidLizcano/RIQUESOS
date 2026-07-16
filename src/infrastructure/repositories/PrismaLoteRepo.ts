@@ -2,7 +2,8 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import { Lote } from '../../domain/entities/Lote';
-import { EstadoLote, TipoProducto } from '../../domain/enums';
+import { EstadoLote, TipoProducto, EstadoPagoLote, MetodoPago } from '../../domain/enums';
+import { asTipoProducto, asEstadoLote, asEstadoPagoLote } from '../../domain/mappers';
 import { ConcurrencyError } from '../../domain/errors/ConcurrencyError';
 import type { LoteRepository } from '../../domain/ports/LoteRepository';
 
@@ -11,6 +12,14 @@ export class PrismaLoteRepo implements LoteRepository {
     const record = await prisma.lote.findUnique({ where: { id, deletedAt: null } });
     if (!record) return null;
     return this.toEntity(record);
+  }
+
+  async findByIds(ids: string[]): Promise<Lote[]> {
+    if (ids.length === 0) return [];
+    const records = await prisma.lote.findMany({
+      where: { id: { in: ids }, deletedAt: null },
+    });
+    return records.map((r) => this.toEntity(r));
   }
 
   async findActive(): Promise<Lote[]> {
@@ -42,18 +51,26 @@ export class PrismaLoteRepo implements LoteRepository {
       producto: lote.producto as TipoProducto,
       proveedorId: lote.proveedorId,
       cantidadCompradaKg: new Prisma.Decimal(lote.cantidadCompradaKg.value),
-      precioCompraBaseKg: new Prisma.Decimal(lote.precioCompraBaseKg.value),
-      precioPorBloque: new Prisma.Decimal(lote.precioPorBloque.value),
-      costoFlete: new Prisma.Decimal(lote.costoFlete.value),
+       precioCompraBaseKg: new Prisma.Decimal(lote.precioCompraBaseKg.value),
+       precioPorBloqueEntero: new Prisma.Decimal(lote.precioPorBloqueEntero.value),
+       precioPorBloqueTajado: new Prisma.Decimal(lote.precioPorBloqueTajado.value),
+       costoFlete: new Prisma.Decimal(lote.costoFlete.value),
       costoTajado: new Prisma.Decimal(lote.costoTajado.value),
       costoEmpaques: new Prisma.Decimal(lote.costoEmpaques.value),
+      costoSeparadores: new Prisma.Decimal(lote.costoSeparadores.value),
       costoRealCalculadoKg: new Prisma.Decimal(lote.costoRealCalculadoKg.value),
       stockDisponibleKg: new Prisma.Decimal(lote.stockDisponibleKg.value),
       bloquesEnteros: lote.bloquesEnteros,
       bloquesTajados: lote.bloquesTajados,
       bloquesTajadosDeFabrica: lote.bloquesTajadosDeFabrica,
-      estado: lote.estado as EstadoLote,
-    };
+       bloquesEnterosOriginal: lote.bloquesEnterosOriginal,
+       bloquesTajadosFabricaOriginal: lote.bloquesTajadosFabricaOriginal,
+        sueltosEntero: new Prisma.Decimal(lote.sueltosEntero.value),
+        sueltosTajado: new Prisma.Decimal(lote.sueltosTajado.value),
+        estado: lote.estado as EstadoLote,
+       estadoPago: lote.estadoPago as EstadoPagoLote,
+       metodoPagoLote: lote.metodoPagoLote as MetodoPago,
+     };
 
     if (lote.id) {
       const updated = await prisma.lote.update({
@@ -91,7 +108,7 @@ export class PrismaLoteRepo implements LoteRepository {
     }
 
     const newStock = currentStock.minus(cantidad);
-    const newEstado = newStock.isZero() ? EstadoLote.AGOTADO : current.estado as string as EstadoLote;
+    const newEstado = newStock.isZero() && (current.producto !== 'RECORTES_DOBLE_CREMA') ? EstadoLote.AGOTADO : asEstadoLote(current.estado);
 
     // Optimistic locking: updateMany with version check
     const result = await prisma.lote.updateMany({
@@ -118,6 +135,27 @@ export class PrismaLoteRepo implements LoteRepository {
   }
 
   /**
+   * Accumulate recortes kg into the permanent lot with optimistic locking.
+   * Increments both stockDisponibleKg and cantidadCompradaKg by the given amount.
+   */
+  async acumularRecortes(id: string, recortesKg: string, expectedVersion: number): Promise<Lote> {
+    const result = await prisma.lote.updateMany({
+      where: { id, version: expectedVersion },
+      data: {
+        stockDisponibleKg: { increment: new Prisma.Decimal(recortesKg) },
+        cantidadCompradaKg: { increment: new Prisma.Decimal(recortesKg) },
+        version: { increment: 1 },
+      },
+    });
+    if (result.count === 0) {
+      throw new ConcurrencyError(`Lote ${id} was modified by another transaction`);
+    }
+    const updated = await prisma.lote.findUnique({ where: { id } });
+    if (!updated) throw new Error(`Lote not found after update: ${id}`);
+    return this.toEntity(updated);
+  }
+
+  /**
    * Update cost fields with optimistic locking.
    * Uses updateMany with version check to detect concurrent modifications.
    * Returns updated Lote or throws ConcurrencyError if version mismatch.
@@ -126,14 +164,18 @@ export class PrismaLoteRepo implements LoteRepository {
     const result = await prisma.lote.updateMany({
       where: { id, version: expectedVersion },
       data: {
-        precioCompraBaseKg: new Prisma.Decimal(lote.precioCompraBaseKg.value),
-        precioPorBloque: new Prisma.Decimal(lote.precioPorBloque.value),
-        cantidadCompradaKg: new Prisma.Decimal(lote.cantidadCompradaKg.value),
-        costoFlete: new Prisma.Decimal(lote.costoFlete.value),
-        costoTajado: new Prisma.Decimal(lote.costoTajado.value),
-        costoEmpaques: new Prisma.Decimal(lote.costoEmpaques.value),
-        costoRealCalculadoKg: new Prisma.Decimal(lote.costoRealCalculadoKg.value),
-        version: { increment: 1 },
+          precioCompraBaseKg: new Prisma.Decimal(lote.precioCompraBaseKg.value),
+          precioPorBloqueEntero: new Prisma.Decimal(lote.precioPorBloqueEntero.value),
+          precioPorBloqueTajado: new Prisma.Decimal(lote.precioPorBloqueTajado.value),
+          cantidadCompradaKg: new Prisma.Decimal(lote.cantidadCompradaKg.value),
+         costoFlete: new Prisma.Decimal(lote.costoFlete.value),
+         costoTajado: new Prisma.Decimal(lote.costoTajado.value),
+         costoEmpaques: new Prisma.Decimal(lote.costoEmpaques.value),
+         costoSeparadores: new Prisma.Decimal(lote.costoSeparadores.value),
+          costoRealCalculadoKg: new Prisma.Decimal(lote.costoRealCalculadoKg.value),
+          estadoPago: lote.estadoPago as EstadoPagoLote,
+          metodoPagoLote: lote.metodoPagoLote as MetodoPago,
+          version: { increment: 1 },
       },
     });
 
@@ -160,7 +202,10 @@ export class PrismaLoteRepo implements LoteRepository {
       data: {
         bloquesEnteros: lote.bloquesEnteros,
         bloquesTajados: lote.bloquesTajados,
+       sueltosEntero: new Prisma.Decimal(lote.sueltosEntero.value),
+       sueltosTajado: new Prisma.Decimal(lote.sueltosTajado.value),
         costoTajado: new Prisma.Decimal(lote.costoTajado.value),
+        costoSeparadores: new Prisma.Decimal(lote.costoSeparadores.value),
         costoRealCalculadoKg: new Prisma.Decimal(lote.costoRealCalculadoKg.value),
         version: { increment: 1 },
       },
@@ -176,6 +221,28 @@ export class PrismaLoteRepo implements LoteRepository {
     if (!updated) {
       throw new Error(`Lote not found after update: ${id}`);
     }
+    return this.toEntity(updated);
+  }
+
+  async cerrarLote(id: string, lote: Lote, expectedVersion: number): Promise<Lote> {
+    const result = await prisma.lote.updateMany({
+      where: { id, version: expectedVersion },
+      data: {
+        estado: lote.estado as EstadoLote,
+        stockDisponibleKg: new Prisma.Decimal(lote.stockDisponibleKg.value),
+        bloquesEnteros: lote.bloquesEnteros,
+        bloquesTajados: lote.bloquesTajados,
+        bloquesTajadosDeFabrica: lote.bloquesTajadosDeFabrica,
+        sueltosEntero: new Prisma.Decimal(lote.sueltosEntero.value),
+        sueltosTajado: new Prisma.Decimal(lote.sueltosTajado.value),
+        version: { increment: 1 },
+      },
+    });
+    if (result.count === 0) {
+      throw new ConcurrencyError(`Lote ${id} was modified by another transaction`);
+    }
+    const updated = await prisma.lote.findUnique({ where: { id } });
+    if (!updated) throw new Error(`Lote not found after close: ${id}`);
     return this.toEntity(updated);
   }
 
@@ -201,23 +268,57 @@ export class PrismaLoteRepo implements LoteRepository {
     return records.map((r) => this.toEntity(r));
   }
 
+  async sumCostoPendientePago(): Promise<{ total: string; count: number }> {
+    const records = await prisma.lote.findMany({
+      where: {
+        estadoPago: EstadoPagoLote.PENDIENTE,
+        deletedAt: null,
+      },
+      select: {
+        cantidadCompradaKg: true,
+        precioCompraBaseKg: true,
+        costoFlete: true,
+      },
+    });
+
+    let total = new Prisma.Decimal(0);
+    let count = records.length;
+
+    for (const r of records) {
+      const costoLote = new Prisma.Decimal(r.cantidadCompradaKg)
+        .mul(new Prisma.Decimal(r.precioCompraBaseKg))
+        .add(new Prisma.Decimal(r.costoFlete));
+      total = total.add(costoLote);
+    }
+
+    return { total: total.toString(), count };
+  }
+
   private toEntity(record: Prisma.LoteGetPayload<{}>): Lote {
     return new Lote({
       id: record.id,
-      producto: record.producto as string as TipoProducto,
+      producto: asTipoProducto(record.producto),
       fechaIngreso: record.fechaIngreso,
       proveedorId: record.proveedorId,
       cantidadCompradaKg: record.cantidadCompradaKg.toString(),
       precioCompraBaseKg: record.precioCompraBaseKg.toString(),
-      precioPorBloque: record.precioPorBloque.toString(),
+       precioPorBloqueEntero: record.precioPorBloqueEntero.toString(),
+       precioPorBloqueTajado: (record.precioPorBloqueTajado ?? record.precioPorBloqueEntero).toString(),
       costoFlete: record.costoFlete.toString(),
       costoTajado: record.costoTajado.toString(),
       costoEmpaques: record.costoEmpaques.toString(),
+      costoSeparadores: record.costoSeparadores.toString(),
       stockDisponibleKg: record.stockDisponibleKg.toString(),
       bloquesEnteros: record.bloquesEnteros,
       bloquesTajados: record.bloquesTajados,
       bloquesTajadosDeFabrica: record.bloquesTajadosDeFabrica,
-      estado: record.estado as string as EstadoLote,
+      bloquesEnterosOriginal: record.bloquesEnterosOriginal,
+      bloquesTajadosFabricaOriginal: record.bloquesTajadosFabricaOriginal,
+      sueltosEntero: record.sueltosEntero.toString(),
+      sueltosTajado: record.sueltosTajado.toString(),
+      estado: asEstadoLote(record.estado),
+      estadoPago: asEstadoPagoLote(record.estadoPago),
+      metodoPagoLote: record.metodoPagoLote as MetodoPago,
       version: record.version,
       deletedAt: record.deletedAt,
     });

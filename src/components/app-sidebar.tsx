@@ -7,9 +7,9 @@ import {
   Package,
   ShoppingCart,
   Users,
-  Receipt,
   Truck,
   PackageOpen,
+  Scissors,
   LogOut,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -31,11 +31,11 @@ import { Button } from '@/components/ui/button';
 const navItems = [
   { label: 'Dashboard', href: '/', icon: LayoutDashboard },
   { label: 'Lotes', href: '/lotes', icon: Package },
+  { label: 'Tajados', href: '/tajados', icon: Scissors },
   { label: 'Ventas', href: '/ventas', icon: ShoppingCart },
   { label: 'Clientes', href: '/clientes', icon: Users },
   { label: 'Proveedores', href: '/proveedores', icon: Truck },
-  { label: 'Empaques', href: '/empaques', icon: PackageOpen },
-  { label: 'Gastos Fijos', href: '/gastos', icon: Receipt },
+  { label: 'Insumos', href: '/insumos', icon: PackageOpen },
 ];
 
 export function AppSidebar() {

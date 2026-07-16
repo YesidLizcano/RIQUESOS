@@ -1,8 +1,9 @@
 // Use Case: CrearLote — create with cost calculation, block support for Doble Crema
 // Application layer: can import from Domain but NOT from Infrastructure
 import { Lote, type LoteProps } from '../../domain/entities/Lote';
-import { EstadoLote, TipoProducto } from '../../domain/enums';
-import { DOBLE_CREMA_BLOCK_KG } from '../../domain/constants';
+import { EstadoLote, TipoProducto, EstadoPagoLote, MetodoPago } from '../../domain/enums';
+import { DOBLE_CREMA_BLOCK_KG, RECORTES_DC_PERMANENT_LOT_ID } from '../../domain/constants';
+import { Dinero } from '../../domain/value-objects/Dinero';
 import type { LoteRepository } from '../../domain/ports/LoteRepository';
 import type { ProveedorRepository } from '../../domain/ports/ProveedorRepository';
 
@@ -11,11 +12,14 @@ export interface CrearLoteInput {
   proveedorId: string;
   cantidadCompradaKg: string;
   precioCompraBaseKg: string;
-  precioPorBloque?: string;
+  precioPorBloqueEntero?: string;
+  precioPorBloqueTajado?: string;
   costoFlete?: string;
   costoEmpaques?: string;
   bloquesEnteros?: number;
   bloquesTajadosDeFabrica?: number;
+  estadoPago?: EstadoPagoLote;
+  metodoPagoLote?: MetodoPago;
 }
 
 export interface CrearLoteOutput {
@@ -29,6 +33,11 @@ export class CrearLote {
   ) {}
 
   async execute(input: CrearLoteInput): Promise<CrearLoteOutput> {
+    // Prevent manual creation of Recortes Doble Crema lots — managed by the system
+    if (input.producto === TipoProducto.RECORTES_DOBLE_CREMA) {
+      throw new Error('No se pueden crear lotes de Recortes Doble Crema manualmente. Este lote se gestiona automáticamente.');
+    }
+
     // Validate proveedor exists
     const proveedor = await this.proveedorRepo.findById(input.proveedorId);
     if (!proveedor) {
@@ -47,9 +56,15 @@ export class CrearLote {
         throw new Error('Para Doble Crema, debe ingresar al menos un bloque');
       }
 
-      const precioPorBloque = input.precioPorBloque ?? '0';
-      // precioCompraBaseKg is derived from precioPorBloque / DOBLE_CREMA_BLOCK_KG
-      const precioCompraBaseKg = String(Number(precioPorBloque) / DOBLE_CREMA_BLOCK_KG);
+      const precioPorBloqueEntero = input.precioPorBloqueEntero ?? '0';
+      const precioPorBloqueTajado = input.precioPorBloqueTajado ?? '0';
+      // precioCompraBaseKg is derived from precioPorBloqueEntero / DOBLE_CREMA_BLOCK_KG
+      // Use string-based division to avoid float64 precision loss
+      const precioCompraBaseKg = bloquesEnteros > 0
+        ? new Dinero(precioPorBloqueEntero).divide(String(DOBLE_CREMA_BLOCK_KG)).value
+        : bloquesTajadosDeFabrica > 0
+          ? new Dinero(precioPorBloqueTajado).divide(String(DOBLE_CREMA_BLOCK_KG)).value
+          : '0';
 
       const cantidadKg = (bloquesEnteros + bloquesTajadosDeFabrica) * DOBLE_CREMA_BLOCK_KG;
       loteProps = {
@@ -57,16 +72,22 @@ export class CrearLote {
         proveedorId: input.proveedorId,
         cantidadCompradaKg: String(cantidadKg),
         precioCompraBaseKg,
-        precioPorBloque,
+        precioPorBloqueEntero,
+        precioPorBloqueTajado,
         costoFlete: input.costoFlete,
         costoEmpaques: input.costoEmpaques,
         bloquesEnteros,
         bloquesTajadosDeFabrica,
         bloquesTajados: 0, // Initially no bloques tajados
+        bloquesEnterosOriginal: bloquesEnteros,
+        bloquesTajadosFabricaOriginal: bloquesTajadosDeFabrica,
+        estadoPago: input.estadoPago,
+        metodoPagoLote: input.metodoPagoLote,
       };
     } else {
       // Semisalado: quantity input in Kg, no precioPorBloque
-      if (!input.cantidadCompradaKg || Number(input.cantidadCompradaKg) <= 0) {
+      const cantidadKg = new Dinero(input.cantidadCompradaKg);
+      if (!input.cantidadCompradaKg || cantidadKg.isZero() || cantidadKg.isNegative()) {
         throw new Error('Para Semisalado, la cantidad en Kg es obligatoria');
       }
       loteProps = {
@@ -74,12 +95,17 @@ export class CrearLote {
         proveedorId: input.proveedorId,
         cantidadCompradaKg: input.cantidadCompradaKg,
         precioCompraBaseKg: input.precioCompraBaseKg,
-        precioPorBloque: '0',
+        precioPorBloqueEntero: '0',
+        precioPorBloqueTajado: '0',
         costoFlete: input.costoFlete,
         costoEmpaques: input.costoEmpaques,
         bloquesEnteros: 0,
         bloquesTajados: 0,
         bloquesTajadosDeFabrica: 0,
+        bloquesEnterosOriginal: 0,
+        bloquesTajadosFabricaOriginal: 0,
+        estadoPago: input.estadoPago,
+        metodoPagoLote: input.metodoPagoLote,
       };
     }
 

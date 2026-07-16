@@ -3,8 +3,11 @@ export { PrismaProveedorRepo } from './PrismaProveedorRepo';
 export { PrismaLoteRepo } from './PrismaLoteRepo';
 export { PrismaClienteRepo } from './PrismaClienteRepo';
 export { PrismaVentaRepo } from './PrismaVentaRepo';
-export { PrismaGastoFijoRepo } from './PrismaGastoFijoRepo';
+export { PrismaVentaItemRepo } from './PrismaVentaItemRepo';
 export { PrismaUsuarioRepo } from './PrismaUsuarioRepo';
-export { PrismaAuditLogRepo } from './PrismaAuditLogRepo';
+
 export { PrismaTajadoRepo } from './PrismaTajadoRepo';
+export { PrismaCompraInsumoRepo } from './PrismaCompraInsumoRepo';
+export { PrismaPrecioClienteProveedorRepo } from './PrismaPrecioClienteProveedorRepo';
+export { PrismaSedeRepo } from './PrismaSedeRepo';
 export { ConcurrencyError } from '../../domain/errors/ConcurrencyError';

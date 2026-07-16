@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useRefresh } from '@/components/refresh-context';
 import { modificarLote } from '@/presentation/actions/lotes';
 import { toast } from 'sonner';
-import { isDobleCrema, DOBLE_CREMA_BLOCK_KG } from '@/domain/constants';
-import { TipoProducto } from '@/domain/enums';
-import { tipoProductoLabel } from '@/domain/labels';
+import { DOBLE_CREMA_BLOCK_KG } from '@/domain/constants';
+import { TipoProducto, EstadoPagoLote, MetodoPago } from '@/domain/enums';
+import { tipoProductoLabel, metodoPagoLabel } from '@/domain/labels';
+import { useLoteCostCalculator } from '@/hooks/use-lote-cost-calculator';
 import type { LoteResponse } from '@/presentation/dtos';
 import {
   Dialog,
@@ -18,6 +19,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface EditarLoteDialogProps {
   lote: LoteResponse;
@@ -28,32 +36,36 @@ interface EditarLoteDialogProps {
 
 export function EditarLoteDialog({ lote, open, onOpenChange, proveedorNombre }: EditarLoteDialogProps) {
   const refreshData = useRefresh();
-  const isDobleCremaLote = isDobleCrema(lote.producto);
 
-  const [precioPorBloque, setPrecioPorBloque] = useState(lote.precioPorBloque);
+  const [precioPorBloqueEntero, setPrecioPorBloqueEntero] = useState(lote.precioPorBloqueEntero);
+  const [precioPorBloqueTajado, setPrecioPorBloqueTajado] = useState(lote.precioPorBloqueTajado);
   const [precioCompraBaseKg, setPrecioCompraBaseKg] = useState(lote.precioCompraBaseKg);
   const [costoFlete, setCostoFlete] = useState(lote.costoFlete);
+  const [estadoPago, setEstadoPago] = useState(lote.estadoPago);
+  const [metodoPagoLote, setMetodoPagoLote] = useState(lote.metodoPagoLote ?? MetodoPago.EFECTIVO);
 
-  // For DC: derive precioCompraBaseKg from precioPorBloque
-  const effectivePrecioBaseKg = isDobleCremaLote
-    ? (parseFloat(precioPorBloque) || 0) / DOBLE_CREMA_BLOCK_KG
-    : parseFloat(precioCompraBaseKg) || 0;
-
-  const costoRealCalculadoKg = useMemo(() => {
-    const cantidad = parseFloat(lote.cantidadCompradaKg);
-    const precioBase = effectivePrecioBaseKg;
-    const flete = parseFloat(costoFlete) || 0;
-    const tajado = parseFloat(lote.costoTajado) || 0;
-
-    if (!cantidad || cantidad <= 0 || isNaN(precioBase)) return null;
-
-    const costoTotal = (precioBase * cantidad) + flete + tajado;
-    return costoTotal / cantidad;
-  }, [lote.cantidadCompradaKg, lote.costoTajado, effectivePrecioBaseKg, costoFlete, isDobleCremaLote, precioPorBloque, precioCompraBaseKg]);
-
-  const costoRealPorBloque = isDobleCremaLote && costoRealCalculadoKg !== null
-    ? costoRealCalculadoKg * DOBLE_CREMA_BLOCK_KG
-    : null;
+  const {
+    isDobleCremaSelected: isDobleCremaLote,
+    effectivePrecioBaseKg,
+    costoRealCalculadoKg,
+    costoRealPorBloqueEntero: costoRealPorBloque,
+    costoRealCalculadoTajadoFabricaKg,
+    costoRealPorBloqueTajado,
+    showTajadoPrice,
+    costoMercancia,
+    costoFleteNum,
+    inversionTotal,
+    hasInversion,
+  } = useLoteCostCalculator({
+    producto: lote.producto,
+    bloquesEnteros: lote.bloquesEnteros,
+    bloquesTajadosDeFabrica: lote.bloquesTajadosDeFabrica,
+    cantidadCompradaKg: parseFloat(lote.cantidadCompradaKg) || 0,
+    precioPorBloqueEntero: parseFloat(precioPorBloqueEntero) || 0,
+    precioPorBloqueTajado: parseFloat(precioPorBloqueTajado) || 0,
+    precioCompraBaseKg: parseFloat(precioCompraBaseKg) || 0,
+    costoFlete: parseFloat(costoFlete) || 0,
+  });
 
   async function action(formData: FormData) {
     const result = await modificarLote(formData);
@@ -132,25 +144,41 @@ export function EditarLoteDialog({ lote, open, onOpenChange, proveedorNombre }: 
           )}
 
           {isDobleCremaLote ? (
-            <div className="space-y-2">
-              <Label htmlFor="edit-precioPorBloque">Precio por Bloque ($)</Label>
-              <Input
-                id="edit-precioPorBloque"
-                name="precioPorBloque"
-                type="number"
-                step="0.01"
-                min="0"
-                value={precioPorBloque}
-                onChange={(e) => setPrecioPorBloque(e.target.value)}
-                required
-              />
-              {precioPorBloque && !isNaN(parseFloat(precioPorBloque)) && parseFloat(precioPorBloque) > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  Equivale a ${(effectivePrecioBaseKg).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/kg
-                </p>
-              )}
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="edit-precioPorBloqueEntero">Precio Bloque Entero ($)</Label>
+                <Input
+                  id="edit-precioPorBloqueEntero"
+                  name="precioPorBloqueEntero"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={precioPorBloqueEntero}
+                  onChange={(e) => setPrecioPorBloqueEntero(e.target.value)}
+                  required
+                />
+                {precioPorBloqueEntero && !isNaN(parseFloat(precioPorBloqueEntero)) && parseFloat(precioPorBloqueEntero) > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Equivale a ${(effectivePrecioBaseKg).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/kg
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-precioPorBloqueTajado">Precio Bloque Tajado ($)</Label>
+                <Input
+                  id="edit-precioPorBloqueTajado"
+                  name="precioPorBloqueTajado"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={precioPorBloqueTajado}
+                  onChange={(e) => setPrecioPorBloqueTajado(e.target.value)}
+                  disabled={lote.bloquesTajadosDeFabrica === 0}
+                  placeholder={lote.bloquesTajadosDeFabrica > 0 ? '0.00' : 'Sin tajados de fábrica'}
+                />
+              </div>
               <input type="hidden" name="precioCompraBaseKg" value={String(effectivePrecioBaseKg)} />
-            </div>
+            </>
           ) : (
             <div className="space-y-2">
               <Label htmlFor="edit-precioCompraBaseKg">Precio Compra Base ($/Kg)</Label>
@@ -192,15 +220,61 @@ export function EditarLoteDialog({ lote, open, onOpenChange, proveedorNombre }: 
             </p>
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-estadoPago">Estado de pago</Label>
+              <Select name="estadoPago" value={estadoPago} onValueChange={(v) => { if (v) { setEstadoPago(v); if (v !== 'PAGADO') setMetodoPagoLote(MetodoPago.EFECTIVO); } }}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Seleccione estado de pago">{estadoPago === EstadoPagoLote.PAGADO ? 'Pagado' : 'Pendiente'}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={EstadoPagoLote.PENDIENTE}>Pendiente</SelectItem>
+                  <SelectItem value={EstadoPagoLote.PAGADO}>Pagado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {estadoPago === 'PAGADO' && (
+              <div className="space-y-2">
+                 <Label htmlFor="edit-metodoPagoLote">Método de pago</Label>
+                 <Select name="metodoPagoLote" value={metodoPagoLote} onValueChange={(v) => v && setMetodoPagoLote(v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar método">{metodoPagoLabel[metodoPagoLote] ?? metodoPagoLote}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                       <SelectItem value={MetodoPago.EFECTIVO}>Efectivo</SelectItem>
+                       <SelectItem value={MetodoPago.NEQUI}>Nequi</SelectItem>
+                       <SelectItem value={MetodoPago.BRE_B}>Bre-B</SelectItem>
+                    </SelectContent>
+                 </Select>
+              </div>
+            )}
+          </div>
+          <input type="hidden" name="metodoPagoLote" value={metodoPagoLote} />
+
           {isDobleCremaLote && costoRealPorBloque !== null ? (
-            <div className="rounded-lg bg-muted p-3">
-              <p className="text-sm text-muted-foreground">Costo Real Calculado por Bloque:</p>
-              <p className="text-lg font-semibold">
-                ${costoRealPorBloque.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <div className="rounded-lg bg-muted p-3 space-y-1">
+              <p className="text-sm text-muted-foreground">Costo Real Calculado:</p>
+              <p className="text-sm">
+                <span className="font-medium text-green-700 dark:text-green-400">Entero:</span> ${costoRealPorBloque.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/bloque
+                {' '}(${costoRealCalculadoKg!.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/kg)
               </p>
-              <p className="text-xs text-muted-foreground">
-                (${costoRealCalculadoKg!.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/kg)
-              </p>
+              {showTajadoPrice && costoRealPorBloqueTajado !== null && (
+                <p className="text-sm">
+                  <span className="font-medium text-blue-700 dark:text-blue-400">Taj. fábrica:</span> ${costoRealPorBloqueTajado.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/bloque
+                  {' '}(${costoRealCalculadoTajadoFabricaKg!.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/kg)
+                </p>
+              )}
+              {hasInversion && (
+                <p className="text-sm border-t border-border/50 pt-1 mt-1">
+                  <span className="font-medium">Inversión Total:</span>{' '}
+                  <span className="font-semibold">${Math.round(inversionTotal).toLocaleString('es-AR')}</span>
+                  {costoFleteNum > 0 && (
+                    <span className="text-muted-foreground">
+                      {' '}(${Math.round(costoMercancia).toLocaleString('es-AR')} prod. + ${Math.round(costoFleteNum).toLocaleString('es-AR')} flete)
+                    </span>
+                  )}
+                </p>
+              )}
             </div>
           ) : !isDobleCremaLote && costoRealCalculadoKg !== null && !isNaN(costoRealCalculadoKg) ? (
             <div className="rounded-lg bg-muted p-3">
@@ -208,6 +282,17 @@ export function EditarLoteDialog({ lote, open, onOpenChange, proveedorNombre }: 
               <p className="text-lg font-semibold">
                 ${costoRealCalculadoKg.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
+              {hasInversion && (
+                <p className="text-sm border-t border-border/50 pt-1 mt-1">
+                  <span className="font-medium">Inversión Total:</span>{' '}
+                  <span className="font-semibold">${Math.round(inversionTotal).toLocaleString('es-AR')}</span>
+                  {costoFleteNum > 0 && (
+                    <span className="text-muted-foreground">
+                      {' '}(${Math.round(costoMercancia).toLocaleString('es-AR')} prod. + ${Math.round(costoFleteNum).toLocaleString('es-AR')} flete)
+                    </span>
+                  )}
+                </p>
+              )}
             </div>
           ) : null}
 

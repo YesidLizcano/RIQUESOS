@@ -7,8 +7,12 @@ import { PrismaProveedorRepo } from '@/infrastructure/repositories/PrismaProveed
 import { GestionarProveedores } from '@/application/use-cases/GestionarProveedores';
 import { crearProveedorSchema, actualizarProveedorSchema, eliminarProveedorSchema } from '@/presentation/validations/proveedor.schema';
 import type { CrearProveedorRequest, ActualizarProveedorRequest, ProveedorResponse } from '../dtos';
+import { PrismaLoteRepo } from '@/infrastructure/repositories/PrismaLoteRepo';
+import { Dinero } from '@/domain/value-objects/Dinero';
+import { loteToResponse } from './utils';
+import type { LotesByProveedorResponse } from '@/presentation/dtos';
 import { handlePrismaError } from './utils';
-import { recordAuditLog } from './audit-log';
+
 import { logger } from '@/infrastructure/pino-logger';
 
 async function getGestionarProveedoresUseCase() {
@@ -41,14 +45,18 @@ export async function crearProveedor(formData: FormData) {
   try {
     const useCase = await getGestionarProveedoresUseCase();
     const proveedor = await useCase.crear(request);
-    await recordAuditLog({ entityType: 'Proveedor', entityId: proveedor.id, action: 'CREATE', userId: (session.user as { id?: string }).id });
+
     revalidatePath('/proveedores');
     return { success: true, proveedor: proveedorToResponse(proveedor) };
   } catch (error) {
     logger.error({ err: error }, 'Error creating proveedor');
+    const prismaError = handlePrismaError(error);
+    if (prismaError) {
+      return { success: false, error: 'Ya existe un proveedor con ese nombre' };
+    }
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Error creating proveedor',
+      error: error instanceof Error ? error.message : 'Error al crear proveedor',
     };
   }
 }
@@ -70,14 +78,18 @@ export async function actualizarProveedor(formData: FormData) {
   try {
     const useCase = await getGestionarProveedoresUseCase();
     const proveedor = await useCase.actualizar(request);
-    await recordAuditLog({ entityType: 'Proveedor', entityId: proveedor.id, action: 'UPDATE', userId: (session.user as { id?: string }).id });
+
     revalidatePath('/proveedores');
     return { success: true, proveedor: proveedorToResponse(proveedor) };
   } catch (error) {
     logger.error({ err: error }, 'Error updating proveedor');
+    const prismaError = handlePrismaError(error);
+    if (prismaError) {
+      return { success: false, error: 'Ya existe un proveedor con ese nombre' };
+    }
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Error updating proveedor',
+      error: error instanceof Error ? error.message : 'Error al actualizar proveedor',
     };
   }
 }
@@ -93,7 +105,7 @@ export async function eliminarProveedor(formData: FormData) {
   try {
     const useCase = await getGestionarProveedoresUseCase();
     await useCase.eliminar(parsed.data.id);
-    await recordAuditLog({ entityType: 'Proveedor', entityId: parsed.data.id, action: 'DELETE', userId: (session.user as { id?: string }).id });
+
     revalidatePath('/proveedores');
     return { success: true };
   } catch (error) {
@@ -104,7 +116,7 @@ export async function eliminarProveedor(formData: FormData) {
     }
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Error deleting proveedor',
+      error: error instanceof Error ? error.message : 'Error al eliminar proveedor',
     };
   }
 }
@@ -117,14 +129,18 @@ export async function restaurarProveedor(formData: FormData) {
   try {
     const useCase = await getGestionarProveedoresUseCase();
     const proveedor = await useCase.restaurar(id);
-    await recordAuditLog({ entityType: 'Proveedor', entityId: id, action: 'RESTORE', userId: (session.user as { id?: string }).id });
+
     revalidatePath('/proveedores');
     return { success: true, proveedor: proveedorToResponse(proveedor) };
   } catch (error) {
     logger.error({ err: error }, 'Error restoring proveedor');
+    const prismaError = handlePrismaError(error);
+    if (prismaError) {
+      return { success: false, error: 'Ya existe un proveedor activo con ese nombre' };
+    }
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Error restoring proveedor',
+      error: error instanceof Error ? error.message : 'Error al restaurar proveedor',
     };
   }
 }
@@ -138,7 +154,7 @@ export async function getProveedores() {
     return { success: true, proveedores: proveedores.map(proveedorToResponse) };
   } catch (error) {
     logger.error({ err: error }, 'Error fetching proveedores');
-    return { success: false, error: 'Error fetching proveedores', proveedores: [] };
+    return { success: false, error: 'Error al obtener proveedores', proveedores: [] };
   }
 }
 
@@ -153,7 +169,7 @@ export async function getProveedoresIncludeDeleted() {
     return { success: true, proveedores: [...active, ...deletedProveedores.map(proveedorToResponse)] };
   } catch (error) {
     logger.error({ err: error }, 'Error fetching proveedores including deleted');
-    return { success: false, error: 'Error fetching proveedores', proveedores: [] };
+    return { success: false, error: 'Error al obtener proveedores', proveedores: [] };
   }
 }
 
@@ -164,11 +180,61 @@ export async function getProveedorById(id: string) {
     const useCase = await getGestionarProveedoresUseCase();
     const proveedor = await useCase.obtenerPorId(id);
     if (!proveedor) {
-      return { success: false, error: 'Proveedor not found' };
+      return { success: false, error: 'Proveedor no encontrado' };
     }
     return { success: true, proveedor: proveedorToResponse(proveedor) };
   } catch (error) {
     logger.error({ err: error }, 'Error fetching proveedor');
-    return { success: false, error: 'Error fetching proveedor' };
+    return { success: false, error: 'Error al obtener proveedor' };
+  }
+}
+
+export async function getLotesByProveedor(proveedorId: string): Promise<{ success: boolean; data?: LotesByProveedorResponse; error?: string }> {
+  await requireSession();
+
+  try {
+    const proveedorRepo = new PrismaProveedorRepo();
+    const loteRepo = new PrismaLoteRepo();
+
+    const proveedor = await proveedorRepo.findById(proveedorId);
+    if (!proveedor) {
+      return { success: false, error: 'Proveedor no encontrado' };
+    }
+
+    const lotes = await loteRepo.findByProveedor(proveedorId);
+    const lotesResponse = lotes.map(loteToResponse);
+
+    let totalCosto = new Dinero('0');
+    let montoPendienteTotal = new Dinero('0');
+    let lotesPagados = 0;
+    let lotesPendientes = 0;
+
+    for (const lote of lotes) {
+      const costoLote = lote.precioCompraBaseKg.multiply(lote.cantidadCompradaKg.value).add(lote.costoFlete);
+      totalCosto = totalCosto.add(costoLote);
+
+      if (lote.estadoPago === 'PAGADO') {
+        lotesPagados++;
+      } else {
+        lotesPendientes++;
+        montoPendienteTotal = montoPendienteTotal.add(costoLote);
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        lotes: lotesResponse,
+        proveedorNombre: proveedor.nombre,
+        totalLotes: lotes.length,
+        totalCosto: totalCosto.value,
+        lotesPagados,
+        lotesPendientes,
+        montoPendienteTotal: montoPendienteTotal.value,
+      },
+    };
+  } catch (error) {
+    logger.error({ err: error }, 'Error fetching lotes by proveedor');
+    return { success: false, error: 'Error al obtener lotes del proveedor' };
   }
 }

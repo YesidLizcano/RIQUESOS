@@ -7,98 +7,218 @@ import { DataTable } from '@/components/data-table';
 import { DataTableToolbar, FilterConfig } from '@/components/data-table-toolbar';
 import { createVentaColumns } from '@/components/columns/venta-columns';
 import { RegistrarVentaDialog } from '@/components/forms/registrar-venta-dialog';
-import { PeriodSelector } from '@/components/period-selector';
-import { getVentasByDateRange } from '@/presentation/actions/ventas';
+import { VentaDetalleDialog } from '@/components/venta-detalle-dialog';
+import { AbonoPagoDialog } from '@/components/abono-pago-dialog';
+import { DateRangePicker } from '@/components/date-range-picker';
+import { getVentasByExactDateRange } from '@/presentation/actions/ventas';
 import { useExportExcel } from '@/hooks/use-export-excel';
+import type { ColumnType, ColumnMapItem } from '@/hooks/use-export-excel';
+import { usePdfDownload } from '@/hooks/use-pdf-download';
+import { VistaPreviaExcelDialog } from '@/components/dialogs/vista-previa-excel-dialog';
+
 import { RefreshContext } from '@/components/refresh-context';
-import type { VentaResponse, ClienteResponse, LoteResponse } from '@/presentation/dtos';
+import { DeferredMount } from '@/components/deferred-mount';
+import type { VentaResponse, ClienteResponse, LoteResponse, ProveedorResponse } from '@/presentation/dtos';
 import { TipoProducto } from '@/domain/enums';
+import { isDobleCrema, formatDobleCremaDetalle, formatDobleCremaGranel } from '@/domain/constants';
+import { formatSSKg } from '@/domain/formatters';
 
 const PRODUCTO_LABELS: Record<string, string> = {
   DOBLE_CREMA: 'Doble Crema',
   SEMISALADO: 'Semisalado',
+  RECORTES_DOBLE_CREMA: 'Recortes DC',
 };
 
 const ventaExportMap = [
-  { key: 'fecha', header: 'Fecha' },
+  { key: 'fecha', header: 'Fecha', type: 'date' as ColumnType },
   { key: 'clienteNombre', header: 'Cliente' },
+  { key: 'sedeNombre', header: 'Sede' },
   { key: 'domiciliario', header: 'Domiciliario' },
-  { key: 'producto', header: 'Producto', format: (v: unknown) => PRODUCTO_LABELS[v as string] ?? v },
-  { key: 'cantidadVendidaKg', header: 'Cantidad (Kg)', format: (v: unknown) => Number(v) },
-  { key: 'bloquesEnterosVendidos', header: 'Bloques Enteros' },
-  { key: 'bloquesTajadosVendidos', header: 'Bloques Tajados' },
-  { key: 'bloquesReempacados', header: 'Reempacados' },
-  { key: 'precioVentaKg', header: 'Precio/Kg', format: (v: unknown) => Number(v) },
-  { key: 'valorDomicilio', header: 'Domicilio ($)', format: (v: unknown) => Number(v) },
-  { key: 'ingresoTotal', header: 'Ingreso Total', format: (v: unknown) => Number(v) },
-  { key: 'gananciaBruta', header: 'Ganancia Bruta', format: (v: unknown) => Number(v) },
-];
+  { key: 'metodoPago', header: 'Método de Pago', format: (v: unknown) => {
+    const labels: Record<string, string> = { EFECTIVO: 'Efectivo', NEQUI: 'Nequi', BRE_B: 'Bre-B', CREDITO: 'Crédito' };
+    return labels[String(v)] ?? String(v);
+  }},
+  { key: 'cantidadTotalKg', header: 'Cantidad', format: (_v: unknown, row: unknown) => {
+    const venta = row as VentaResponse;
+    const items = venta.items ?? [];
+    const dcItems = items.filter((item) => {
+      const producto = item.loteProducto ?? '';
+      return isDobleCrema(producto);
+    });
+    const ssItems = items.filter((item) => {
+      const producto = item.loteProducto ?? '';
+      return !isDobleCrema(producto);
+    });
 
-const MESES = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+    if (dcItems.length === 0) {
+      // Pure SS venta — show kg
+      return Number(venta.cantidadTotalKg);
+    }
+
+    if (ssItems.length === 0) {
+      // Pure DC venta — aggregate blocks from items
+      let totalEnteros = 0;
+      let totalTajados = 0;
+      let totalKgSueltosEntero = 0;
+      let totalKgSueltosTajado = 0;
+
+      for (const item of dcItems) {
+        if (item.ventaTipo === 'BLOQUES') {
+          totalEnteros += item.bloquesEnterosVendidos;
+          totalTajados += item.bloquesTajadosVendidos + item.bloquesTajadosDeFabricaVendidos;
+        } else {
+          // GRANEL — convert kg to blocks within variety
+          const kg = Number(item.cantidadKg);
+          const variedad = item.origenCorte === 'TAJADO' ? 'tajado' : 'entero';
+          if (variedad === 'entero') {
+            totalKgSueltosEntero += kg;
+          } else {
+            totalKgSueltosTajado += kg;
+          }
+        }
+      }
+
+      return formatDobleCremaDetalle(totalEnteros, totalTajados, totalKgSueltosEntero, totalKgSueltosTajado);
+    }
+
+    // Mixed: DC + SS — show both separated by " | "
+    let totalEnteros = 0;
+    let totalTajados = 0;
+    let totalKgSueltosEntero = 0;
+    let totalKgSueltosTajado = 0;
+
+    for (const item of dcItems) {
+      if (item.ventaTipo === 'BLOQUES') {
+        totalEnteros += item.bloquesEnterosVendidos;
+        totalTajados += item.bloquesTajadosVendidos + item.bloquesTajadosDeFabricaVendidos;
+      } else {
+        const kg = Number(item.cantidadKg);
+        const variedad = item.origenCorte === 'TAJADO' ? 'tajado' : 'entero';
+        if (variedad === 'entero') {
+          totalKgSueltosEntero += kg;
+        } else {
+          totalKgSueltosTajado += kg;
+        }
+      }
+    }
+
+    const dcPart = formatDobleCremaDetalle(totalEnteros, totalTajados, totalKgSueltosEntero, totalKgSueltosTajado);
+    const ssKg = ssItems.reduce((sum, item) => sum + Number(item.cantidadKg), 0);
+    return `${dcPart} | ${formatSSKg(ssKg)}`;
+  }},
+  { key: 'ingresoTotal', header: 'Ingreso Total', type: 'currency' as ColumnType, format: (v: unknown) => v != null ? Number(v) : 0 },
+  { key: 'abono', header: 'Abono', type: 'currency' as ColumnType, format: (v: unknown) => v != null ? Number(v) : 0 },
+  { key: 'saldo', header: 'Saldo Pendiente', type: 'currency' as ColumnType, format: (v: unknown) => v != null ? Number(v) : 0 },
+  { key: 'gananciaBruta', header: 'Ganancia Bruta', type: 'currency' as ColumnType, format: (v: unknown) => v != null ? Number(v) : 0 },
+  { key: 'valorDomicilio', header: 'Domicilio ($)', type: 'currency' as ColumnType, format: (v: unknown) => v != null ? Number(v) : 0 },
 ];
 
 interface VentasClientPageProps {
   initialVentas: VentaResponse[];
   clientes: ClienteResponse[];
   lotes: LoteResponse[];
-  initialMonth: number;
-  initialYear: number;
+  proveedores: ProveedorResponse[];
+  precioBolsa: number;
+  initialInicio: string;
+  initialFin: string;
+  initialMetodoPago?: string;
+  initialSaldoPendiente?: boolean;
 }
-
-type VentaRow = VentaResponse & { producto: string };
 
 const productoFilterOptions = [
   { label: 'Doble Crema', value: TipoProducto.DOBLE_CREMA },
   { label: 'Semisalado', value: TipoProducto.SEMISALADO },
+  { label: 'Recortes DC', value: TipoProducto.RECORTES_DOBLE_CREMA },
 ];
 
-export function VentasClientPage({ initialVentas, clientes, lotes, initialMonth, initialYear }: VentasClientPageProps) {
-  const [ventas, setVentas] = useState<VentaResponse[]>(initialVentas);
-  const [month, setMonth] = useState(initialMonth);
-  const [year, setYear] = useState(initialYear);
-  const [loading, setLoading] = useState(false);
+const metodoPagoFilterOptions = [
+  { label: 'Efectivo', value: 'EFECTIVO' },
+  { label: 'Nequi', value: 'NEQUI' },
+  { label: 'Bre-B', value: 'BRE_B' },
+  { label: 'Crédito', value: 'CREDITO' },
+];
 
-  // Sync when server data changes (fallback for initial load)
-  useEffect(() => {
-    setVentas(initialVentas);
-  }, [initialVentas]);
+function formatDisplayDate(isoDate: string): string {
+  const [y, m, d] = isoDate.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+export function VentasClientPage({ initialVentas, clientes, lotes, proveedores, precioBolsa, initialInicio, initialFin, initialMetodoPago, initialSaldoPendiente }: VentasClientPageProps) {
+  const [ventas, setVentas] = useState<VentaResponse[]>(initialVentas);
+  const [inicio, setInicio] = useState(initialInicio);
+  const [fin, setFin] = useState(initialFin);
+  const [loading, setLoading] = useState(false);
+  const [ventaToEdit, setVentaToEdit] = useState<VentaResponse | null>(null);
+  const [ventaToAbonar, setVentaToAbonar] = useState<VentaResponse | null>(null);
+  const [saldoPendiente, setSaldoPendiente] = useState(initialSaldoPendiente ?? false);
 
   const clienteMap = useMemo(
     () => new Map(clientes.map((c) => [c.id, c.nombre])),
     [clientes]
   );
 
-  const clienteFilterOptions = useMemo(
-    () => clientes.map((c) => ({ label: c.nombre, value: c.id })),
+  const clienteObjMap = useMemo(
+    () => new Map(clientes.map((c) => [c.id, c])),
     [clientes]
+  );
+
+  const clienteFilterOptions = useMemo(
+    () => clientes.filter((c) => !c.deletedAt).map((c) => ({ label: c.nombre, value: c.id })),
+    [clientes]
+  );
+
+  const loteProductoMap = useMemo(
+    () => new Map(lotes.map((l) => [l.id, l.producto])),
+    [lotes]
+  );
+
+  const proveedorMap = useMemo(
+    () => new Map(proveedores.map((p) => [p.id, p.nombre])),
+    [proveedores]
+  );
+
+  const loteProveedorNombreMap = useMemo(
+    () => new Map(lotes.map((l) => [l.id, proveedorMap.get(l.proveedorId) ?? ''])),
+    [lotes, proveedores]
+  );
+
+  const loteMap = useMemo(
+    () => new Map(lotes.map((l) => [l.id, l])),
+    [lotes]
   );
 
   const filters: FilterConfig[] = useMemo(
     () => [
       { columnId: 'clienteNombre', label: 'Cliente', options: clienteFilterOptions },
-      { columnId: 'producto', label: 'Producto', options: productoFilterOptions },
+      { columnId: 'metodoPago', label: 'Método de Pago', options: metodoPagoFilterOptions },
+      { columnId: 'productos', label: 'Producto', options: productoFilterOptions },
     ],
     [clienteFilterOptions]
   );
 
-  // Enrich ventas with producto from lote for filtering
-  const enrichedVentas: VentaRow[] = useMemo(() => {
-    const loteMap = new Map(lotes.map((l) => [l.id, l.producto]));
-    return ventas.map((v) => ({
-      ...v,
-      producto: loteMap.get(v.loteId) ?? '',
-    }));
-  }, [ventas, lotes]);
-
   const columns = useMemo(
-    () => createVentaColumns(clienteMap),
-    [clienteMap]
+    () => createVentaColumns(clienteMap, loteProductoMap, loteProveedorNombreMap, (venta) => (
+      <VentaDetalleDialog
+        venta={venta}
+        clienteMap={clienteMap}
+        loteProductoMap={loteProductoMap}
+        loteProveedorNombreMap={loteProveedorNombreMap}
+        loteMap={loteMap}
+        clienteObjMap={clienteObjMap}
+        onEdit={(v) => setVentaToEdit(v)}
+        onAbonar={(v) => setVentaToAbonar(v)}
+      />
+    ), (venta) => setVentaToAbonar(venta)),
+    [clienteMap, loteProductoMap, loteProveedorNombreMap, loteMap, clienteObjMap]
   );
 
+  const filteredVentas = useMemo(() => {
+    if (!saldoPendiente) return ventas;
+    return ventas.filter((v) => Number(v.saldo) > 0);
+  }, [ventas, saldoPendiente]);
+
   const table = useReactTable({
-    data: enrichedVentas,
+    data: filteredVentas,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -107,31 +227,99 @@ export function VentasClientPage({ initialVentas, clientes, lotes, initialMonth,
     globalFilterFn: 'includesString',
   });
 
-  const { exportExcel, isExporting } = useExportExcel(table, ventaExportMap, 'Ventas');
-
-  const refreshData = useCallback(async () => {
-    const result = await getVentasByDateRange(month, year);
-    if (result.success && result.ventas) {
-      setVentas(result.ventas);
+  // Apply initial filter after mount to avoid React state update warning
+  useEffect(() => {
+    if (initialMetodoPago) {
+      table.getColumn('metodoPago')?.setFilterValue(initialMetodoPago);
     }
-  }, [month, year]);
+  }, [initialMetodoPago, table]);
 
-  const handlePeriodChange = async (newMonth: number, newYear: number) => {
-    setMonth(newMonth);
-    setYear(newYear);
+  // Totals derived from the table's filtered rows (respects all active filters)
+  const filteredTotals = useMemo(() => {
+    const rows = table.getFilteredRowModel().rows;
+    const visible = rows.map((row) => row.original as VentaResponse);
+    const ingreso = visible.reduce((sum, v) => sum + Number(v.ingresoTotal), 0);
+    const ganancia = visible.reduce((sum, v) => sum + Number(v.gananciaBruta), 0);
+    const saldoTotal = visible.reduce((sum, v) => sum + Number(v.saldo), 0);
+    return { ingreso, ganancia, saldoTotal, count: visible.length };
+  }, [table.getFilteredRowModel().rows]);
+
+  // Dynamic footer label based on active filters
+  const metodoPagoFilter = String(table.getColumn('metodoPago')?.getFilterValue() ?? '');
+  const isCredito = metodoPagoFilter.includes('CREDITO');
+  const isEfectivo = metodoPagoFilter === 'EFECTIVO';
+  const isNequi = metodoPagoFilter === 'NEQUI';
+  const isBreb = metodoPagoFilter === 'BRE_B';
+  const isDigital = isNequi || isBreb;
+
+  const footerLabel = useMemo(() => {
+    if (saldoPendiente && isCredito) return `ventas con deuda`;
+    if (isCredito) return 'ventas a crédito';
+    if (isEfectivo) return 'ventas en efectivo';
+    if (isNequi) return 'ventas por Nequi';
+    if (isBreb) return 'ventas por Bre-B';
+    if (isDigital) return 'ventas digitales';
+    return 'ventas';
+  }, [metodoPagoFilter, saldoPendiente]);
+
+  const showFooter = filteredTotals.count > 0;
+  const showSaldo = isCredito || saldoPendiente;
+
+  const { exportExcel, isExporting, getPreviewData } = useExportExcel(table, ventaExportMap, 'Ventas');
+  const { isGenerating: isGeneratingPdf, fetchPdf } = usePdfDownload();
+
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewData, setPreviewData] = useState<{ columnMap: ColumnMapItem[]; data: unknown[][]; entityName: string } | null>(null);
+
+  const handlePreviewExport = useCallback(() => {
+    const data = getPreviewData();
+    setPreviewData(data);
+    setPreviewOpen(true);
+  }, [getPreviewData]) as () => Promise<void>;
+
+  const handlePdfVentas = () => {
+    fetchPdf(`/api/reports/ventas?inicio=${inicio}&fin=${fin}`);
+  };
+
+  const handleDateRangeChange = useCallback(async (newInicio: string, newFin: string) => {
+    setInicio(newInicio);
+    setFin(newFin);
     setLoading(true);
 
+    // Sync URL with new date range
+    const params = new URLSearchParams();
+    params.set('inicio', newInicio);
+    params.set('fin', newFin);
+    if (saldoPendiente) params.set('saldo', 'PENDIENTE');
+    window.history.replaceState(null, '', `/ventas?${params.toString()}`);
+
     try {
-      const result = await getVentasByDateRange(newMonth, newYear);
+      const result = await getVentasByExactDateRange(newInicio, newFin);
       if (result.success && result.ventas) {
         setVentas(result.ventas);
       }
     } finally {
       setLoading(false);
     }
-  };
+  }, [saldoPendiente]);
 
-  const periodLabel = month === -1 ? 'Todos' : `${MESES[month]} ${year}`;
+  const handleSaldoPendienteChange = useCallback((checked: boolean) => {
+    setSaldoPendiente(checked);
+    const params = new URLSearchParams();
+    params.set('inicio', inicio);
+    params.set('fin', fin);
+    if (checked) params.set('saldo', 'PENDIENTE');
+    window.history.replaceState(null, '', `/ventas?${params.toString()}`);
+  }, [inicio, fin]);
+
+  const refreshData = useCallback(async () => {
+    const result = await getVentasByExactDateRange(inicio, fin);
+    if (result.success && result.ventas) {
+      setVentas(result.ventas);
+    }
+  }, [inicio, fin]);
+
+  const periodLabel = `${formatDisplayDate(inicio)} — ${formatDisplayDate(fin)}`;
 
   return (
     <RefreshContext.Provider value={refreshData}>
@@ -141,22 +329,29 @@ export function VentasClientPage({ initialVentas, clientes, lotes, initialMonth,
           <h1 className="text-3xl font-bold tracking-tight">Ventas</h1>
           <p className="text-muted-foreground">Registro de ventas — {periodLabel}</p>
         </div>
-        <div className="flex items-center gap-3">
-          <PeriodSelector
-            month={month}
-            year={year}
-            onPeriodChange={handlePeriodChange}
+        <div className="flex flex-wrap items-center gap-3">
+          <DateRangePicker
+            inicio={inicio}
+            fin={fin}
+            onDateRangeChange={handleDateRangeChange}
           />
-          <RegistrarVentaDialog clientes={clientes} lotes={lotes} />
+          <RegistrarVentaDialog clientes={clientes} lotes={lotes} proveedorMap={proveedorMap} ventaToEdit={ventaToEdit} onEditComplete={() => setVentaToEdit(null)} precioBolsa={precioBolsa} />
+          {ventaToAbonar && (
+            <AbonoPagoDialog
+              ventaId={ventaToAbonar.id}
+              ingresoTotal={ventaToAbonar.ingresoTotal}
+              abonoActual={ventaToAbonar.abono}
+              clienteNombre={ventaToAbonar.clienteNombre}
+              open={true}
+              onClose={() => setVentaToAbonar(null)}
+            />
+          )}
         </div>
       </div>
 
-      {loading && (
-        <p className="text-sm text-muted-foreground">Actualizando ventas...</p>
-      )}
-
       <Card>
         <CardContent className="pt-6 space-y-4">
+          <DeferredMount>
           {ventas.length === 0 && !loading ? (
             <p className="text-muted-foreground text-center py-8">No hay ventas en el período seleccionado</p>
           ) : (
@@ -165,14 +360,56 @@ export function VentasClientPage({ initialVentas, clientes, lotes, initialMonth,
                 table={table}
                 searchPlaceholder="Buscar ventas..."
                 filters={filters}
-                onExportExcel={exportExcel}
+                pdfButtons={[
+                  { label: 'Reporte Ventas', onClick: handlePdfVentas, loading: isGeneratingPdf },
+                ]}
+                onExportExcel={handlePreviewExport}
                 isExporting={isExporting}
+                saldoPendiente={saldoPendiente}
+                onSaldoPendienteChange={handleSaldoPendienteChange}
               />
-              <DataTable table={table} />
+              <DataTable
+                table={table}
+                isLoading={loading}
+                emptyMessage="No hay ventas en este período"
+                footerRow={
+                  showFooter ? (
+                    <tr className="border-t-2 bg-muted/30 font-semibold">
+                      <td className="px-3 py-2" colSpan={5}>Total ({filteredTotals.count} {footerLabel})</td>
+                      <td className="px-3 py-2 text-right">
+                        <span className="text-xs text-muted-foreground">Ingreso: </span>${Math.round(filteredTotals.ingreso).toLocaleString('es-AR')}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <span className="text-xs text-muted-foreground">Ganancia: </span>
+                        <span className={filteredTotals.ganancia < 0 ? 'text-red-600' : 'text-green-600'}>
+                          ${Math.round(filteredTotals.ganancia).toLocaleString('es-AR')}
+                        </span>
+                      </td>
+                      {showSaldo ? (
+                        <td className="px-3 py-2 text-right text-amber-600 dark:text-amber-400">
+                          <span className="text-xs text-muted-foreground">Saldo: </span>${Math.round(filteredTotals.saldoTotal).toLocaleString('es-AR')}
+                        </td>
+                      ) : null}
+                    </tr>
+                  ) : undefined
+                }
+              />
             </>
           )}
+          </DeferredMount>
         </CardContent>
       </Card>
+
+      {previewData && (
+        <VistaPreviaExcelDialog
+          open={previewOpen}
+          onOpenChange={setPreviewOpen}
+          columnMap={previewData.columnMap}
+          data={previewData.data}
+          entityName={previewData.entityName}
+          onDownload={exportExcel}
+        />
+      )}
     </div>
     </RefreshContext.Provider>
   );

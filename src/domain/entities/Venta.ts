@@ -3,6 +3,9 @@
 
 import { Dinero } from '../value-objects/Dinero';
 import { Kilogramo } from '../value-objects/Kilogramo';
+import { MetodoPago } from '../enums';
+import { METODOS_PAGO_ABONO } from '../constants';
+import type { VentaItem } from './VentaItem';
 
 export type VentaTipo = 'BLOQUES' | 'GRANEL';
 
@@ -10,60 +13,105 @@ export interface VentaProps {
   id?: string;
   fecha?: Date;
   clienteId: string;
-  loteId: string;
-  cantidadVendidaKg: string;
-  precioVentaKg: string;
-  costoAplicadoKg: string;
+  sedeId?: string;
   valorDomicilio?: string;
+  costoDomiciliario?: string;
   domiciliario?: string;
-  ventaTipo?: VentaTipo;
-  bloquesReempacados?: number;
-  bloquesEnterosVendidos?: number;
-  bloquesTajadosVendidos?: number;
-  costoEmpaques?: string;
+  metodoPago?: string;
+  metodoPagoAbono?: string | null;
+  abono?: string;
+  observaciones?: string;
+  // Computed from items — can be set directly for reconstruction from DB
+  cantidadTotalKg?: string;
+  ingresoTotal?: string;
+  costoAplicado?: string;
+  gananciaBruta?: string;
 }
 
 export class Venta {
   readonly id: string;
   readonly fecha: Date;
   readonly clienteId: string;
-  readonly loteId: string;
-  readonly cantidadVendidaKg: Kilogramo;
-  readonly precioVentaKg: Dinero;
+  readonly sedeId: string | null;
+  readonly cantidadTotalKg: Kilogramo;
   readonly ingresoTotal: Dinero;
   readonly costoAplicado: Dinero;
   readonly gananciaBruta: Dinero;
   readonly valorDomicilio: Dinero;
+  readonly costoDomiciliario: Dinero;
   readonly domiciliario: string;
-  readonly ventaTipo: VentaTipo;
-  readonly bloquesReempacados: number;
-  readonly bloquesEnterosVendidos: number;
-  readonly bloquesTajadosVendidos: number;
-  readonly costoEmpaques: Dinero;
+  readonly metodoPago: MetodoPago;
+  readonly metodoPagoAbono: MetodoPago | null;
+  readonly abono: Dinero;
+  readonly observaciones: string;
 
-  constructor(props: VentaProps) {
+  get saldo(): Dinero {
+    return this.ingresoTotal.subtract(this.abono);
+  }
+
+  constructor(props: VentaProps, items?: VentaItem[]) {
     this.id = props.id ?? '';
     this.fecha = props.fecha ?? new Date();
     this.clienteId = props.clienteId;
-    this.loteId = props.loteId;
-    this.cantidadVendidaKg = new Kilogramo(props.cantidadVendidaKg);
-    this.precioVentaKg = new Dinero(props.precioVentaKg);
+    this.sedeId = props.sedeId ?? null;
     this.valorDomicilio = new Dinero(props.valorDomicilio ?? '0');
+    this.costoDomiciliario = new Dinero(props.costoDomiciliario ?? '0');
     this.domiciliario = props.domiciliario ?? '';
-    this.ventaTipo = props.ventaTipo ?? 'GRANEL';
-    this.bloquesReempacados = props.bloquesReempacados ?? 0;
-    this.bloquesEnterosVendidos = props.bloquesEnterosVendidos ?? 0;
-    this.bloquesTajadosVendidos = props.bloquesTajadosVendidos ?? 0;
-    this.costoEmpaques = new Dinero(props.costoEmpaques ?? '0');
+    this.metodoPago = Object.values(MetodoPago).includes(props.metodoPago as MetodoPago)
+      ? (props.metodoPago as MetodoPago)
+      : MetodoPago.EFECTIVO;
 
-    // Costo aplicado por Kg (from the Lote's costoRealCalculadoKg)
-    this.costoAplicado = new Dinero(props.costoAplicadoKg).multiply(this.cantidadVendidaKg.value);
+    this.observaciones = props.observaciones ?? '';
 
-    // Ingreso_Total = Cantidad × Precio_Asignado
-    this.ingresoTotal = this.precioVentaKg.multiply(this.cantidadVendidaKg.value);
+    if (items && items.length > 0) {
+      let totalKg = Kilogramo.zero();
+      let ingreso = Dinero.zero();
+      let costo = Dinero.zero();
 
-    // Ganancia_Bruta = Ingreso_Total − Costo_Mercancía
-    this.gananciaBruta = this.ingresoTotal.subtract(this.costoAplicado);
+      for (const item of items) {
+        totalKg = totalKg.add(item.cantidadKg);
+        ingreso = ingreso.add(item.ingreso);
+        costo = costo.add(item.costoAplicado).add(item.costoEmpaques);
+      }
+
+      this.cantidadTotalKg = totalKg;
+      this.ingresoTotal = ingreso.add(this.valorDomicilio);
+      this.costoAplicado = costo.add(this.costoDomiciliario);
+      this.gananciaBruta = this.ingresoTotal.subtract(this.costoAplicado);
+
+      // Default abono: if CREDITO, default 0; otherwise, default to full ingresoTotal
+      if (props.abono !== undefined && props.abono !== '') {
+        this.abono = new Dinero(props.abono);
+      } else if (this.metodoPago === MetodoPago.CREDITO) {
+        this.abono = Dinero.zero();
+      } else {
+        this.abono = this.ingresoTotal;
+      }
+    } else {
+      this.cantidadTotalKg = new Kilogramo(props.cantidadTotalKg ?? '0');
+      this.ingresoTotal = new Dinero(props.ingresoTotal ?? '0');
+      this.costoAplicado = new Dinero(props.costoAplicado ?? '0');
+      this.gananciaBruta = new Dinero(props.gananciaBruta ?? '0');
+
+      // Reconstruct from DB: abono is always provided
+      this.abono = new Dinero(props.abono ?? '0');
+    }
+
+    // metodoPagoAbono business rules:
+    // - CREDITO + abono > 0 → metodoPagoAbono is required and must be EFECTIVO/NEQUI/BRE_B
+    // - CREDITO + abono = 0 → metodoPagoAbono is null (no initial abono)
+    // - Non-CREDITO → metodoPagoAbono is always null (full payment covers everything)
+    if (this.metodoPago === MetodoPago.CREDITO && this.abono.greaterThan(Dinero.zero())) {
+      if (!props.metodoPagoAbono) {
+        throw new Error('metodoPagoAbono is required when metodoPago is CREDITO and abono > 0');
+      }
+      if (!METODOS_PAGO_ABONO.includes(props.metodoPagoAbono as MetodoPago)) {
+        throw new Error(`metodoPagoAbono must be one of: ${METODOS_PAGO_ABONO.join(', ')}, got: ${props.metodoPagoAbono}`);
+      }
+      this.metodoPagoAbono = props.metodoPagoAbono as MetodoPago;
+    } else {
+      this.metodoPagoAbono = null;
+    }
 
     this.validate();
   }
@@ -71,15 +119,6 @@ export class Venta {
   private validate(): void {
     if (!this.clienteId) {
       throw new Error('Venta clienteId is required');
-    }
-    if (!this.loteId) {
-      throw new Error('Venta loteId is required');
-    }
-    if (this.cantidadVendidaKg.isZero()) {
-      throw new Error('Venta cantidadVendidaKg cannot be zero');
-    }
-    if (this.precioVentaKg.isNegative()) {
-      throw new Error('Venta precioVentaKg cannot be negative');
     }
   }
 

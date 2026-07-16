@@ -19,9 +19,9 @@ describe('PrismaLoteRepo — Integration', () => {
   beforeEach(async () => {
     // Clean test data — use raw SQL with FK checks disabled for reliable cleanup
     await prisma.$executeRawUnsafe('PRAGMA foreign_keys = OFF');
+    await prisma.$executeRawUnsafe('DELETE FROM AbonoPago');
     await prisma.$executeRawUnsafe('DELETE FROM Venta');
     await prisma.$executeRawUnsafe('DELETE FROM Lote');
-    await prisma.$executeRawUnsafe('DELETE FROM GastoFijo');
     await prisma.$executeRawUnsafe('DELETE FROM Cliente');
     await prisma.$executeRawUnsafe('DELETE FROM Usuario');
     await prisma.$executeRawUnsafe('DELETE FROM Proveedor');
@@ -48,8 +48,9 @@ describe('PrismaLoteRepo — Integration', () => {
 
       expect(saved.id).toBeTruthy();
       expect(saved.producto).toBe(TipoProducto.DOBLE_CREMA);
-      // (3000 × 100 + 5000 + 2000) / 100 = 3070  (empaques excluded)
-      expect(saved.costoRealCalculadoKg.value).toBe('3070');
+      // Costo_Entero_Por_Kg = (3000 × 100 + 5000) / 100 = 3050
+      // tajado (2000) is NOT included in costoRealCalculadoKg
+      expect(saved.costoRealCalculadoKg.value).toBe('3050');
       expect(saved.stockDisponibleKg.value).toBe('100');
       expect(saved.estado).toBe(EstadoLote.ACTIVO);
 
@@ -102,6 +103,8 @@ describe('PrismaLoteRepo — Integration', () => {
           proveedorId: proveedor.id,
           cantidadCompradaKg: 100,
           precioCompraBaseKg: 3000,
+          precioPorBloqueEntero: 7500,
+          precioPorBloqueTajado: 7500,
           costoFlete: 0,
           costoTajado: 0,
           costoEmpaques: 0,
@@ -120,6 +123,8 @@ describe('PrismaLoteRepo — Integration', () => {
           proveedorId: proveedor.id,
           cantidadCompradaKg: 30,
           precioCompraBaseKg: 3500,
+          precioPorBloqueEntero: 0,
+          precioPorBloqueTajado: 0,
           costoFlete: 0,
           costoTajado: 0,
           costoEmpaques: 0,

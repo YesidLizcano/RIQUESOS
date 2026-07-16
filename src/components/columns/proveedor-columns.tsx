@@ -1,86 +1,15 @@
 'use client';
 
-import { useState } from 'react';
-import { useRefresh } from '@/components/refresh-context';
 import { ColumnDef } from '@tanstack/react-table';
-import { Pencil, Trash2, RotateCcw } from 'lucide-react';
 import type { ProveedorResponse } from '@/presentation/dtos';
 import { EditarProveedorDialog } from '@/components/forms/editar-proveedor-dialog';
-import { DeleteConfirmDialog } from '@/components/forms/delete-confirm-dialog';
+import { EntityActions } from '@/components/entity-actions';
 import { eliminarProveedor, restaurarProveedor } from '@/presentation/actions/proveedores';
-import { toast } from 'sonner';
-
-export function ProveedorActions({ proveedor }: { proveedor: ProveedorResponse }) {
-  const refreshData = useRefresh();
-  const [editOpen, setEditOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const isDeleted = proveedor.deletedAt !== null;
-
-  async function handleDelete() {
-    const formData = new FormData();
-    formData.set('id', proveedor.id);
-    const result = await eliminarProveedor(formData);
-    if (result.success) {
-      toast.success('Proveedor eliminado exitosamente');
-      refreshData();
-    } else {
-      toast.error(result.error || 'Error al eliminar proveedor');
-    }
-  }
-
-  async function handleRestore() {
-    const formData = new FormData();
-    formData.set('id', proveedor.id);
-    const result = await restaurarProveedor(formData);
-    if (result.success) {
-      toast.success('Proveedor restaurado exitosamente');
-      refreshData();
-    } else {
-      toast.error(result.error || 'Error al restaurar proveedor');
-    }
-  }
-
-  if (isDeleted) {
-    return (
-      <button
-        onClick={() => { handleRestore(); }}
-        className="inline-flex items-center gap-1 rounded-md p-1.5 text-muted-foreground hover:text-green-600 hover:bg-green-50"
-        title="Restaurar"
-      >
-        <RotateCcw className="size-4" />
-      </button>
-    );
-  }
-
-  return (
-    <>
-      <button
-        onClick={() => setEditOpen(true)}
-        className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted"
-        title="Editar"
-      >
-        <Pencil className="size-4" />
-      </button>
-      <button
-        onClick={() => setDeleteOpen(true)}
-        className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-        title="Eliminar"
-      >
-        <Trash2 className="size-4" />
-      </button>
-      <EditarProveedorDialog proveedor={proveedor} open={editOpen} onOpenChange={setEditOpen} />
-      <DeleteConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        entityName={`el proveedor "${proveedor.nombre}"`}
-        onConfirm={handleDelete}
-      />
-    </>
-  );
-}
+import { Package } from 'lucide-react';
 
 export function createProveedorColumns(
-  showDeleted?: boolean
+  showDeleted?: boolean,
+  onVerLotes?: (proveedor: ProveedorResponse) => void
 ): ColumnDef<ProveedorResponse, unknown>[] {
   return [
     {
@@ -107,7 +36,31 @@ export function createProveedorColumns(
       id: 'actions',
       header: 'Acciones',
       enableGlobalFilter: false,
-      cell: ({ row }) => <ProveedorActions proveedor={row.original} />,
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1">
+          {!row.original.deletedAt && onVerLotes && (
+            <button
+              onClick={() => onVerLotes(row.original)}
+              className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted"
+              title="Ver Lotes"
+              aria-label="Ver lotes del proveedor"
+            >
+              <Package className="size-4" />
+            </button>
+          )}
+          <EntityActions
+            entityId={row.original.id}
+            entityName={`el proveedor "${row.original.nombre}"`}
+            isDeleted={row.original.deletedAt !== null}
+            deleteAction={eliminarProveedor}
+            restoreAction={restaurarProveedor}
+            deleteToastLabel="Proveedor"
+            renderEditDialog={(open, onOpenChange) => (
+              <EditarProveedorDialog proveedor={row.original} open={open} onOpenChange={onOpenChange} />
+            )}
+          />
+        </div>
+      ),
     },
   ];
 }

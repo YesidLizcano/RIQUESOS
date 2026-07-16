@@ -8,26 +8,36 @@ import type { ClienteRepository } from '../../domain/ports/ClienteRepository';
 export interface CrearClienteInput {
   nombre: string;
   tipo: TipoCliente;
-  precioDobleCrema?: string;
+  precioDobleCremaEntero?: string;
+  precioDobleCremaTajado?: string;
   precioSemisalado?: string;
+  valorDomicilio?: string;
 }
 
 export interface ActualizarClienteInput {
   id: string;
   nombre?: string;
-  precioDobleCrema?: string;
+  precioDobleCremaEntero?: string;
+  precioDobleCremaTajado?: string;
   precioSemisalado?: string;
+  valorDomicilio?: string;
 }
 
 export class GestionarClientes {
   constructor(private readonly clienteRepo: ClienteRepository) {}
 
   async crear(input: CrearClienteInput): Promise<Cliente> {
+    const existing = await this.clienteRepo.findActiveByNombre(input.nombre);
+    if (existing) {
+      throw new Error(`Ya existe un cliente con el nombre "${input.nombre}"`);
+    }
     const cliente = new Cliente({
       nombre: input.nombre,
       tipo: input.tipo,
-      precioDobleCrema: input.precioDobleCrema,
+      precioDobleCremaEntero: input.precioDobleCremaEntero,
+      precioDobleCremaTajado: input.precioDobleCremaTajado,
       precioSemisalado: input.precioSemisalado,
+      valorDomicilio: input.valorDomicilio,
     });
     return this.clienteRepo.save(cliente);
   }
@@ -46,6 +56,14 @@ export class GestionarClientes {
       throw new Error(`Cliente not found: ${input.id}`);
     }
 
+    // Check nombre uniqueness if it's being changed
+    if (input.nombre !== undefined && input.nombre !== existing.nombre) {
+      const duplicate = await this.clienteRepo.findActiveByNombre(input.nombre);
+      if (duplicate) {
+        throw new Error(`Ya existe un cliente con el nombre "${input.nombre}"`);
+      }
+    }
+
     // Apply updates using domain methods
     let updated = existing;
 
@@ -53,12 +71,40 @@ export class GestionarClientes {
       updated = updated.updateNombre(input.nombre);
     }
 
-    if (input.precioDobleCrema !== undefined) {
-      updated = updated.updatePrecio(TipoProducto.DOBLE_CREMA, input.precioDobleCrema);
+    if (input.precioDobleCremaEntero !== undefined) {
+      updated = updated.updatePrecio(TipoProducto.DOBLE_CREMA, input.precioDobleCremaEntero);
+    }
+
+    if (input.precioDobleCremaTajado !== undefined) {
+      // Update only the tajado price — need to preserve entero price
+      // We use a special approach: create new Cliente with both prices set
+      updated = new Cliente({
+        id: updated.id,
+        nombre: updated.nombre,
+        tipo: updated.tipo,
+        precioDobleCremaEntero: updated.precioDobleCremaEntero?.value,
+        precioDobleCremaTajado: input.precioDobleCremaTajado,
+        precioSemisalado: updated.precioSemisalado?.value,
+        valorDomicilio: updated.valorDomicilio.value,
+        deletedAt: updated.deletedAt,
+      });
     }
 
     if (input.precioSemisalado !== undefined) {
       updated = updated.updatePrecio(TipoProducto.SEMISALADO, input.precioSemisalado);
+    }
+
+    if (input.valorDomicilio !== undefined) {
+      updated = new Cliente({
+        id: updated.id,
+        nombre: updated.nombre,
+        tipo: updated.tipo,
+        precioDobleCremaEntero: updated.precioDobleCremaEntero?.value,
+        precioDobleCremaTajado: updated.precioDobleCremaTajado?.value,
+        precioSemisalado: updated.precioSemisalado?.value,
+        valorDomicilio: input.valorDomicilio,
+        deletedAt: updated.deletedAt,
+      });
     }
 
     return this.clienteRepo.save(updated);

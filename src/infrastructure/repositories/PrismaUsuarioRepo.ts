@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import { Usuario } from '../../domain/entities/Usuario';
 import { RolUsuario } from '../../domain/enums';
+import { asRolUsuario } from '../../domain/mappers';
 import type { UsuarioRepository } from '../../domain/ports/UsuarioRepository';
 
 export class PrismaUsuarioRepo implements UsuarioRepository {
@@ -63,7 +64,7 @@ export class PrismaUsuarioRepo implements UsuarioRepository {
       id: record.id,
       email: record.email,
       passwordHash: record.passwordHash,
-      role: record.role as string as RolUsuario,
+      role: asRolUsuario(record.role),
       deletedAt: record.deletedAt,
     });
   }

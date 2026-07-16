@@ -13,6 +13,7 @@ import {
 } from '@tanstack/react-table';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 import {
   Table as TableUI,
   TableBody,
@@ -38,7 +39,7 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 
-const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 20;
 
 interface DataTableProps<TData, TValue> {
@@ -47,6 +48,8 @@ interface DataTableProps<TData, TValue> {
   footerRow?: React.ReactNode;
   pagination?: boolean;
   table?: Table<TData>;
+  isLoading?: boolean;
+  emptyMessage?: string;
 }
 
 export function DataTable<TData, TValue>({
@@ -55,6 +58,8 @@ export function DataTable<TData, TValue>({
   footerRow,
   pagination = true,
   table: externalTable,
+  isLoading = false,
+  emptyMessage = 'No hay datos para mostrar',
 }: DataTableProps<TData, TValue>) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -164,12 +169,17 @@ export function DataTable<TData, TValue>({
           </Select>
         </div>
       )}
-      <div className="rounded-md border overflow-x-auto">
+      <div className="rounded-md border overflow-x-auto relative">
+        {isLoading && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-[2px]">
+            <Loader2 className="size-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
         <TableUI>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
+                {headerGroup.headers.filter((header) => !(header.column.columnDef.meta as any)?.hidden).map((header) => (
                   <TableHead
                     key={header.id}
                     className={
@@ -200,7 +210,7 @@ export function DataTable<TData, TValue>({
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
+                  {row.getVisibleCells().filter((cell) => !((cell.column.columnDef.meta as any)?.hidden)).map((cell) => (
                     <TableCell key={cell.id}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
@@ -209,8 +219,8 @@ export function DataTable<TData, TValue>({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No hay resultados.
+                <TableCell colSpan={table.getVisibleLeafColumns().length} className="h-24 text-center text-muted-foreground">
+                  {emptyMessage}
                 </TableCell>
               </TableRow>
             )}
@@ -219,9 +229,9 @@ export function DataTable<TData, TValue>({
         </TableUI>
       </div>
       {showPagination && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col items-center justify-between gap-2 sm:flex-row">
           <span className="text-sm text-muted-foreground">
-            Página {currentPage} de {totalPages}
+            {currentPage} de {totalPages} resultados
           </span>
           <Pagination>
             <PaginationContent>

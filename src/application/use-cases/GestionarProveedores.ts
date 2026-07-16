@@ -18,6 +18,10 @@ export class GestionarProveedores {
   constructor(private readonly proveedorRepo: ProveedorRepository) {}
 
   async crear(input: CrearProveedorInput): Promise<Proveedor> {
+    const existing = await this.proveedorRepo.findActiveByNombre(input.nombre);
+    if (existing) {
+      throw new Error(`Ya existe un proveedor con el nombre "${input.nombre}"`);
+    }
     const proveedor = new Proveedor({
       nombre: input.nombre,
       telefono: input.telefono,
@@ -29,6 +33,14 @@ export class GestionarProveedores {
     const existing = await this.proveedorRepo.findById(input.id);
     if (!existing) {
       throw new Error(`Proveedor not found: ${input.id}`);
+    }
+
+    // Check nombre uniqueness if it's being changed
+    if (input.nombre !== undefined && input.nombre !== existing.nombre) {
+      const duplicate = await this.proveedorRepo.findActiveByNombre(input.nombre);
+      if (duplicate) {
+        throw new Error(`Ya existe un proveedor con el nombre "${input.nombre}"`);
+      }
     }
 
     let updated = existing;

@@ -1,14 +1,15 @@
 // Infrastructure: PrismaEmpaqueRepo — implements EmpaqueRepository port
 import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
-import { Empaque } from '../../domain/entities/Empaque';
+import { Empaque, type CategoriaInsumo } from '../../domain/entities/Empaque';
 import type { EmpaqueRepository } from '../../domain/ports/EmpaqueRepository';
 
 export class PrismaEmpaqueRepo implements EmpaqueRepository {
   async save(empaque: Empaque): Promise<Empaque> {
     const data = {
       tipo: empaque.tipo,
-      stock: empaque.stock,
+      categoria: empaque.categoria,
+      stock: new Prisma.Decimal(empaque.stock.value),
       precio: new Prisma.Decimal(empaque.precio.value),
     };
 
@@ -30,15 +31,17 @@ export class PrismaEmpaqueRepo implements EmpaqueRepository {
     return this.toEntity(record);
   }
 
-  async findByTipo(tipo: string): Promise<Empaque | null> {
-    const record = await prisma.empaque.findFirst({ where: { tipo, deletedAt: null } });
-    if (!record) return null;
-    return this.toEntity(record);
-  }
-
   async findAll(): Promise<Empaque[]> {
     const records = await prisma.empaque.findMany({
       where: { deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+    });
+    return records.map((r) => this.toEntity(r));
+  }
+
+  async findByCategoria(categoria: CategoriaInsumo): Promise<Empaque[]> {
+    const records = await prisma.empaque.findMany({
+      where: { categoria, deletedAt: null },
       orderBy: { createdAt: 'desc' },
     });
     return records.map((r) => this.toEntity(r));
@@ -49,7 +52,8 @@ export class PrismaEmpaqueRepo implements EmpaqueRepository {
       where: { id },
       data: {
         tipo: empaque.tipo,
-        stock: empaque.stock,
+        categoria: empaque.categoria,
+        stock: new Prisma.Decimal(empaque.stock.value),
         precio: new Prisma.Decimal(empaque.precio.value),
       },
     });
@@ -80,14 +84,16 @@ export class PrismaEmpaqueRepo implements EmpaqueRepository {
   private toEntity(record: {
     id: string;
     tipo: string;
-    stock: number;
+    categoria: string;
+    stock: { toString(): string };
     precio: { toString(): string };
     deletedAt: Date | null;
   }): Empaque {
     return new Empaque({
       id: record.id,
       tipo: record.tipo,
-      stock: record.stock,
+      categoria: record.categoria as CategoriaInsumo,
+      stock: record.stock.toString(),
       precio: record.precio.toString(),
       deletedAt: record.deletedAt,
     });

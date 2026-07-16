@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRefresh } from '@/components/refresh-context';
+import { toast } from 'sonner';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,9 +35,12 @@ export function DeleteConfirmDialog({
     try {
       await onConfirm();
       refreshData();
+      onOpenChange(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error al eliminar';
+      toast.error(message);
     } finally {
       setIsLoading(false);
-      onOpenChange(false);
     }
   }
 

@@ -1,11 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import type { ReactNode } from 'react';
 
 interface MetricCardProps {
   title: string;
-  value: string;
+  value: ReactNode;
   description?: string;
   variant?: 'default' | 'success' | 'warning' | 'destructive';
+  icon?: ReactNode;
+  onClick?: () => void;
 }
 
 const variantStyles: Record<string, string> = {
@@ -20,11 +23,14 @@ export function MetricCard({
   value,
   description,
   variant = 'default',
+  icon,
+  onClick,
 }: MetricCardProps) {
   return (
-    <Card>
+    <Card onClick={onClick} className={cn(onClick && 'cursor-pointer hover:bg-muted/50 transition-colors')}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+          {icon}
           {title}
         </CardTitle>
       </CardHeader>

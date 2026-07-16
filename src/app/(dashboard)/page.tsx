@@ -1,36 +1,38 @@
-import { getMetricas, getAlertas } from '@/presentation/actions/dashboard';
+import { getMetricas } from '@/presentation/actions/dashboard';
 import { getLotes } from '@/presentation/actions/lotes';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/infrastructure/auth';
 import { redirect } from 'next/navigation';
 import { DashboardClientPage } from './dashboard-client-page';
-import { DashboardAlertSection } from '@/components/dashboard-alert-section';
-import { MetricCard } from '@/components/dashboard-metric-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { DataTable } from '@/components/data-table';
 import { lotesColumns } from '@/components/columns/dashboard-lote-columns';
+import { Suspense } from 'react';
 
 export const dynamic = 'force-dynamic';
+
+function formatDateToYYYYMMDD(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect('/login');
 
   const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
+  const inicio = formatDateToYYYYMMDD(new Date(now.getFullYear(), now.getMonth(), 1));
+  const fin = formatDateToYYYYMMDD(new Date(now.getFullYear(), now.getMonth() + 1, 0));
 
-  const [metricasResult, lotesResult, alertasResult] = await Promise.all([
-    getMetricas(currentMonth, currentYear),
+  const [metricasResult, lotesResult] = await Promise.all([
+    getMetricas(inicio, fin),
     getLotes(),
-    getAlertas(),
   ]);
 
   const metricas = metricasResult.success ? metricasResult.metricas : null;
   const lotes = lotesResult.success ? lotesResult.lotes : [];
-  const alertas = alertasResult.success ? alertasResult.alertas : [];
-  const alertasResumen = alertasResult.success ? alertasResult.resumen : { stockBajo: 0, stockCritico: 0, antiguo: 0, muyAntiguo: 0, total: 0 };
 
   if (!metricas) {
     return (
@@ -43,11 +45,6 @@ export default async function DashboardPage() {
           Error al cargar las métricas. Intente recargar la página.
         </div>
 
-        {/* Alert Section */}
-        {alertasResumen.total > 0 && (
-          <DashboardAlertSection alertas={alertas} resumen={alertasResumen} />
-        )}
-
         {/* Active Lotes Summary */}
         <Card>
           <CardHeader>
@@ -57,7 +54,9 @@ export default async function DashboardPage() {
             {lotes.length === 0 ? (
               <p className="text-muted-foreground text-center py-4">No hay lotes</p>
             ) : (
-              <DataTable columns={lotesColumns} data={lotes} pagination={false} />
+              <Suspense>
+                <DataTable columns={lotesColumns} data={lotes} pagination={false} />
+              </Suspense>
             )}
           </CardContent>
         </Card>
@@ -67,16 +66,13 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <DashboardClientPage
-        initialMetricas={metricas}
-        initialMonth={currentMonth}
-        initialYear={currentYear}
-      />
-
-      {/* Alert Section */}
-      {alertasResumen.total > 0 && (
-        <DashboardAlertSection alertas={alertas} resumen={alertasResumen} />
-      )}
+      <Suspense>
+        <DashboardClientPage
+          initialMetricas={metricas}
+          initialInicio={inicio}
+          initialFin={fin}
+        />
+      </Suspense>
 
       {/* Active Lotes Summary */}
       <Card>
@@ -87,7 +83,9 @@ export default async function DashboardPage() {
           {lotes.length === 0 ? (
             <p className="text-muted-foreground text-center py-4">No hay lotes</p>
           ) : (
-            <DataTable columns={lotesColumns} data={lotes} pagination={false} />
+            <Suspense>
+              <DataTable columns={lotesColumns} data={lotes} pagination={false} />
+            </Suspense>
           )}
         </CardContent>
       </Card>

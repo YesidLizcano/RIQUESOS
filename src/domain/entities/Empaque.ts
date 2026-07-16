@@ -1,12 +1,16 @@
-// Entity: Empaque — packaging inventory for reempacado
+// Entity: Empaque — insumo inventory (bolsas y separadores)
 // No external imports from infrastructure or frameworks
 
 import { Dinero } from '../value-objects/Dinero';
+import { CategoriaInsumo } from '../enums';
+
+export { CategoriaInsumo };
 
 export interface EmpaqueProps {
   id?: string;
   tipo: string;
-  stock: number;
+  categoria: CategoriaInsumo;
+  stock: string; // Decimal string for kg support (separadores)
   precio: string;
   deletedAt?: Date | null;
 }
@@ -14,53 +18,72 @@ export interface EmpaqueProps {
 export class Empaque {
   readonly id: string;
   readonly tipo: string;
-  readonly stock: number;
+  readonly categoria: CategoriaInsumo;
+  readonly stock: Dinero; // Changed from number to Dinero for kg support
   readonly precio: Dinero;
   readonly deletedAt: Date | null;
 
   constructor(props: EmpaqueProps) {
     this.id = props.id ?? '';
     this.tipo = props.tipo;
-    this.stock = props.stock;
+    this.categoria = props.categoria;
+    this.stock = new Dinero(props.stock);
     this.precio = new Dinero(props.precio);
     this.deletedAt = props.deletedAt ?? null;
     this.validate();
   }
 
   private validate(): void {
-    if (!this.tipo.trim()) throw new Error('El tipo de empaque es obligatorio');
-    if (this.stock < 0) throw new Error('El stock no puede ser negativo');
+    if (!this.tipo.trim()) throw new Error('El tipo de insumo es obligatorio');
+    if (this.stock.isNegative()) throw new Error('El stock no puede ser negativo');
     if (this.precio.isNegative()) throw new Error('El precio no puede ser negativo');
   }
 
-  deduct(cantidad: number): Empaque {
-    if (cantidad > this.stock) {
-      throw new Error(`Stock insuficiente: solicitado ${cantidad}, disponible ${this.stock}`);
+  get isBolsa(): boolean {
+    return this.categoria === 'BOLSA';
+  }
+
+  get isSeparador(): boolean {
+    return this.categoria === 'SEPARADOR';
+  }
+
+  get stockDisplay(): string {
+    return this.isBolsa ? String(Math.round(Number(this.stock.value))) : `${Number(this.stock.value).toLocaleString('es-AR')} kg`;
+  }
+
+  deduct(cantidad: string): Empaque {
+    const cantidadDinero = new Dinero(cantidad);
+    if (cantidadDinero.greaterThan(this.stock)) {
+      throw new Error(`Stock insuficiente: solicitado ${cantidadDinero.value}, disponible ${this.stock.value}`);
     }
     return new Empaque({
       id: this.id,
       tipo: this.tipo,
-      stock: this.stock - cantidad,
+      categoria: this.categoria,
+      stock: this.stock.subtract(cantidadDinero).value,
       precio: this.precio.value,
       deletedAt: this.deletedAt,
     });
   }
 
-  addStock(cantidad: number): Empaque {
+  addStock(cantidad: string): Empaque {
+    const cantidadDinero = new Dinero(cantidad);
     return new Empaque({
       id: this.id,
       tipo: this.tipo,
-      stock: this.stock + cantidad,
+      categoria: this.categoria,
+      stock: this.stock.add(cantidadDinero).value,
       precio: this.precio.value,
       deletedAt: this.deletedAt,
     });
   }
 
-  updateDetails(params: { tipo?: string; precio?: string }): Empaque {
+  updateDetails(params: { tipo?: string; categoria?: CategoriaInsumo; precio?: string }): Empaque {
     return new Empaque({
       id: this.id,
       tipo: params.tipo ?? this.tipo,
-      stock: this.stock,
+      categoria: params.categoria ?? this.categoria,
+      stock: this.stock.value,
       precio: params.precio ?? this.precio.value,
       deletedAt: this.deletedAt,
     });
@@ -70,7 +93,8 @@ export class Empaque {
     return new Empaque({
       id: this.id,
       tipo: this.tipo,
-      stock: this.stock,
+      categoria: this.categoria,
+      stock: this.stock.value,
       precio: this.precio.value,
       deletedAt: new Date(),
     });
@@ -80,7 +104,8 @@ export class Empaque {
     return new Empaque({
       id: this.id,
       tipo: this.tipo,
-      stock: this.stock,
+      categoria: this.categoria,
+      stock: this.stock.value,
       precio: this.precio.value,
       deletedAt: null,
     });

@@ -78,12 +78,11 @@ describe('E2E structural verification', () => {
       expect(content).toMatch(/requireSession|getServerSession/);
     });
 
-    it('should have lotes, ventas, clientes, gastos, dashboard actions', () => {
+    it('should have lotes, ventas, clientes, dashboard actions', () => {
       const actionsDir = path.join(srcDir, 'presentation', 'actions');
       expect(fs.existsSync(path.join(actionsDir, 'lotes.ts'))).toBe(true);
       expect(fs.existsSync(path.join(actionsDir, 'ventas.ts'))).toBe(true);
       expect(fs.existsSync(path.join(actionsDir, 'clientes.ts'))).toBe(true);
-      expect(fs.existsSync(path.join(actionsDir, 'gastos.ts'))).toBe(true);
       expect(fs.existsSync(path.join(actionsDir, 'dashboard.ts'))).toBe(true);
     });
   });

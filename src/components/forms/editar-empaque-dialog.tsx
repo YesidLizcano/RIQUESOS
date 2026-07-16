@@ -3,8 +3,11 @@
 import { useState } from 'react';
 import { useRefresh } from '@/components/refresh-context';
 import { actualizarEmpaque } from '@/presentation/actions/empaques';
+import { actualizarEmpaqueSchema } from '@/presentation/validations/empaque.schema';
 import { toast } from 'sonner';
 import type { EmpaqueResponse } from '@/presentation/dtos';
+import { CategoriaInsumo } from '@/domain/enums';
+import { categoriaInsumoLabel } from '@/domain/labels';
 import {
   Dialog,
   DialogContent,
@@ -15,6 +18,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface EditarEmpaqueDialogProps {
   empaque: EmpaqueResponse;
@@ -24,18 +34,48 @@ interface EditarEmpaqueDialogProps {
 
 export function EditarEmpaqueDialog({ empaque, open, onOpenChange }: EditarEmpaqueDialogProps) {
   const refreshData = useRefresh();
-  const [tipo, setTipo] = useState(empaque.tipo);
+  const [categoria, setCategoria] = useState<CategoriaInsumo>(empaque.categoria as CategoriaInsumo);
   const [stock, setStock] = useState(String(empaque.stock));
   const [precio, setPrecio] = useState(empaque.precio);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  async function action(formData: FormData) {
-    const result = await actualizarEmpaque(formData);
-    if (result.success) {
-      toast.success('Empaque actualizado exitosamente');
+  const stockLabel = categoria === CategoriaInsumo.SEPARADOR ? 'Stock (kg)' : 'Stock (unidades)';
+  const stockStep = categoria === CategoriaInsumo.SEPARADOR ? '0.01' : '1';
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+
+    const result = actualizarEmpaqueSchema.safeParse({
+      id: empaque.id,
+      categoria,
+      stock: stock === '' ? undefined : Number(stock),
+      precio: precio === '' ? undefined : Number(precio),
+    });
+
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {};
+      for (const issue of result.error.issues) {
+        const field = issue.path[0]?.toString();
+        if (field && !fieldErrors[field]) {
+          fieldErrors[field] = issue.message;
+        }
+      }
+      setErrors(fieldErrors);
+      toast.error(fieldErrors[Object.keys(fieldErrors)[0]] || 'Error de validación');
+      return;
+    }
+
+    setErrors({});
+    const formData = new FormData(e.currentTarget);
+    // Set tipo from categoria label
+    formData.set('tipo', categoriaInsumoLabel[categoria]);
+    const actionResult = await actualizarEmpaque(formData);
+    if (actionResult.success) {
+      toast.success('Insumo actualizado exitosamente');
       refreshData();
       onOpenChange(false);
     } else {
-      toast.error(result.error || 'Error al actualizar empaque');
+      toast.error(actionResult.error || 'Error al actualizar insumo');
     }
   }
 
@@ -43,37 +83,49 @@ export function EditarEmpaqueDialog({ empaque, open, onOpenChange }: EditarEmpaq
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Editar Empaque</DialogTitle>
+          <DialogTitle>Editar Insumo</DialogTitle>
           <DialogDescription>
-            Modifique el tipo, stock o precio del empaque.
+            Modifique la categoría, stock o precio del insumo.
           </DialogDescription>
         </DialogHeader>
-        <form action={action} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <input type="hidden" name="id" value={empaque.id} />
 
           <div className="space-y-2">
-            <Label htmlFor="edit-tipo">Tipo de Empaque</Label>
-            <Input
-              id="edit-tipo"
-              name="tipo"
-              value={tipo}
-              onChange={(e) => setTipo(e.target.value)}
-              required
-            />
+            <Label htmlFor="edit-categoria">Categoría</Label>
+            <Select name="categoria" value={categoria} onValueChange={(v) => {
+              setCategoria(v as CategoriaInsumo);
+              if (errors.categoria) setErrors(prev => { const next = {...prev}; delete next.categoria; return next; });
+            }}>
+              <SelectTrigger className="w-full">
+                <SelectValue>{categoriaInsumoLabel[categoria]}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(CategoriaInsumo).map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {categoriaInsumoLabel[cat]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.categoria && <p className="text-sm text-destructive">{errors.categoria}</p>}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-stock">Stock</Label>
+            <Label htmlFor="edit-stock">{stockLabel}</Label>
             <Input
               id="edit-stock"
               name="stock"
               type="number"
-              step="1"
+              step={stockStep}
               min="0"
               value={stock}
-              onChange={(e) => setStock(e.target.value)}
-              required
+              onChange={(e) => {
+                setStock(e.target.value);
+                if (errors.stock) setErrors(prev => { const next = {...prev}; delete next.stock; return next; });
+              }}
             />
+            {errors.stock && <p className="text-sm text-destructive">{errors.stock}</p>}
           </div>
 
           <div className="space-y-2">
@@ -85,9 +137,12 @@ export function EditarEmpaqueDialog({ empaque, open, onOpenChange }: EditarEmpaq
               step="0.01"
               min="0"
               value={precio}
-              onChange={(e) => setPrecio(e.target.value)}
-              required
+              onChange={(e) => {
+                setPrecio(e.target.value);
+                if (errors.precio) setErrors(prev => { const next = {...prev}; delete next.precio; return next; });
+              }}
             />
+            {errors.precio && <p className="text-sm text-destructive">{errors.precio}</p>}
           </div>
 
           <div className="flex justify-end gap-2">

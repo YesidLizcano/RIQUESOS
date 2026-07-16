@@ -10,6 +10,7 @@ datasource db {
 enum TipoProducto {
   DOBLE_CREMA
   SEMISALADO
+  RECORTES_DOBLE_CREMA
 }
 
 enum TipoCliente {
@@ -20,6 +21,16 @@ enum TipoCliente {
 enum EstadoLote {
   ACTIVO
   AGOTADO
+}
+
+enum EstadoPagoLote {
+  PENDIENTE
+  PAGADO
+}
+
+enum CategoriaInsumo {
+  BOLSA
+  SEPARADOR
 }
 
 enum RolUsuario {
@@ -33,15 +44,35 @@ enum VentaTipo {
 }
 
 model Proveedor {
-  id         String    @id @default(uuid())
-  nombre     String
-  telefono   String?
-  deletedAt  DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  lotes      Lote[]
+  id              String                    @id @default(uuid())
+  nombre          String
+  telefono        String?
+  deletedAt       DateTime?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  lotes           Lote[]
+  preciosCliente  PrecioClienteProveedor[]
 
+  @@unique([nombre, deletedAt])
   @@index([deletedAt])
+}
+
+model PrecioClienteProveedor {
+  id              String    @id @default(uuid())
+  clienteId       String
+  cliente         Cliente   @relation(fields: [clienteId], references: [id])
+  proveedorId     String
+  proveedor       Proveedor @relation(fields: [proveedorId], references: [id])
+  precioEntero    Decimal   @default("0")
+  precioTajado    Decimal   @default("0")
+  valorDomicilio  Decimal   @default("0")
+  costoDomiciliario Decimal @default("0")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([clienteId, proveedorId])
+  @@index([clienteId])
+  @@index([proveedorId])
 }
 
 model Lote {
@@ -55,62 +86,120 @@ model Lote {
   costoFlete             Decimal      @default("0")
   costoTajado            Decimal      @default("0")
   costoEmpaques          Decimal      @default("0")
+  costoSeparadores       Decimal      @default("0")
   costoRealCalculadoKg   Decimal      @default("0")
   stockDisponibleKg      Decimal      @default("0")
   bloquesEnteros         Int          @default(0)
   bloquesTajados         Int          @default(0)
   bloquesTajadosDeFabrica Int         @default(0)
-  precioPorBloque       Decimal      @default("0")
+  bloquesEnterosOriginal      Int          @default(0)
+  bloquesTajadosFabricaOriginal Int     @default(0)
+  sueltosEntero            Decimal      @default(0)
+  sueltosTajado            Decimal      @default(0)
+  precioPorBloqueEntero  Decimal      @default("0")
+  precioPorBloqueTajado  Decimal      @default("0")
   estado                 EstadoLote   @default(ACTIVO)
+  estadoPago             EstadoPagoLote @default(PENDIENTE)
+  metodoPagoLote         String       @default("EFECTIVO")
   version                Int          @default(1)
   deletedAt              DateTime?
   createdAt              DateTime     @default(now())
   updatedAt              DateTime     @updatedAt
-  ventas                 Venta[]
+  items                  VentaItem[]
   tajados                Tajado[]
 
   @@index([deletedAt])
+  @@index([proveedorId])
+  @@index([estado])
 }
 
 model Tajado {
-  id              String   @id @default(uuid())
-  loteId          String
-  lote            Lote     @relation(fields: [loteId], references: [id])
-  cantidadBloques Int
-  precioPorBloque Decimal  @default("1500")
-  tajador         String
-  costoTotal      Decimal  @default("0")
-  fecha           DateTime @default(now())
-  createdAt       DateTime @default(now())
+  id                String   @id @default(uuid())
+  loteId            String
+  lote              Lote     @relation(fields: [loteId], references: [id])
+  cantidadBloques   Int
+  precioPorBloque   Decimal  @default("1500")
+  tajador           String
+  costoTotal        Decimal  @default("0")
+  separadoresKg     Decimal  @default("0")
+  costoSeparadores  Decimal  @default("0")
+  recortesKg        Decimal  @default("0")
+  estadoPago        String   @default("PENDIENTE")
+  fecha             DateTime @default(now())
+  createdAt         DateTime @default(now())
 
   @@index([loteId])
   @@index([fecha])
+  @@index([estadoPago])
 }
 
 model Cliente {
   id               String       @id @default(uuid())
   nombre            String
   tipo              TipoCliente
-  precioDobleCrema  Decimal?
-  precioSemisalado  Decimal?
+  precioDobleCremaEntero  Decimal?
+  precioDobleCremaTajado  Decimal?
+  precioSemisalado        Decimal?
+  valorDomicilio    Decimal?     @default("0")
   deletedAt         DateTime?
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
   ventas            Venta[]
+  preciosProveedor  PrecioClienteProveedor[]
+  sedes             Sede[]
 
+  @@unique([nombre, deletedAt])
   @@index([deletedAt])
 }
 
+model Sede {
+  id          String   @id @default(uuid())
+  nombre      String
+  direccion   String?
+  telefono    String?
+  esPrincipal Boolean  @default(false)
+  clienteId   String
+  cliente     Cliente  @relation(fields: [clienteId], references: [id])
+  ventas      Venta[]
+  deletedAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([clienteId])
+  @@unique([clienteId, nombre, deletedAt])
+}
+
 model Empaque {
-  id        String   @id @default(uuid())
-  tipo      String   @unique
-  stock     Int      @default(0)
-  precio    Decimal  @default("0")
-  deletedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String          @id @default(uuid())
+  tipo            String
+  categoria       CategoriaInsumo @default(BOLSA)
+  stock           Decimal         @default("0")
+  precio          Decimal         @default("0")
+  deletedAt       DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  compras         CompraInsumo[]
 
   @@index([deletedAt])
+  @@index([categoria])
+}
+
+model CompraInsumo {
+  id                String          @id @default(uuid())
+  empaqueId         String
+  empaque           Empaque         @relation(fields: [empaqueId], references: [id])
+  categoria         CategoriaInsumo @default(BOLSA)
+  cantidad           Decimal         @default("0")
+  cantidadRestante  Decimal         @default("0")
+  precioUnitario    Decimal         @default("0")
+  costoTotal        Decimal         @default("0")
+  fecha             DateTime        @default(now())
+  createdAt         DateTime        @default(now())
+
+  @@index([empaqueId])
+  @@index([empaqueId, fecha])
+  @@index([fecha])
+  @@index([categoria])
 }
 
 model Venta {
@@ -118,33 +207,72 @@ model Venta {
   fecha            DateTime  @default(now())
   clienteId        String
   cliente          Cliente   @relation(fields: [clienteId], references: [id])
-  loteId           String
-  lote             Lote      @relation(fields: [loteId], references: [id])
-  cantidadVendidaKg Decimal  @default("0")
-  precioVentaKg    Decimal   @default("0")
+  sedeId           String?
+  sede             Sede?     @relation(fields: [sedeId], references: [id])
+  cantidadTotalKg  Decimal   @default("0")
   ingresoTotal     Decimal   @default("0")
   costoAplicado    Decimal   @default("0")
   gananciaBruta    Decimal   @default("0")
   valorDomicilio   Decimal   @default("0")
+  costoDomiciliario Decimal @default("0")
   domiciliario     String    @default("")
-  ventaTipo              VentaTipo @default(GRANEL)
-  bloquesReempacados     Int      @default(0)
-  bloquesEnterosVendidos Int     @default(0)
-  bloquesTajadosVendidos Int     @default(0)
-  costoEmpaques          Decimal  @default("0")
+  metodoPago       String    @default("EFECTIVO")
+  metodoPagoAbono  String?
+  abono            Decimal   @default("0")
+  observaciones    String?
   createdAt        DateTime  @default(now())
+  items            VentaItem[]
+  abonos           AbonoPago[]
+
+  @@index([fecha])
+  @@index([clienteId])
+  @@index([metodoPago])
+  @@index([clienteId, fecha])
+  @@index([sedeId])
 }
 
-model GastoFijo {
-  id        String    @id @default(uuid())
-  fecha     DateTime  @default(now())
-  concepto  String
-  valor     Decimal   @default("0")
-  deletedAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+model VentaItem {
+  id                       String    @id @default(uuid())
+  ventaId                  String
+  venta                    Venta     @relation(fields: [ventaId], references: [id])
+  loteId                   String
+  lote                     Lote      @relation(fields: [loteId], references: [id])
+  ventaTipo                VentaTipo @default(GRANEL)
+  cantidadKg               Decimal   @default("0")
+  precioVentaKg            Decimal   @default("0")
+  ingreso                  Decimal   @default("0")
+  costoAplicadoKg          Decimal   @default("0")
+  costoAplicado            Decimal   @default("0")
+  bloquesEnterosVendidos   Int       @default(0)
+  bloquesTajadosVendidos   Int       @default(0)
+  bloquesTajadosDeFabricaVendidos Int @default(0)
+  bloquesTajadosInternosVendidos  Int @default(0)
+  bloquesReempacados       Int       @default(0)
+  costoEmpaques            Decimal   @default("0")
+  precioEnteroBloque       Decimal?
+  precioTajadoBloque       Decimal?
+  origenCorte              String?   @default("ENTERO")  // ENTERO or TAJADO — variety requested for DC granel
+  origenTajadoGranel       String?   // INTERNO or FABRICA — when origenCorte=TAJADO, which tajado pool to deduct from
+  sueltosEnteroDelta       Decimal   @default(0)  // net kg change to enteros sueltos (negative=consumed, positive=surplus)
+  sueltosTajadoDelta       Decimal   @default(0)  // net kg change to tajados sueltos (negative=consumed, positive=surplus)
+  createdAt                DateTime  @default(now())
 
-  @@index([deletedAt])
+  @@index([ventaId])
+  @@index([loteId])
+}
+
+model AbonoPago {
+  id          String   @id @default(uuid())
+  ventaId     String
+  venta       Venta    @relation(fields: [ventaId], references: [id])
+  monto       Decimal  @default("0")
+  metodoPago  String   @default("EFECTIVO")
+  observacion String?
+  fecha       DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([ventaId])
+  @@index([fecha])
 }
 
 model Usuario {
@@ -157,17 +285,3 @@ model Usuario {
   updatedAt    DateTime    @updatedAt
 }
 
-model AuditLog {
-  id          String   @id @default(uuid())
-  entityType  String
-  entityId    String
-  action      String
-  userId      String?
-  changes     String?
-  createdAt   DateTime @default(now())
-
-  @@index([entityType, entityId])
-  @@index([action])
-  @@index([createdAt])
-  @@map("audit_logs")
-}

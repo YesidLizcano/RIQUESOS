@@ -8,6 +8,7 @@ describe('GestionarProveedores', () => {
     findById: vi.fn(),
     findByIds: vi.fn(),
     findAll: vi.fn(),
+    findActiveByNombre: vi.fn(),
     save: vi.fn(),
     softDelete: vi.fn(),
     restore: vi.fn(),

@@ -1,20 +1,42 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import type { VentaResponse } from '@/presentation/dtos';
-import { bloquesCompletos, isDobleCrema } from '@/domain/constants';
-import { TipoProducto } from '@/domain/enums';
-import { tipoProductoLabel } from '@/domain/labels';
+import type { VentaResponse, VentaItemResponse, AbonoMetodoPagoBreakdown } from '@/presentation/dtos';
+import { isDobleCrema, formatDobleCremaGranel } from '@/domain/constants';
+import { metodoPagoLabel } from '@/domain/labels';
+import { formatCurrency } from '@/domain/formatters';
+import { ProductoBadge } from '@/components/producto-badge';
+import { Button } from '@/components/ui/button';
+import { CreditCard } from 'lucide-react';
+import { decimalSub } from '@/lib/utils';
 
-/** Check if a kg value is a whole number of blocks (within floating-point tolerance) */
-function isWholeBlocks(kg: number): boolean {
-  return Math.abs(kg / 2.5 - Math.round(kg / 2.5)) < 0.001;
+/** Format a single item for display */
+function formatItemSummary(item: VentaItemResponse, producto: string): string {
+  if (item.ventaTipo === 'BLOQUES' && isDobleCrema(producto)) {
+    const parts: string[] = [];
+    if (item.bloquesEnterosVendidos > 0) parts.push(`${item.bloquesEnterosVendidos} enteros`);
+    if (item.bloquesTajadosVendidos > 0) parts.push(`${item.bloquesTajadosVendidos} tajados`);
+    let result = parts.length > 0 ? parts.join(' + ') : formatDobleCremaGranel(Number(item.cantidadKg));
+    if (item.bloquesReempacados > 0) result += ` (${item.bloquesReempacados} reempacados)`;
+    return result;
+  }
+  // Granel DC: convert kg to blocks + remainder, variety determines suffix
+  if (item.ventaTipo === 'GRANEL' && isDobleCrema(producto)) {
+    const variedad = item.origenCorte === 'TAJADO' ? 'tajado' as const : 'entero' as const;
+    const origen = variedad === 'tajado' ? (item.origenTajadoGranel as 'INTERNO' | 'FABRICA' | undefined) : undefined;
+    return formatDobleCremaGranel(Number(item.cantidadKg), variedad, origen);
+  }
+  return `${Number(item.cantidadKg).toLocaleString('es-AR')} kg`;
 }
 
 export function createVentaColumns(
-  clienteMap?: Map<string, string>
+  clienteMap?: Map<string, string>,
+  loteProductoMap?: Map<string, string>,
+  loteProveedorNombreMap?: Map<string, string>,
+  onVerDetalle?: (venta: VentaResponse) => void,
+  onAbonar?: (venta: VentaResponse) => void,
 ): ColumnDef<VentaResponse & { producto?: string }, unknown>[] {
-  return [
+  const columns: ColumnDef<VentaResponse & { producto?: string }, unknown>[] = [
     {
       accessorKey: 'fecha',
       header: 'Fecha',
@@ -35,98 +57,218 @@ export function createVentaColumns(
       },
     },
     {
+      id: 'sedeNombre',
+      header: 'Sede',
+      enableGlobalFilter: false,
+      accessorFn: (row) => (row as VentaResponse).sedeNombre ?? '—',
+    },
+    {
+      id: 'metodoPago',
+      header: '',
+      enableGlobalFilter: false,
+      enableHiding: false,
+      meta: { hidden: true },
+      accessorFn: (row) => (row as VentaResponse).metodoPago ?? 'EFECTIVO',
+      filterFn: (row, _columnId, filterValue) => {
+        const venta = row.original as VentaResponse;
+        const mp = venta.metodoPago ?? 'EFECTIVO';
+
+        // Support comma-separated multi-values (e.g., "NEQUI,BRE_B")
+        const filterMethods = String(filterValue).split(',');
+
+        // Direct match: venta's metodoPago is in the filter
+        if (filterMethods.includes(mp)) return true;
+
+        // Cross-match: CREDITO venta with abonos matching the filter
+        if (mp === 'CREDITO' && venta.abonoMetodoPagoBreakdown) {
+          return venta.abonoMetodoPagoBreakdown.some(b => filterMethods.includes(b.metodoPago));
+        }
+
+        return false;
+      },
+    },
+    {
       accessorKey: 'domiciliario',
       header: 'Domiciliario',
     },
     {
-      accessorKey: 'producto',
-      header: 'Producto',
+      id: 'productos',
+      header: 'Productos',
       enableGlobalFilter: false,
+      accessorFn: (row) => {
+        const venta = row as VentaResponse;
+        const items = venta.items ?? [];
+        const products = new Set<string>();
+        for (const item of items) {
+          const producto = loteProductoMap?.get(item.loteId) ?? '';
+          if (producto) products.add(producto);
+        }
+        return Array.from(products).join(',');
+      },
+      filterFn: (row, _columnId, filterValue) => {
+        const venta = row.original as VentaResponse;
+        const items = venta.items ?? [];
+        for (const item of items) {
+          const producto = loteProductoMap?.get(item.loteId) ?? '';
+          if (producto === filterValue) return true;
+        }
+        return false;
+      },
       cell: ({ row }) => {
-        const producto = row.getValue('producto') as string;
-        return producto ? (tipoProductoLabel[producto as TipoProducto] ?? producto) : '';
+        const venta = row.original as VentaResponse;
+        const items = venta.items ?? [];
+        if (items.length === 0) return '—';
+
+        return (
+          <div className="flex flex-col gap-0.5 py-0.5">
+            {items.map((item, i) => {
+              const producto = loteProductoMap?.get(item.loteId) ?? '';
+              const proveedor = loteProveedorNombreMap?.get(item.loteId);
+              const summary = formatItemSummary(item, producto);
+              return (
+                <span key={item.id || i} className="whitespace-nowrap">
+                  {producto && <ProductoBadge producto={producto} compact className="mr-1" />}
+                  {proveedor && <span className="text-muted-foreground">({proveedor}) </span>}
+                  {summary}
+                </span>
+              );
+            })}
+          </div>
+        );
       },
     },
     {
-      accessorKey: 'cantidadVendidaKg',
-      header: 'Cantidad',
+      id: 'cantidadTotalKg',
+      header: 'Cantidad Total',
       enableGlobalFilter: false,
       cell: ({ row }) => {
-        const kg = Number(row.getValue('cantidadVendidaKg'));
-        const venta = row.original as VentaResponse & { producto?: string };
-        const producto = venta.producto;
-        const ventaTipo = venta.ventaTipo;
-
-        // Block mode: show enteros/tajados breakdown
-        if (ventaTipo === 'BLOQUES' && producto && isDobleCrema(producto)) {
-          const enteros = venta.bloquesEnterosVendidos ?? 0;
-          const tajados = venta.bloquesTajadosVendidos ?? 0;
-          const parts: string[] = [];
-          if (enteros > 0) parts.push(`${enteros} ent.`);
-          if (tajados > 0) parts.push(`${tajados} taj.`);
-          const blockLabel = parts.length > 0 ? parts.join(' + ') : `${bloquesCompletos(kg)} bloques`;
-          return (
-            <span>
-              {blockLabel} ({kg.toLocaleString('es-AR')} kg)
-            </span>
-          );
-        }
-
-        // Granel DC: show kg and block equivalent
-        if (producto && isDobleCrema(producto) && isWholeBlocks(kg)) {
-          return `${kg.toLocaleString('es-AR')} kg (${bloquesCompletos(kg)} bloque${bloquesCompletos(kg) === 1 ? '' : 's'})`;
-        }
-        return `${kg.toLocaleString('es-AR')} kg`;
+        const venta = row.original as VentaResponse;
+        return `${Number(venta.cantidadTotalKg).toLocaleString('es-AR')} kg`;
       },
-    },
-    {
-      accessorKey: 'precioVentaKg',
-      header: 'Precio/Kg',
-      enableGlobalFilter: false,
-      cell: ({ row }) => `$${Number(row.getValue('precioVentaKg')).toLocaleString('es-AR')}`,
     },
     {
       accessorKey: 'valorDomicilio',
       header: 'Domicilio',
       enableGlobalFilter: false,
       cell: ({ row }) => {
-        const valor = Number(row.getValue('valorDomicilio'));
-        if (valor === 0) return '—';
-        return `$${valor.toLocaleString('es-AR')}`;
-      },
-    },
-    {
-      accessorKey: 'bloquesReempacados',
-      header: 'Reempacados',
-      enableGlobalFilter: false,
-      cell: ({ row }) => {
-        const venta = row.original as VentaResponse & { producto?: string };
-        if (!venta.producto || !isDobleCrema(venta.producto)) return '—';
-        const reempacados = venta.bloquesReempacados ?? 0;
-        if (reempacados === 0) return '—';
-        return `${reempacados}`;
+        const rawValue = String(row.getValue('valorDomicilio'));
+        if (rawValue === '0' || rawValue === '0.00' || rawValue === '') return '—';
+        const valor = Number(rawValue);
+        return `$${Math.round(valor).toLocaleString('es-AR')}`;
       },
     },
     {
       accessorKey: 'ingresoTotal',
       header: 'Ingreso Total',
       enableGlobalFilter: false,
-      cell: ({ row }) => `$${Number(row.getValue('ingresoTotal')).toLocaleString('es-AR')}`,
+      cell: ({ row }) => `$${Math.round(Number(row.getValue('ingresoTotal'))).toLocaleString('es-AR')}`,
     },
     {
       accessorKey: 'gananciaBruta',
       header: 'Ganancia Bruta',
       enableGlobalFilter: false,
       cell: ({ row }) => {
-        const value = Number(row.getValue('gananciaBruta'));
+        const rawValue = String(row.getValue('gananciaBruta'));
+        const isNegative = rawValue.startsWith('-');
+        const value = Number(rawValue);
         return (
-          <span className={value < 0 ? 'text-red-600 font-medium' : 'text-green-600 font-medium'}>
-            ${value.toLocaleString('es-AR')}
+          <span className={isNegative ? 'text-red-600 font-medium' : 'text-green-600 font-medium'}>
+            ${Math.round(value).toLocaleString('es-AR')}
           </span>
         );
       },
     },
+    {
+      id: 'pago',
+      header: 'Pago',
+      enableGlobalFilter: false,
+      cell: ({ row, table }) => {
+        const venta = row.original as VentaResponse;
+        const mp = venta.metodoPago ?? 'EFECTIVO';
+        const saldo = venta.saldo ?? '0';
+        const saldoPositivo = !saldo.startsWith('-') && saldo !== '0' && saldo !== '0.00';
+        const label = metodoPagoLabel[mp] ?? mp;
+        const colorClass = mp === 'EFECTIVO' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : mp === 'CREDITO' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+        const isSaldado = mp === 'CREDITO' && !saldoPositivo;
+
+        // Check if there's an active metodoPago filter for CREDITO proportion badge
+        const metodoPagoFilter = table.getColumn('metodoPago')?.getFilterValue() as string | undefined;
+        const breakdown = venta.abonoMetodoPagoBreakdown;
+
+        // Build proportion badge for CREDITO ventas when filter is active
+        let badgeLabel: string | null = null;
+
+        if (mp === 'CREDITO' && breakdown && breakdown.length > 0) {
+          if (metodoPagoFilter) {
+            // Find matching breakdown entry from the active filter
+            const filterMethods = String(metodoPagoFilter).split(',');
+            const matchingBreakdown = breakdown.filter(b => filterMethods.includes(b.metodoPago));
+            if (matchingBreakdown.length > 0) {
+              badgeLabel = matchingBreakdown
+                .map(b => `Abono ${metodoPagoLabel[b.metodoPago] ?? b.metodoPago}: ${formatCurrency(b.monto)} — ${b.porcentaje}%`)
+                .join(' · ');
+            }
+          } else {
+            // No filter active — show compact summary of all methods
+            badgeLabel = breakdown
+              .map(b => `${metodoPagoLabel[b.metodoPago] ?? b.metodoPago} ${b.porcentaje}%`)
+              .join(', ');
+          }
+        }
+
+        return (
+          <div className="flex flex-col gap-0.5">
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${colorClass}`}>{label}</span>
+            {mp === 'CREDITO' && badgeLabel && (
+              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium bg-amber-50 text-amber-700">
+                {badgeLabel}
+              </span>
+            )}
+            {isSaldado && (
+              <span className="inline-flex items-center gap-0.5 text-xs font-medium text-green-600">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="size-3.5">
+                  <path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm3.844-8.791a.75.75 0 0 0-1.188-.918l-3.7 4.79-1.649-1.833a.75.75 0 1 0-1.114 1.004l2.25 2.5a.75.75 0 0 0 1.15-.043l4.25-5.5Z" clipRule="evenodd" />
+                </svg>
+                Saldado
+              </span>
+            )}
+            {mp === 'CREDITO' && saldoPositivo && (
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-red-600 font-medium">Saldo: ${Math.round(Number(saldo)).toLocaleString('es-AR')}</span>
+                {onAbonar && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 px-2 text-[10px]"
+                    onClick={(e) => { e.stopPropagation(); onAbonar(venta); }}
+                  >
+                    <CreditCard className="size-3 mr-1" />
+                    Abonar
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
   ];
+
+  // Add actions column only if callback provided
+  if (onVerDetalle) {
+    columns.push({
+      id: 'acciones',
+      header: 'Acciones',
+      enableGlobalFilter: false,
+      enableSorting: false,
+      cell: ({ row }) => {
+        const venta = row.original as VentaResponse;
+        return onVerDetalle(venta);
+      },
+    });
+  }
+
+  return columns;
 }
 
 // Keep backward-compatible export for pages that don't need FK resolution

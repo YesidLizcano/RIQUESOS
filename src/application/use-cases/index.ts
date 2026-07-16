@@ -9,12 +9,6 @@ export {
   type ActualizarClienteInput,
 } from './GestionarClientes';
 export {
-  GestionarGastos,
-  type CrearGastoInput,
-  type ActualizarGastoInput,
-  type GastoMensualResumen,
-} from './GestionarGastos';
-export {
   GestionarProveedores,
   type CrearProveedorInput,
   type ActualizarProveedorInput,
@@ -27,3 +21,5 @@ export {
   type TopCliente,
   type MetricasDashboard,
 } from './ObtenerMetricas';
+export { RegistrarCompraInsumo, type RegistrarCompraInput, type RegistrarCompraOutput } from './RegistrarCompraInsumo';
+export { GestionarSedes, type CrearSedeInput, type ActualizarSedeInput } from './GestionarSedes';

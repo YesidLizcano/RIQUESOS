@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import { Cliente } from '../../domain/entities/Cliente';
 import { TipoCliente } from '../../domain/enums';
+import { asTipoCliente } from '../../domain/mappers';
 import type { ClienteRepository } from '../../domain/ports/ClienteRepository';
 
 export class PrismaClienteRepo implements ClienteRepository {
@@ -29,16 +30,28 @@ export class PrismaClienteRepo implements ClienteRepository {
     return records.map((r) => this.toEntity(r));
   }
 
+  async findActiveByNombre(nombre: string): Promise<Cliente | null> {
+    const record = await prisma.cliente.findFirst({
+      where: { nombre, deletedAt: null },
+    });
+    if (!record) return null;
+    return this.toEntity(record);
+  }
+
   async save(cliente: Cliente): Promise<Cliente> {
     const data = {
       nombre: cliente.nombre,
       tipo: cliente.tipo as TipoCliente,
-      precioDobleCrema: cliente.precioDobleCrema
-        ? new Prisma.Decimal(cliente.precioDobleCrema.value)
+      precioDobleCremaEntero: cliente.precioDobleCremaEntero
+        ? new Prisma.Decimal(cliente.precioDobleCremaEntero.value)
+        : null,
+      precioDobleCremaTajado: cliente.precioDobleCremaTajado
+        ? new Prisma.Decimal(cliente.precioDobleCremaTajado.value)
         : null,
       precioSemisalado: cliente.precioSemisalado
         ? new Prisma.Decimal(cliente.precioSemisalado.value)
         : null,
+      valorDomicilio: new Prisma.Decimal(cliente.valorDomicilio.value),
     };
 
     if (cliente.id) {
@@ -79,9 +92,11 @@ export class PrismaClienteRepo implements ClienteRepository {
     return new Cliente({
       id: record.id,
       nombre: record.nombre,
-      tipo: record.tipo as string as TipoCliente,
-      precioDobleCrema: record.precioDobleCrema?.toString() ?? undefined,
+      tipo: asTipoCliente(record.tipo),
+      precioDobleCremaEntero: record.precioDobleCremaEntero?.toString() ?? undefined,
+      precioDobleCremaTajado: record.precioDobleCremaTajado?.toString() ?? undefined,
       precioSemisalado: record.precioSemisalado?.toString() ?? undefined,
+      valorDomicilio: record.valorDomicilio?.toString() ?? '0',
       deletedAt: record.deletedAt,
     });
   }

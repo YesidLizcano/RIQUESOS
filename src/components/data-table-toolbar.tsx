@@ -1,7 +1,7 @@
 'use client';
 
 import { Table } from '@tanstack/react-table';
-import { Download, Loader2, Search, X } from 'lucide-react';
+import { Download, FileText, Loader2, Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,12 +19,21 @@ export interface FilterConfig {
   options: { label: string; value: string }[];
 }
 
+export interface PdfButtonConfig {
+  label: string;
+  onClick: () => void;
+  loading?: boolean;
+}
+
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;
   searchPlaceholder?: string;
   filters?: FilterConfig[];
   showDeleted?: boolean;
   onShowDeletedChange?: (show: boolean) => void;
+  saldoPendiente?: boolean;
+  onSaldoPendienteChange?: (checked: boolean) => void;
+  pdfButtons?: PdfButtonConfig[];
   onExportExcel?: () => Promise<void>;
   isExporting?: boolean;
 }
@@ -35,10 +44,21 @@ export function DataTableToolbar<TData>({
   filters = [],
   showDeleted,
   onShowDeletedChange,
+  saldoPendiente,
+  onSaldoPendienteChange,
+  pdfButtons,
   onExportExcel,
   isExporting,
 }: DataTableToolbarProps<TData>) {
   const globalFilter = table.getState().globalFilter as string | undefined;
+
+  // Check if metodoPago filter includes CREDITO for conditional saldoPendiente display
+  // Only relevant for tables that have a metodoPago column (Ventas)
+  const hasMetodoPagoFilter = filters.some(f => f.columnId === 'metodoPago');
+  const metodoPagoValue = hasMetodoPagoFilter
+    ? (table.getColumn('metodoPago')?.getFilterValue() as string | undefined)
+    : undefined;
+  const isCredito = metodoPagoValue === 'CREDITO' || metodoPagoValue?.includes('CREDITO');
 
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -63,17 +83,30 @@ export function DataTableToolbar<TData>({
         const column = table.getColumn(filter.columnId);
         if (!column) return null;
         const currentValue = column.getFilterValue() as string | undefined;
+        const isMultiValue = typeof currentValue === 'string' && currentValue.includes(',');
+        const currentLabel = isMultiValue
+          ? currentValue!.split(',').map(v => filter.options.find(o => o.value === v)?.label).filter(Boolean).join(' / ')
+          : currentValue
+            ? filter.options.find(o => o.value === currentValue)?.label
+            : undefined;
         return (
           <Select
             key={filter.columnId}
-            value={currentValue ?? ''}
+            value={isMultiValue ? '__multi__' : (currentValue ?? '')}
             onValueChange={(v) => {
               if (v === null) return;
-              column.setFilterValue(v === '__all__' ? undefined : v);
+              if (v === '__all__') {
+                column.setFilterValue(undefined);
+              } else if (v === '__multi__') {
+                // Keep current multi-value, don't change
+                return;
+              } else {
+                column.setFilterValue(v);
+              }
             }}
           >
             <SelectTrigger size="sm" className="w-full sm:w-[160px]">
-              <SelectValue placeholder={filter.label} />
+              <SelectValue placeholder={filter.label}>{currentLabel ?? (currentValue ? filter.label : undefined)}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__all__">Todos</SelectItem>
@@ -95,6 +128,31 @@ export function DataTableToolbar<TData>({
           Mostrar eliminados
         </label>
       )}
+      {onSaldoPendienteChange && isCredito && (
+        <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+          <Checkbox
+            checked={saldoPendiente ?? false}
+            onCheckedChange={(checked) => onSaldoPendienteChange(checked === true)}
+          />
+          Solo deudas pendientes
+        </label>
+      )}
+      {pdfButtons && pdfButtons.length > 0 && pdfButtons.map((btn) => (
+        <Button
+          key={btn.label}
+          variant="outline"
+          size="sm"
+          onClick={btn.onClick}
+          disabled={btn.loading}
+        >
+          {btn.loading ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <FileText className="size-4" />
+          )}
+          {btn.label}
+        </Button>
+      ))}
       {onExportExcel && (
         <Button
           variant="outline"

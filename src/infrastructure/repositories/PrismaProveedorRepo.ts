@@ -27,6 +27,14 @@ export class PrismaProveedorRepo implements ProveedorRepository {
     return records.map((r) => this.toEntity(r));
   }
 
+  async findActiveByNombre(nombre: string): Promise<Proveedor | null> {
+    const record = await prisma.proveedor.findFirst({
+      where: { nombre, deletedAt: null },
+    });
+    if (!record) return null;
+    return this.toEntity(record);
+  }
+
   async save(proveedor: Proveedor): Promise<Proveedor> {
     const data = {
       nombre: proveedor.nombre,

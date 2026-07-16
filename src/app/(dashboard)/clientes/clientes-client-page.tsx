@@ -1,23 +1,31 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useReactTable, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel } from '@tanstack/react-table';
 import { Card, CardContent } from '@/components/ui/card';
 import { DataTable } from '@/components/data-table';
 import { DataTableToolbar, FilterConfig } from '@/components/data-table-toolbar';
 import { createClienteColumns } from '@/components/columns/cliente-columns';
 import { CrearClienteDialog } from '@/components/forms/crear-cliente-dialog';
+import { HistorialClienteDialog } from '@/components/historial-cliente-dialog';
 import { getClientes, getClientesIncludeDeleted } from '@/presentation/actions/clientes';
 import { useExportExcel } from '@/hooks/use-export-excel';
+import type { ColumnType } from '@/hooks/use-export-excel';
 import { RefreshContext } from '@/components/refresh-context';
+import { DeferredMount } from '@/components/deferred-mount';
 import type { ClienteResponse } from '@/presentation/dtos';
 import { TipoCliente } from '@/domain/enums';
 
+const TIPO_LABELS: Record<string, string> = {
+  MAYORISTA: 'Mayorista',
+  MINORISTA: 'Minorista',
+};
+
 const clienteExportMap = [
   { key: 'nombre', header: 'Nombre' },
-  { key: 'tipo', header: 'Tipo' },
-  { key: 'precioDobleCrema', header: 'Precio Doble Crema', format: (v: unknown) => v !== null ? Number(v) : '' },
-  { key: 'precioSemisalado', header: 'Precio Semisalado', format: (v: unknown) => v !== null ? Number(v) : '' },
+  { key: 'tipo', header: 'Tipo', format: (v: unknown) => TIPO_LABELS[String(v)] ?? String(v) },
+  { key: 'precioDobleCrema', header: 'Precio Doble Crema', type: 'currency' as ColumnType },
+  { key: 'precioSemisalado', header: 'Precio Semisalado', type: 'currency' as ColumnType },
 ];
 
 interface ClientesClientPageProps {
@@ -31,12 +39,9 @@ const tipoFilterOptions = [
 
 export function ClientesClientPage({ clientes }: ClientesClientPageProps) {
   const [showDeleted, setShowDeleted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [data, setData] = useState<ClienteResponse[]>(clientes);
-
-  // Sync when server data changes (fallback for initial load)
-  useEffect(() => {
-    setData(clientes);
-  }, [clientes]);
+  const [clienteToView, setClienteToView] = useState<ClienteResponse | null>(null);
 
   const filters: FilterConfig[] = useMemo(
     () => [
@@ -46,32 +51,42 @@ export function ClientesClientPage({ clientes }: ClientesClientPageProps) {
   );
 
   const refreshData = useCallback(async () => {
-    if (showDeleted) {
-      const result = await getClientesIncludeDeleted();
-      if (result.success && result.clientes) {
-        setData(result.clientes);
+    setIsLoading(true);
+    try {
+      if (showDeleted) {
+        const result = await getClientesIncludeDeleted();
+        if (result.success && result.clientes) {
+          setData(result.clientes);
+        }
+      } else {
+        const result = await getClientes();
+        if (result.success && result.clientes) {
+          setData(result.clientes);
+        }
       }
-    } else {
-      const result = await getClientes();
-      if (result.success && result.clientes) {
-        setData(result.clientes);
-      }
+    } finally {
+      setIsLoading(false);
     }
   }, [showDeleted]);
 
   const handleShowDeletedChange = useCallback(async (checked: boolean) => {
     setShowDeleted(checked);
-    if (checked) {
-      const result = await getClientesIncludeDeleted();
-      if (result.success && result.clientes) {
-        setData(result.clientes);
+    setIsLoading(true);
+    try {
+      if (checked) {
+        const result = await getClientesIncludeDeleted();
+        if (result.success && result.clientes) {
+          setData(result.clientes);
+        }
+      } else {
+        setData(clientes);
       }
-    } else {
-      setData(clientes);
+    } finally {
+      setIsLoading(false);
     }
   }, [clientes]);
 
-  const columns = createClienteColumns(showDeleted);
+  const columns = createClienteColumns(showDeleted, setClienteToView);
 
   const table = useReactTable({
     data,
@@ -98,6 +113,7 @@ export function ClientesClientPage({ clientes }: ClientesClientPageProps) {
 
       <Card>
         <CardContent className="pt-6 space-y-4">
+          <DeferredMount>
           {data.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">No hay clientes registrados</p>
           ) : (
@@ -111,11 +127,18 @@ export function ClientesClientPage({ clientes }: ClientesClientPageProps) {
                 onExportExcel={exportExcel}
                 isExporting={isExporting}
               />
-              <DataTable table={table} />
+              <DataTable table={table} isLoading={isLoading} emptyMessage="No hay clientes registrados" />
             </>
           )}
+          </DeferredMount>
         </CardContent>
       </Card>
+
+      <HistorialClienteDialog
+        cliente={clienteToView}
+        open={clienteToView !== null}
+        onOpenChange={(open) => { if (!open) setClienteToView(null); }}
+      />
     </div>
     </RefreshContext.Provider>
   );
