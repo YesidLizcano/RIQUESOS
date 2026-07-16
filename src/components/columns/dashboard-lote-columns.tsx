@@ -23,6 +23,9 @@ export const lotesColumns: ColumnDef<LoteResponse, unknown>[] = [
     cell: ({ row }) => {
       const lote = row.original;
       const stockValue = Number(lote.stockDisponibleKg);
+      if (lote.producto === 'RECORTES_DOBLE_CREMA') {
+        return `${stockValue.toLocaleString('es-AR')} kg`;
+      }
       if (!isDobleCrema(lote.producto)) {
         return `${stockValue.toLocaleString('es-AR')} kg`;
       }

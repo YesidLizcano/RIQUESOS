@@ -180,7 +180,7 @@ async function main() {
       bloquesTajadosDeFabrica: 8,
       bloquesEnterosOriginal: 20,
       bloquesTajadosFabricaOriginal: 8,
-      bloquesTajados: 8, // 8 tajados de fábrica
+      bloquesTajados: 0, // 0 tajados internos (all 8 are de fábrica, stored in bloquesTajadosDeFabrica)
       sueltosEntero: '0',
       sueltosTajado: '0',
       stockDisponibleKg: '70',

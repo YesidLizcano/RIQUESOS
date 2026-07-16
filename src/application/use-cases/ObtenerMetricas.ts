@@ -28,6 +28,8 @@ export interface MetricasPeriodo {
   volumenDobleCremaKgGranelTajado: string;
   /** SS kg sold */
   volumenSemisaladoKg: string;
+  /** Recortes DC kg sold */
+  volumenRecortesKg: string;
 }
 
 export interface InventarioPorProducto {
@@ -156,7 +158,7 @@ export class ObtenerMetricas {
     // 3. Margin percentages (as strings, "N/A" if revenue is zero)
     const margenBrutoPct = ingreso.isZero()
       ? 'N/A'
-      : gananciaBruta.divide(ingreso.value).multiply('100').value;
+      : String(Math.round(Number(gananciaBruta.divide(ingreso.value).multiply('100').value) * 10) / 10);
 
     // Volume breakdown — will be computed after items are fetched in section 9
     // Count what was INVOICED (sold), not what was consumed from inventory
@@ -166,6 +168,7 @@ export class ObtenerMetricas {
     let dcKgGranelEntero = 0;  // kg sold as granel from ENTERO variety
     let dcKgGranelTajado = 0;  // kg sold as granel from TAJADO variety
     let ssKg = 0;
+    let recortesKg = 0;
 
     // 4. Inventory levels by product type (only ACTIVO lotes)
     const lotesActivos = await this.loteRepo.findActive();
@@ -389,6 +392,8 @@ export class ObtenerMetricas {
         }
       } else if (loteInfo.producto === 'SEMISALADO') {
         ssKg += Number(item.cantidadKg.value);
+      } else if (loteInfo.producto === 'RECORTES_DOBLE_CREMA') {
+        recortesKg += Number(item.cantidadKg.value);
       }
     }
 
@@ -498,6 +503,7 @@ export class ObtenerMetricas {
       volumenDobleCremaKgGranelEntero: String(Math.round(dcKgGranelEntero * 10) / 10),
       volumenDobleCremaKgGranelTajado: String(Math.round(dcKgGranelTajado * 10) / 10),
       volumenSemisaladoKg: String(Math.round(ssKg * 10) / 10),
+      volumenRecortesKg: String(Math.round(recortesKg * 10) / 10),
     };
 
     // 10. Flujo de Dinero — revenue grouped by payment method

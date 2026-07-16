@@ -54,6 +54,7 @@ export async function getMetricas(inicio?: string, fin?: string) {
         volumenDobleCremaKgGranelEntero: metricas.periodo.volumenDobleCremaKgGranelEntero,
         volumenDobleCremaKgGranelTajado: metricas.periodo.volumenDobleCremaKgGranelTajado,
         volumenSemisaladoKg: metricas.periodo.volumenSemisaladoKg,
+        volumenRecortesKg: metricas.periodo.volumenRecortesKg,
       },
       inventario: metricas.inventario.map((item) => ({
         producto: item.producto,

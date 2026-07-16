@@ -499,6 +499,11 @@ export function DashboardClientPage({ initialMetricas, initialInicio, initialFin
                   <span className="block text-lg">
                     Semisalado: {formatSSKg(Number(p.volumenSemisaladoKg))}
                   </span>
+                  {Number(p.volumenRecortesKg) > 0 && (
+                    <span className="block text-lg">
+                      Recortes: {Number(p.volumenRecortesKg).toLocaleString('es-AR')} kg
+                    </span>
+                  )}
                 </>
               }
             />
@@ -548,7 +553,9 @@ export function DashboardClientPage({ initialMetricas, initialInicio, initialFin
                    const sueltosTajado = Number(it.sueltosTajado);
                    const detail = isDC
                       ? formatDobleCremaDetalle(it.bloquesEnteros, bloquesTajados, sueltosEntero, sueltosTajado)
-                     : formatSSKg(Number(it.stockKg));
+                      : isRecortes
+                      ? `${Number(it.stockKg).toLocaleString('es-AR')} kg`
+                      : formatSSKg(Number(it.stockKg));
                   const lotesDisplay = `${it.lotes} ${it.lotes === 1 ? 'lote' : 'lotes'}`;
                   return (
                     <div key={it.tipo} className="flex items-center justify-between w-full">

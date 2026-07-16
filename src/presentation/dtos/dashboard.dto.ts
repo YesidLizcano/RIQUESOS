@@ -25,6 +25,8 @@ export interface MetricasPeriodoResponse {
   volumenDobleCremaKgGranelTajado: string;
   /** SS kg sold */
   volumenSemisaladoKg: string;
+  /** Recortes DC kg sold */
+  volumenRecortesKg: string;
 }
 
 export interface InventarioPorProductoResponse {
