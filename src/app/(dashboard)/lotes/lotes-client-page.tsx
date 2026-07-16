@@ -189,18 +189,10 @@ export function LotesClientPage({ lotes, proveedores, initialEstadoPago }: Lotes
   const filteredTotals = useMemo(() => {
     const rows = table.getFilteredRowModel().rows;
     const visible = rows.map((row) => row.original as LoteResponse);
-    const costoTotal = visible.reduce((sum, l) => {
-      const kg = Number(l.cantidadCompradaKg);
-      const precioBase = Number(l.precioCompraBaseKg);
-      const flete = Number(l.costoFlete);
-      return sum + (kg * precioBase + flete);
-    }, 0);
+    const costoTotal = visible.reduce((sum, l) => sum + Number(l.costoTotalLote), 0);
     const deudaPendiente = visible.reduce((sum, l) => {
       if (l.estadoPago !== 'PENDIENTE') return sum;
-      const kg = Number(l.cantidadCompradaKg);
-      const precioBase = Number(l.precioCompraBaseKg);
-      const flete = Number(l.costoFlete);
-      return sum + (kg * precioBase + flete);
+      return sum + Number(l.costoTotalLote);
     }, 0);
     return { costoTotal, deudaPendiente, count: visible.length };
   }, [table.getFilteredRowModel().rows]);

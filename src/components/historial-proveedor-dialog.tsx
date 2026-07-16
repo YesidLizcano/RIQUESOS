@@ -116,18 +116,10 @@ export function HistorialProveedorDialog({ proveedor, open, onOpenChange }: Hist
       header: 'Costo Lote',
       size: 90,
       enableGlobalFilter: false,
-      accessorFn: (row) => {
-        const kg = Number(row.cantidadCompradaKg);
-        const precioBase = Number(row.precioCompraBaseKg);
-        const flete = Number(row.costoFlete);
-        return kg * precioBase + flete;
-      },
+      accessorFn: (row) => Number(row.costoTotalLote),
       cell: ({ row }) => {
-        const kg = Number(row.original.cantidadCompradaKg);
-        const precioBase = Number(row.original.precioCompraBaseKg);
-        const flete = Number(row.original.costoFlete);
-        const costoLote = kg * precioBase + flete;
-        return <span className="whitespace-nowrap font-medium">{formatCurrency(costoLote)}</span>;
+        const costoTotalLote = Number(row.original.costoTotalLote);
+        return <span className="whitespace-nowrap font-medium">{formatCurrency(costoTotalLote)}</span>;
       },
     },
     {

@@ -131,22 +131,15 @@ export function createLoteColumns(
       header: 'Costo Lote',
       size: 80,
       enableGlobalFilter: false,
-      accessorFn: (row) => {
-        const kg = Number(row.cantidadCompradaKg);
-        const precioBase = Number(row.precioCompraBaseKg);
-        const flete = Number(row.costoFlete);
-        return kg * precioBase + flete;
-      },
+      accessorFn: (row) => Number(row.costoTotalLote),
       cell: ({ row }) => {
-        const kg = Number(row.original.cantidadCompradaKg);
-        const precioBase = Number(row.original.precioCompraBaseKg);
+        const costoTotalLote = Number(row.original.costoTotalLote);
         const flete = Number(row.original.costoFlete);
-        const costoQueso = kg * precioBase;
-        const costoLote = costoQueso + flete;
+        const costoQueso = costoTotalLote - flete;
         const hasFlete = flete > 0;
         return (
           <span className="whitespace-nowrap">
-            <span className="font-medium">${Math.round(costoLote).toLocaleString('es-AR')}</span>
+            <span className="font-medium">${Math.round(costoTotalLote).toLocaleString('es-AR')}</span>
             {hasFlete && (
               <span className="block text-[10px] text-muted-foreground">
                 (${Math.round(costoQueso).toLocaleString('es-AR')} prod. + ${Math.round(flete).toLocaleString('es-AR')} flete)

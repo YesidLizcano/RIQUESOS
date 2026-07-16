@@ -66,6 +66,7 @@ export function loteToResponse(lote: import('@/domain/entities/Lote').Lote): Lot
     costoRealCalculadoKg: lote.costoRealCalculadoKg.value,
     costoTajadoKg: lote.costoTajadoKg.value,
     costoTajadoFabricaKg: lote.costoTajadoFabricaKg.value,
+    costoTotalLote: lote.costoTotalLote.value,
     stockDisponibleKg: lote.stockDisponibleKg.value,
     bloquesEnteros: lote.bloquesEnteros,
     bloquesTajados: lote.bloquesTajados,

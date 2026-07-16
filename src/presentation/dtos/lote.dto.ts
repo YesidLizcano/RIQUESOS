@@ -48,6 +48,7 @@ export interface LoteResponse {
   costoRealCalculadoKg: string;
   costoTajadoKg: string;
   costoTajadoFabricaKg: string;
+  costoTotalLote: string;
   stockDisponibleKg: string;
   bloquesEnteros: number;
   bloquesTajados: number;
