@@ -1,16 +1,15 @@
 @echo off
 echo Iniciando Riquesos...
-echo Limpiando cache de dependencias...
-if exist package-lock.json del package-lock.json
-if exist node_modules rmdir /s /q node_modules
-echo Instalando dependencias...
-call npm install
-echo Generando cliente Prisma...
-call npx prisma generate
-echo Sincronizando base de datos...
-call npx prisma db push
-call npx prisma db seed
-echo Esperando a que el servidor este listo...
+
+if not exist node_modules (
+    echo Primera vez: instalando dependencias...
+    call npm install
+    call npx prisma generate
+    call npx prisma db push
+    call npx prisma db seed
+)
+
+echo Iniciando servidor...
 start "Riquesos Server" npm run dev
 timeout /t 8 /nobreak >nul
 start "" "http://localhost:3000"
