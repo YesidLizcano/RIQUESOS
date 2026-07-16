@@ -190,6 +190,22 @@ export class Lote {
   }
 
   /**
+   * Total cost of the lot (merchandise + flete).
+   * For DC: (bloquesEnteros × precioPorBloqueEntero) + (bloquesTajadosDeFabrica × precioPorBloqueTajado) + flete.
+   * For non-DC: precioCompraBaseKg × cantidadCompradaKg + flete.
+   */
+  get costoTotalLote(): Dinero {
+    if (this.producto === TipoProducto.DOBLE_CREMA && (this.bloquesEnteros > 0 || this.bloquesTajadosDeFabrica > 0)) {
+      const valorEnteros = this.precioPorBloqueEntero.multiply(String(this.bloquesEnteros));
+      const valorTajadosFabrica = this.precioPorBloqueTajado.multiply(String(this.bloquesTajadosDeFabrica));
+      const costoMercancia = valorEnteros.add(valorTajadosFabrica);
+      return costoMercancia.add(this.costoFlete);
+    }
+    const costoBase = this.precioCompraBaseKg.multiply(this.cantidadCompradaKg.value);
+    return costoBase.add(this.costoFlete);
+  }
+
+  /**
    * Cost per kg for tajado (cut) blocks.
    * Only applies to blocks WE cut (bloquesTajados), not factory-cut blocks (bloquesTajadosDeFabrica).
    * Factory-cut blocks use costoTajadoFabricaKg.

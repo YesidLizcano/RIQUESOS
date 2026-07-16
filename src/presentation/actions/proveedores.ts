@@ -210,7 +210,7 @@ export async function getLotesByProveedor(proveedorId: string): Promise<{ succes
     let lotesPendientes = 0;
 
     for (const lote of lotes) {
-      const costoLote = lote.precioCompraBaseKg.multiply(lote.cantidadCompradaKg.value).add(lote.costoFlete);
+      const costoLote = lote.costoTotalLote;
       totalCosto = totalCosto.add(costoLote);
 
       if (lote.estadoPago === 'PAGADO') {

@@ -274,24 +274,16 @@ export class PrismaLoteRepo implements LoteRepository {
         estadoPago: EstadoPagoLote.PENDIENTE,
         deletedAt: null,
       },
-      select: {
-        cantidadCompradaKg: true,
-        precioCompraBaseKg: true,
-        costoFlete: true,
-      },
     });
 
+    const lotes = records.map((r) => this.toEntity(r));
     let total = new Prisma.Decimal(0);
-    let count = records.length;
 
-    for (const r of records) {
-      const costoLote = new Prisma.Decimal(r.cantidadCompradaKg)
-        .mul(new Prisma.Decimal(r.precioCompraBaseKg))
-        .add(new Prisma.Decimal(r.costoFlete));
-      total = total.add(costoLote);
+    for (const lote of lotes) {
+      total = total.add(new Prisma.Decimal(lote.costoTotalLote.value));
     }
 
-    return { total: total.toString(), count };
+    return { total: total.toString(), count: lotes.length };
   }
 
   private toEntity(record: Prisma.LoteGetPayload<{}>): Lote {

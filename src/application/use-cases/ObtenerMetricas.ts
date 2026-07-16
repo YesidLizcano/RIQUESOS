@@ -223,10 +223,11 @@ export class ObtenerMetricas {
       }
     );
 
-    // 5. Inventory value (sum of costoRealCalculadoKg × stockDisponibleKg for active lotes)
+    // 5. Inventory value (sum of costoTotalLote proportionally to remaining stock for active lotes)
     let inventarioValor = Dinero.zero();
     for (const lote of lotesActivos) {
-      const valorLote = lote.costoRealCalculadoKg.multiply(lote.stockDisponibleKg.value);
+      const proporcionRestante = Number(lote.stockDisponibleKg.value) / Number(lote.cantidadCompradaKg.value);
+      const valorLote = lote.costoTotalLote.multiply(String(proporcionRestante.toFixed(6)));
       inventarioValor = inventarioValor.add(valorLote);
     }
 

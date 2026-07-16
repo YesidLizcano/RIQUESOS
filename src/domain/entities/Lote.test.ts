@@ -649,6 +649,65 @@ describe('Lote', () => {
     });
   });
 
+  describe('costoTotalLote', () => {
+    it('should calculate (enteros × precioEntero) + (tajados × precioTajado) + flete for DC lot', () => {
+      // User scenario: 10 enteros @ $44000 + 10 tajados @ $46000 = $900000
+      const lote = new Lote({
+        proveedorId: 'prov-1',
+        producto: TipoProducto.DOBLE_CREMA,
+        cantidadCompradaKg: '50', // 20 blocks × 2.5 kg
+        precioCompraBaseKg: '18000',
+        precioPorBloqueEntero: '44000',
+        precioPorBloqueTajado: '46000',
+        bloquesEnteros: 10,
+        bloquesTajadosDeFabrica: 10,
+        costoFlete: '0',
+      });
+      // (10 × 44000) + (10 × 46000) + 0 = 440000 + 460000 = 900000
+      expect(lote.costoTotalLote.value).toBe('900000');
+    });
+
+    it('should include flete in costoTotalLote for DC lot', () => {
+      const lote = new Lote({
+        proveedorId: 'prov-1',
+        producto: TipoProducto.DOBLE_CREMA,
+        cantidadCompradaKg: '50',
+        precioCompraBaseKg: '18000',
+        precioPorBloqueEntero: '44000',
+        precioPorBloqueTajado: '46000',
+        bloquesEnteros: 10,
+        bloquesTajadosDeFabrica: 10,
+        costoFlete: '50000',
+      });
+      // (10 × 44000) + (10 × 46000) + 50000 = 950000
+      expect(lote.costoTotalLote.value).toBe('950000');
+    });
+
+    it('should use simple formula for non-DC lot (precioCompraBaseKg × kg + flete)', () => {
+      const lote = new Lote({
+        proveedorId: 'prov-1',
+        producto: TipoProducto.SEMISALADO,
+        cantidadCompradaKg: '100',
+        precioCompraBaseKg: '20000',
+        costoFlete: '50000',
+      });
+      // 20000 × 100 + 50000 = 2050000
+      expect(lote.costoTotalLote.value).toBe('2050000');
+    });
+
+    it('should fall back to simple formula for DC lot with no blocks', () => {
+      const lote = new Lote({
+        proveedorId: 'prov-1',
+        producto: TipoProducto.DOBLE_CREMA,
+        cantidadCompradaKg: '100',
+        precioCompraBaseKg: '3000',
+        costoFlete: '50000',
+      });
+      // No blocks → simple formula: 3000 × 100 + 50000 = 350000
+      expect(lote.costoTotalLote.value).toBe('350000');
+    });
+  });
+
   describe('marcarPagado', () => {
     it('should change estadoPago to PAGADO and set metodoPagoLote', () => {
       const lote = new Lote(validProps);

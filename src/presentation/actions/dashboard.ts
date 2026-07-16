@@ -196,7 +196,7 @@ export async function getCuentasPorPagarDetalle() {
     const responseGrupos = sortedGrupos.map((grupo) => {
       let totalProveedor = new Dinero('0');
       const loteResponses = grupo.lotes.map((lote) => {
-        const costoTotal = lote.costoRealCalculadoKg.multiply(lote.cantidadCompradaKg.value);
+        const costoTotal = lote.costoTotalLote;
         totalProveedor = totalProveedor.add(costoTotal);
         return {
           loteId: lote.id,
