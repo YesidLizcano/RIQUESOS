@@ -46,7 +46,7 @@ export function CrearClienteDialog({}: CrearClienteDialogProps) {
     const result = crearClienteSchema.safeParse({
       nombre,
       tipo: tipo || undefined,
-      valorDomicilio: valorDomicilio || undefined,
+      valorDomicilio: valorDomicilio !== '' ? valorDomicilio : undefined,
     });
 
     if (!result.success) {
@@ -66,7 +66,7 @@ export function CrearClienteDialog({}: CrearClienteDialogProps) {
     const formData = new FormData();
     formData.set('nombre', nombre);
     formData.set('tipo', tipo);
-    if (valorDomicilio) formData.set('valorDomicilio', valorDomicilio);
+    formData.set('valorDomicilio', valorDomicilio || '0');
     const actionResult = await crearCliente(formData);
     if (actionResult.success) {
       toast.success('Cliente creado exitosamente');

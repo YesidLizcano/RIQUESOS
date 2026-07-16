@@ -57,7 +57,7 @@ export function EditarClienteDialog({ cliente, open, onOpenChange }: EditarClien
     const result = actualizarClienteSchema.safeParse({
       id: cliente.id,
       nombre,
-      valorDomicilio: valorDomicilio || undefined,
+      valorDomicilio: valorDomicilio === '' ? undefined : valorDomicilio,
     });
 
     if (!result.success) {
@@ -77,7 +77,7 @@ export function EditarClienteDialog({ cliente, open, onOpenChange }: EditarClien
     const formData = new FormData();
     formData.set('id', cliente.id);
     formData.set('nombre', nombre);
-    if (valorDomicilio) formData.set('valorDomicilio', valorDomicilio);
+    formData.set('valorDomicilio', valorDomicilio || '0');
     const actionResult = await actualizarCliente(formData);
     if (actionResult.success) {
       toast.success('Cliente actualizado exitosamente');

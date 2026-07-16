@@ -11,6 +11,7 @@ import { VentaDetalleDialog } from '@/components/venta-detalle-dialog';
 import { AbonoPagoDialog } from '@/components/abono-pago-dialog';
 import { DateRangePicker } from '@/components/date-range-picker';
 import { getVentasByExactDateRange } from '@/presentation/actions/ventas';
+import { getClientesIncludeDeleted } from '@/presentation/actions/clientes';
 import { useExportExcel } from '@/hooks/use-export-excel';
 import type { ColumnType, ColumnMapItem } from '@/hooks/use-export-excel';
 import { usePdfDownload } from '@/hooks/use-pdf-download';
@@ -145,6 +146,7 @@ function formatDisplayDate(isoDate: string): string {
 
 export function VentasClientPage({ initialVentas, clientes, lotes, proveedores, precioBolsa, initialInicio, initialFin, initialMetodoPago, initialSaldoPendiente }: VentasClientPageProps) {
   const [ventas, setVentas] = useState<VentaResponse[]>(initialVentas);
+  const [clientesState, setClientes] = useState<ClienteResponse[]>(clientes);
   const [inicio, setInicio] = useState(initialInicio);
   const [fin, setFin] = useState(initialFin);
   const [loading, setLoading] = useState(false);
@@ -153,18 +155,18 @@ export function VentasClientPage({ initialVentas, clientes, lotes, proveedores, 
   const [saldoPendiente, setSaldoPendiente] = useState(initialSaldoPendiente ?? false);
 
   const clienteMap = useMemo(
-    () => new Map(clientes.map((c) => [c.id, c.nombre])),
-    [clientes]
+    () => new Map(clientesState.map((c) => [c.id, c.nombre])),
+    [clientesState]
   );
 
   const clienteObjMap = useMemo(
-    () => new Map(clientes.map((c) => [c.id, c])),
-    [clientes]
+    () => new Map(clientesState.map((c) => [c.id, c])),
+    [clientesState]
   );
 
   const clienteFilterOptions = useMemo(
-    () => clientes.filter((c) => !c.deletedAt).map((c) => ({ label: c.nombre, value: c.id })),
-    [clientes]
+    () => clientesState.filter((c) => !c.deletedAt).map((c) => ({ label: c.nombre, value: c.id })),
+    [clientesState]
   );
 
   const loteProductoMap = useMemo(
@@ -313,9 +315,15 @@ export function VentasClientPage({ initialVentas, clientes, lotes, proveedores, 
   }, [inicio, fin]);
 
   const refreshData = useCallback(async () => {
-    const result = await getVentasByExactDateRange(inicio, fin);
-    if (result.success && result.ventas) {
-      setVentas(result.ventas);
+    const [ventasResult, clientesResult] = await Promise.all([
+      getVentasByExactDateRange(inicio, fin),
+      getClientesIncludeDeleted(),
+    ]);
+    if (ventasResult.success && ventasResult.ventas) {
+      setVentas(ventasResult.ventas);
+    }
+    if (clientesResult.success && clientesResult.clientes) {
+      setClientes(clientesResult.clientes);
     }
   }, [inicio, fin]);
 
@@ -335,7 +343,7 @@ export function VentasClientPage({ initialVentas, clientes, lotes, proveedores, 
             fin={fin}
             onDateRangeChange={handleDateRangeChange}
           />
-          <RegistrarVentaDialog clientes={clientes} lotes={lotes} proveedorMap={proveedorMap} ventaToEdit={ventaToEdit} onEditComplete={() => setVentaToEdit(null)} precioBolsa={precioBolsa} />
+          <RegistrarVentaDialog clientes={clientesState} lotes={lotes} proveedorMap={proveedorMap} ventaToEdit={ventaToEdit} onEditComplete={() => setVentaToEdit(null)} precioBolsa={precioBolsa} />
           {ventaToAbonar && (
             <AbonoPagoDialog
               ventaId={ventaToAbonar.id}

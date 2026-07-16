@@ -46,7 +46,7 @@ export async function crearCliente(formData: FormData) {
     precioDobleCremaEntero: parsed.data.precioDobleCremaEntero || undefined,
     precioDobleCremaTajado: parsed.data.precioDobleCremaTajado || undefined,
     precioSemisalado: parsed.data.precioSemisalado || undefined,
-    valorDomicilio: parsed.data.valorDomicilio || undefined,
+    valorDomicilio: parsed.data.valorDomicilio !== undefined && parsed.data.valorDomicilio !== '' ? parsed.data.valorDomicilio : undefined,
   };
 
   try {
@@ -82,7 +82,7 @@ export async function actualizarCliente(formData: FormData) {
     precioDobleCremaEntero: parsed.data.precioDobleCremaEntero || undefined,
     precioDobleCremaTajado: parsed.data.precioDobleCremaTajado || undefined,
     precioSemisalado: parsed.data.precioSemisalado || undefined,
-    valorDomicilio: parsed.data.valorDomicilio || undefined,
+    valorDomicilio: parsed.data.valorDomicilio !== undefined && parsed.data.valorDomicilio !== '' ? parsed.data.valorDomicilio : '0',
   };
 
   try {
@@ -90,6 +90,7 @@ export async function actualizarCliente(formData: FormData) {
     const cliente = await useCase.actualizar(request);
 
     revalidatePath('/clientes');
+    revalidatePath('/ventas');
     return { success: true, cliente: clienteToResponse(cliente) };
   } catch (error) {
     logger.error({ err: error }, 'Error updating cliente');
