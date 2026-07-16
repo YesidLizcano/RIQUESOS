@@ -1,6 +1,8 @@
 @echo off
 echo Iniciando Riquesos...
-start "Riquesos Server" npm run dev
+echo Instalando dependencias...
+call npm install
 echo Esperando a que el servidor este listo...
+start "Riquesos Server" npm run dev
 timeout /t 8 /nobreak >nul
 start "" "http://localhost:3000"
