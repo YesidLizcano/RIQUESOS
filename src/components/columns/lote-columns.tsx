@@ -85,7 +85,7 @@ export function createLoteColumns(
         const precioBase = Number(row.getValue('precioCompraBaseKg'));
         const precioBloqueEntero = Number(row.original.precioPorBloqueEntero);
         const precioBloqueTajado = Number(row.original.precioPorBloqueTajado);
-        if (isDobleCrema(producto) && precioBloqueEntero > 0) {
+        if (isDobleCrema(producto) && (precioBloqueEntero > 0 || precioBloqueTajado > 0)) {
           const tieneEnteros = row.original.bloquesEnteros > 0;
           const tieneTajadosFabrica = row.original.bloquesTajadosDeFabrica > 0;
           if (tieneEnteros && tieneTajadosFabrica && precioBloqueTajado > 0 && precioBloqueTajado !== precioBloqueEntero) {
