@@ -86,14 +86,18 @@ export function createLoteColumns(
         const precioBloqueEntero = Number(row.original.precioPorBloqueEntero);
         const precioBloqueTajado = Number(row.original.precioPorBloqueTajado);
         if (isDobleCrema(producto) && precioBloqueEntero > 0) {
+          const tieneEnteros = row.original.bloquesEnteros > 0;
           const tieneTajadosFabrica = row.original.bloquesTajadosDeFabrica > 0;
-          if (tieneTajadosFabrica && precioBloqueTajado > 0 && precioBloqueTajado !== precioBloqueEntero) {
+          if (tieneEnteros && tieneTajadosFabrica && precioBloqueTajado > 0 && precioBloqueTajado !== precioBloqueEntero) {
             return (
               <span className="whitespace-nowrap text-xs leading-tight">
                 ${precioBloqueEntero.toLocaleString('es-AR')}/E<br />
                 ${precioBloqueTajado.toLocaleString('es-AR')}/TF
               </span>
             );
+          }
+          if (!tieneEnteros && tieneTajadosFabrica) {
+            return <span className="whitespace-nowrap">${precioBloqueTajado.toLocaleString('es-AR')}/TF</span>;
           }
           return <span className="whitespace-nowrap">${precioBloqueEntero.toLocaleString('es-AR')}/bl</span>;
         }
@@ -109,19 +113,30 @@ export function createLoteColumns(
         const costoKg = Number(row.getValue('costoRealCalculadoKg'));
         const producto = row.original.producto;
         if (isDobleCrema(producto)) {
+          const tieneEnteros = row.original.bloquesEnteros > 0;
+          const tieneTajados = row.original.bloquesTajados > 0 || row.original.bloquesTajadosDeFabrica > 0;
           const costoBloqueEntero = Math.round(costoKg * DOBLE_CREMA_BLOCK_KG);
-          // Tajado: use the higher of costoTajadoKg or costoTajadoFabricaKg, fallback to entero cost
           const costoTajadoKg = Number(row.original.costoTajadoKg) || costoKg;
           const costoTajadoFabricaKg = Number(row.original.costoTajadoFabricaKg) || costoKg;
           const maxCostoTajadoKg = Math.max(costoTajadoKg, costoTajadoFabricaKg);
           const costoBloqueTajado = Math.round(maxCostoTajadoKg * DOBLE_CREMA_BLOCK_KG);
-          return (
-            <span className="whitespace-nowrap text-xs leading-tight">
-              <span className="text-green-700 dark:text-green-400">${costoBloqueEntero.toLocaleString('es-AR')}/E</span>
-              <br />
-              <span className="text-amber-700 dark:text-amber-400">${costoBloqueTajado.toLocaleString('es-AR')}/T</span>
-            </span>
-          );
+
+          if (tieneEnteros && tieneTajados) {
+            return (
+              <span className="whitespace-nowrap text-xs leading-tight">
+                <span className="text-green-700 dark:text-green-400">${costoBloqueEntero.toLocaleString('es-AR')}/E</span>
+                <br />
+                <span className="text-amber-700 dark:text-amber-400">${costoBloqueTajado.toLocaleString('es-AR')}/T</span>
+              </span>
+            );
+          }
+          if (tieneEnteros) {
+            return <span className="whitespace-nowrap text-green-700 dark:text-green-400">${costoBloqueEntero.toLocaleString('es-AR')}/E</span>;
+          }
+          if (tieneTajados) {
+            return <span className="whitespace-nowrap text-amber-700 dark:text-amber-400">${costoBloqueTajado.toLocaleString('es-AR')}/T</span>;
+          }
+          return <span className="whitespace-nowrap">${costoBloqueEntero.toLocaleString('es-AR')}/bl</span>;
         }
         return <span className="whitespace-nowrap">${Math.round(costoKg).toLocaleString('es-AR')}/kg</span>;
       },
