@@ -35,8 +35,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusIcon, TrashIcon, Pencil, CheckIcon, ArrowLeftIcon, Loader2, AlertTriangleIcon } from 'lucide-react';
+import { PlusIcon, TrashIcon, Pencil, CheckIcon, ArrowLeftIcon, Loader2, AlertTriangleIcon, UserPlus } from 'lucide-react';
 import { EditarClienteDialog } from '@/components/forms/editar-cliente-dialog';
+import { crearCliente } from '@/presentation/actions/clientes';
+import { crearClienteSchema } from '@/presentation/validations/cliente.schema';
 import { Badge } from '@/components/ui/badge';
 import { ProductoBadge } from '@/components/producto-badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -492,6 +494,17 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
   const [clienteId, setClienteId] = useState<string>('');
   const [sedeId, setSedeId] = useState<string>('');
   const [sedes, setSedes] = useState<SedeResponse[]>([]);
+  const [crearClienteOpen, setCrearClienteOpen] = useState(false);
+  const [crearClienteNombre, setCrearClienteNombre] = useState('');
+  const [crearClienteLoading, setCrearClienteLoading] = useState(false);
+  const [localClientes, setLocalClientes] = useState<ClienteResponse[]>(clientes);
+
+  // Sync local clientes when prop changes
+  useEffect(() => {
+    setLocalClientes(clientes);
+  }, [clientes]);
+
+  const activeClientes = useMemo(() => localClientes.filter((c) => !c.deletedAt), [localClientes]);
   const [items, setItems] = useState<VentaItemForm[]>([createEmptyItem()]);
   const [valorDomicilio, setValorDomicilio] = useState<string>('');
   const [costoDomiciliario, setCostoDomiciliario] = useState<string>('');
@@ -567,8 +580,7 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
     }
   }, [clienteId]);
 
-  // Filter only active clientes and lotes
-  const activeClientes = useMemo(() => clientes.filter((c) => !c.deletedAt), [clientes]);
+  // Filter only active lotes
   const lotesConStock = useMemo(
     () => lotes.filter((l) => l.estado === 'ACTIVO' && Number(l.stockDisponibleKg) > 0 && !l.deletedAt),
     [lotes]
@@ -584,6 +596,29 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
 
   const selectedCliente = activeClientes.find((c) => c.id === clienteId);
   const isMayorista = selectedCliente?.tipo === TipoCliente.MAYORISTA;
+
+  async function handleCrearCliente(e: React.FormEvent) {
+    e.preventDefault();
+    if (!crearClienteNombre.trim()) {
+      toast.error('Ingrese un nombre para el cliente');
+      return;
+    }
+    setCrearClienteLoading(true);
+    const formData = new FormData();
+    formData.set('nombre', crearClienteNombre.trim());
+    formData.set('tipo', 'MINORISTA');
+    const result = await crearCliente(formData);
+    if (result.success && result.cliente) {
+      toast.success('Cliente creado exitosamente');
+      setLocalClientes((prev) => [...prev, result.cliente!]);
+      setClienteId(result.cliente.id);
+      setCrearClienteNombre('');
+      setCrearClienteOpen(false);
+    } else {
+      toast.error(result.error || 'Error al crear cliente');
+    }
+    setCrearClienteLoading(false);
+  }
 
   // Fetch proveedor-specific prices for MAYORISTA clients
   useEffect(() => {
@@ -1711,7 +1746,13 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
           <div className="space-y-2">
             <Label htmlFor="clienteId">Cliente</Label>
             <div className="flex gap-2">
-              <Select name="clienteId" value={clienteId} onValueChange={(v) => { setClienteId(v ?? ''); }}>
+              <Select name="clienteId" value={clienteId} onValueChange={(v) => {
+                if (v === '__crear__') {
+                  setCrearClienteOpen(true);
+                  return;
+                }
+                setClienteId(v ?? '');
+              }}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Seleccione cliente">{clienteId ? (clienteLabels.get(clienteId) ?? 'Seleccione cliente') : 'Seleccione cliente'}</SelectValue>
                 </SelectTrigger>
@@ -1721,8 +1762,23 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
                       {c.nombre} ({tipoClienteLabel[c.tipo as TipoCliente] ?? c.tipo})
                     </SelectItem>
                   ))}
+                  <SelectItem value="__crear__" className="text-primary font-medium">
+                    <span className="flex items-center gap-1.5"><UserPlus className="size-3.5" /> Crear nuevo cliente</span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
+              {!isEditMode && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => setCrearClienteOpen(true)}
+                  title="Crear nuevo cliente"
+                >
+                  <UserPlus className="size-4" />
+                </Button>
+              )}
               {selectedCliente && (
                 <Button
                   type="button"
@@ -2576,6 +2632,39 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
             if (!open) refreshData();
           }}
         />
+      )}
+      {!isEditMode && (
+        <Dialog open={crearClienteOpen} onOpenChange={setCrearClienteOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Crear Nuevo Cliente</DialogTitle>
+              <DialogDescription>
+                Se creará como Minorista. Podés editar los datos completos después.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleCrearCliente} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="crear-cliente-nombre">Nombre</Label>
+                <Input
+                  id="crear-cliente-nombre"
+                  type="text"
+                  placeholder="Nombre del cliente"
+                  value={crearClienteNombre}
+                  onChange={(e) => setCrearClienteNombre(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setCrearClienteOpen(false)} disabled={crearClienteLoading}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={crearClienteLoading || !crearClienteNombre.trim()}>
+                  {crearClienteLoading ? 'Creando...' : 'Crear y Seleccionar'}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       )}
     </Dialog>
   );
