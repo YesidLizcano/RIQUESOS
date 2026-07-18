@@ -62,6 +62,7 @@ function loteToResponse(lote: import('@/domain/entities/Lote').Lote): LoteRespon
     metodoPagoLote: lote.metodoPagoLote,
     version: lote.version,
     deletedAt: lote.deletedAt?.toISOString() ?? null,
+    costBreakdown: lote.costBreakdown,
   };
 }
 

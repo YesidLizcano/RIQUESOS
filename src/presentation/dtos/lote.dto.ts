@@ -64,6 +64,8 @@ export interface LoteResponse {
   metodoPagoLote: string;
   version: number;
   deletedAt: string | null;
+  /** Detailed cost breakdown for auditing DC block cost calculations */
+  costBreakdown?: Record<string, string>;
 }
 
 export interface LoteListResponse {

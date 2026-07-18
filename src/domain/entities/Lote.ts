@@ -221,6 +221,62 @@ export class Lote {
     return this.costoRealCalculadoKg.add(costoExtra);
   }
 
+  /**
+   * Detailed cost breakdown for DC blocks.
+   * Returns each component that contributes to the final cost per kg,
+   * so the user can audit exactly what's driving the price.
+   */
+  get costBreakdown(): Record<string, string> {
+    if (this.producto !== TipoProducto.DOBLE_CREMA) {
+      // Non-DC: simple formula
+      const costoBase = this.precioCompraBaseKg.multiply(this.cantidadCompradaKg.value);
+      const costoTotal = costoBase.add(this.costoFlete);
+      return {
+        tipo: 'SEMISALADO',
+        precioCompraBaseKg: this.precioCompraBaseKg.value,
+        cantidadCompradaKg: this.cantidadCompradaKg.value,
+        costoFlete: this.costoFlete.value,
+        costoBaseTotal: costoBase.value,
+        costoTotal: costoTotal.value,
+        costoRealCalculadoKg: this.costoRealCalculadoKg.value,
+      };
+    }
+
+    const totalBloques = this.bloquesEnteros + this.bloquesTajadosDeFabrica;
+    const fletePorBloque = totalBloques > 0
+      ? this.costoFlete.divide(String(totalBloques)).value
+      : '0';
+    const costoEnteroPorBloque = this.precioPorBloqueEntero.add(
+      totalBloques > 0 ? this.costoFlete.divide(String(totalBloques)) : Dinero.zero()
+    );
+    const kgTajados = this.bloquesTajados * DOBLE_CREMA_BLOCK_KG;
+    const tajadoPlusSeparadores = this.costoTajado.add(this.costoSeparadores);
+    const costoExtra = this.bloquesTajados > 0
+      ? tajadoPlusSeparadores.divide(String(kgTajados)).value
+      : '0';
+
+    return {
+      tipo: 'DOBLE_CREMA',
+      bloquesEnteros: String(this.bloquesEnteros),
+      bloquesTajados: String(this.bloquesTajados),
+      bloquesTajadosDeFabrica: String(this.bloquesTajadosDeFabrica),
+      totalBloquesUsadosParaFlete: String(totalBloques),
+      precioPorBloqueEntero: this.precioPorBloqueEntero.value,
+      precioPorBloqueTajado: this.precioPorBloqueTajado.value,
+      costoFlete: this.costoFlete.value,
+      fletePorBloque,
+      costoEnteroPorBloque: costoEnteroPorBloque.value,
+      costoRealCalculadoKg: this.costoRealCalculadoKg.value,
+      costoTajado: this.costoTajado.value,
+      costoSeparadores: this.costoSeparadores.value,
+      tajadoPlusSeparadores: tajadoPlusSeparadores.value,
+      kgTajadosInternos: String(kgTajados),
+      costoExtraPorKgTajado: costoExtra,
+      costoTajadoKg: this.costoTajadoKg.value,
+      costoTajadoFabricaKg: this.costoTajadoFabricaKg.value,
+    };
+  }
+
   private validate(): void {
     if (!this.proveedorId) {
       throw new Error('Lote proveedorId is required');
