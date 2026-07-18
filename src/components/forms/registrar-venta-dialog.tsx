@@ -789,13 +789,13 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
         const isDualVariety = isDcGranel && kgEntero > 0 && kgTajado > 0;
 
         if (isDualVariety) {
-          // DC GRANEL dual-variety: compute income for each variety with separate prices
+          // DC GRANEL dual-variety: only check price for varieties with quantity > 0
           const precioEntero = Number(item.precioVentaKgEntero) || Number(item.precioVentaKg) || 0;
           const precioTajado = Number(item.precioVentaKgTajado) || Number(item.precioVentaKg) || 0;
           itemIngreso = kgEntero * precioEntero + kgTajado * precioTajado;
-          if ((kgEntero > 0 && precioEntero <= 0) || (kgTajado > 0 && precioTajado <= 0)) hasZeroPrice = true;
+          if (kgEntero > 0 && precioEntero <= 0) hasZeroPrice = true;
+          if (kgTajado > 0 && precioTajado <= 0) hasZeroPrice = true;
         } else if (isDcGranel) {
-          // DC GRANEL single variety: use the appropriate price field
           const hasEnteroStock = lote!.bloquesEnteros > 0 || Number(lote!.sueltosEntero) > 0;
           const hasTajadoStock = lote!.bloquesTajados > 0 || lote!.bloquesTajadosDeFabrica > 0 || Number(lote!.sueltosTajado) > 0;
           let precio: number;
