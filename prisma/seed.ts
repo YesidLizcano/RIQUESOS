@@ -128,6 +128,26 @@ async function main() {
     });
     console.log('Created: Separador (stock: 50 kg, precio: 300)');
   }
+  // Migration: set bloquesTajadosAcumulados for existing lots that have tajados
+  // This field was added to prevent cost inflation when tajados are sold.
+  // For existing data, we set it equal to bloquesTajados (best approximation —
+  // we don't know how many were produced historically, but current stock is a floor).
+  const lotsWithTajados = await prisma.lote.findMany({
+    where: { bloquesTajados: { gt: 0 }, bloquesTajadosAcumulados: 0 },
+    select: { id: true, bloquesTajados: true },
+  });
+  if (lotsWithTajados.length > 0) {
+    let updated = 0;
+    for (const lote of lotsWithTajados) {
+      await prisma.lote.update({
+        where: { id: lote.id },
+        data: { bloquesTajadosAcumulados: lote.bloquesTajados },
+      });
+      updated++;
+    }
+    console.log(`Migrated bloquesTajadosAcumulados for ${updated} lots with existing tajados`);
+  }
+
   console.log('Seed complete.');
 }
 
