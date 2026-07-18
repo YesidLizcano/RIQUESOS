@@ -758,9 +758,9 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
         const enteros = parseInt(item.bloquesEnteros) || 0;
         const tajados = parseInt(item.bloquesTajados) || 0;
         const formPrecioEntero = Number(item.precioEnteroBloque);
-        const formPrecioTajado = Number(item.precioTajadoBloque) || formPrecioEntero;
+        const formPrecioTajado = Number(item.precioTajadoBloque);
         const resolvedPrecioEntero = formPrecioEntero || prices.entero;
-        const resolvedPrecioTajado = formPrecioTajado || formPrecioEntero || (prices.tajado ?? prices.entero);
+        const resolvedPrecioTajado = formPrecioTajado || (prices.tajado ?? prices.entero);
 
         if (enteros > 0 && !resolvedPrecioEntero) hasZeroPrice = true;
         if (tajados > 0 && !resolvedPrecioTajado) hasZeroPrice = true;
@@ -955,7 +955,7 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
       if (isDcBloques) {
         // Use form fields for per-block prices
         const formPrecioEntero = Number(item.precioEnteroBloque);
-        const formPrecioTajado = Number(item.precioTajadoBloque) || formPrecioEntero; // fallback to entero if empty
+        const formPrecioTajado = Number(item.precioTajadoBloque);
 
         resolvedPrecioEntero = formPrecioEntero || prices.entero;
         resolvedPrecioTajado = formPrecioTajado || formPrecioEntero || (prices.tajado ?? prices.entero);
@@ -1283,12 +1283,12 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
 
       // Resolve per-block prices: prefer form inputs, fall back to memorized prices
       const formPrecioEntero = Number(item.precioEnteroBloque);
-      const formPrecioTajado = Number(item.precioTajadoBloque) || formPrecioEntero;
+      const formPrecioTajado = Number(item.precioTajadoBloque);
       const resolvedPrecioEntero = isDcBloques
         ? (formPrecioEntero || prices.entero)
         : prices.entero;
       const resolvedPrecioTajado = isDcBloques
-        ? (formPrecioTajado || formPrecioEntero || (prices.tajado ?? prices.entero))
+        ? (formPrecioTajado || (prices.tajado ?? prices.entero))
         : (prices.tajado ?? prices.entero);
 
       let precioVentaKg = Number(item.precioVentaKg) || 0;
@@ -2291,8 +2291,8 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
                           step="0.01"
                           min="0"
                           placeholder="0.00"
-                          value={item.precioVentaKgTajado || item.precioVentaKg}
-                          onChange={(e) => updateItem(index, { precioVentaKgTajado: e.target.value, precioVentaKg: e.target.value })}
+                          value={item.precioVentaKgTajado}
+                          onChange={(e) => updateItem(index, { precioVentaKgTajado: e.target.value })}
                         />
                         {(prices.tajado ?? prices.entero) !== null && (
                           <p className="text-xs text-muted-foreground">
