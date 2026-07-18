@@ -25,6 +25,7 @@ export interface LoteProps {
   bloquesTajadosDeFabrica?: number;
   bloquesEnterosOriginal?: number;
   bloquesTajadosFabricaOriginal?: number;
+  bloquesTajadosAcumulados?: number;
   sueltosEntero?: string;
   sueltosTajado?: string;
   estado?: EstadoLote;
@@ -51,9 +52,10 @@ export class Lote {
   readonly stockDisponibleKg: Kilogramo;
   readonly bloquesEnteros: number;
   readonly bloquesTajados: number;
-  readonly bloquesTajadosDeFabrica: number;
+  readonly   bloquesTajadosDeFabrica: number;
   readonly bloquesEnterosOriginal: number;
   readonly bloquesTajadosFabricaOriginal: number;
+  readonly bloquesTajadosAcumulados: number;
   readonly sueltosEntero: Kilogramo;
   readonly sueltosTajado: Kilogramo;
   readonly estado: EstadoLote;
@@ -75,6 +77,7 @@ export class Lote {
     this.bloquesTajadosDeFabrica = props.bloquesTajadosDeFabrica ?? 0;
     this.bloquesEnterosOriginal = props.bloquesEnterosOriginal ?? 0;
     this.bloquesTajadosFabricaOriginal = props.bloquesTajadosFabricaOriginal ?? 0;
+    this.bloquesTajadosAcumulados = props.bloquesTajadosAcumulados ?? 0;
     this.sueltosEntero = props.sueltosEntero ? new Kilogramo(props.sueltosEntero) : Kilogramo.zero();
     this.sueltosTajado = props.sueltosTajado ? new Kilogramo(props.sueltosTajado) : Kilogramo.zero();
 
@@ -215,7 +218,12 @@ export class Lote {
     if (this.producto !== TipoProducto.DOBLE_CREMA || this.bloquesTajados === 0) {
       return this.costoRealCalculadoKg;
     }
-    const kgTajados = this.bloquesTajados * DOBLE_CREMA_BLOCK_KG;
+    // Use bloquesTajadosAcumulados (total ever produced) as denominator,
+    // not bloquesTajados (current stock). This prevents cost inflation
+    // when tajados are sold — the tajado cost was incurred for ALL blocks
+    // that were cut, not just the ones still in stock.
+    const denominator = this.bloquesTajadosAcumulados > 0 ? this.bloquesTajadosAcumulados : this.bloquesTajados;
+    const kgTajados = denominator * DOBLE_CREMA_BLOCK_KG;
     const tajadoPlusSeparadores = this.costoTajado.add(this.costoSeparadores);
     const costoExtra = tajadoPlusSeparadores.divide(String(kgTajados));
     return this.costoRealCalculadoKg.add(costoExtra);
@@ -251,8 +259,10 @@ export class Lote {
     );
     const kgTajados = this.bloquesTajados * DOBLE_CREMA_BLOCK_KG;
     const tajadoPlusSeparadores = this.costoTajado.add(this.costoSeparadores);
-    const costoExtra = this.bloquesTajados > 0
-      ? tajadoPlusSeparadores.divide(String(kgTajados)).value
+    const denominator = this.bloquesTajadosAcumulados > 0 ? this.bloquesTajadosAcumulados : this.bloquesTajados;
+    const kgTajadosForCost = denominator * DOBLE_CREMA_BLOCK_KG;
+    const costoExtra = denominator > 0
+      ? tajadoPlusSeparadores.divide(String(kgTajadosForCost)).value
       : '0';
 
     return {
@@ -261,6 +271,7 @@ export class Lote {
       bloquesTajados: String(this.bloquesTajados),
       bloquesTajadosDeFabrica: String(this.bloquesTajadosDeFabrica),
       totalBloquesUsadosParaFlete: String(totalBloques),
+      bloquesTajadosAcumulados: String(this.bloquesTajadosAcumulados),
       precioPorBloqueEntero: this.precioPorBloqueEntero.value,
       precioPorBloqueTajado: this.precioPorBloqueTajado.value,
       costoFlete: this.costoFlete.value,
@@ -338,6 +349,7 @@ export class Lote {
       bloquesTajadosDeFabrica: this.bloquesTajadosDeFabrica,
       bloquesEnterosOriginal: this.bloquesEnterosOriginal,
       bloquesTajadosFabricaOriginal: this.bloquesTajadosFabricaOriginal,
+      bloquesTajadosAcumulados: this.bloquesTajadosAcumulados + cantidadBloques,
       sueltosEntero: this.sueltosEntero.value,
       sueltosTajado: this.sueltosTajado.value,
       estado: this.estado,
@@ -392,6 +404,7 @@ export class Lote {
       bloquesTajadosDeFabrica: this.bloquesTajadosDeFabrica,
       bloquesEnterosOriginal: this.bloquesEnterosOriginal,
       bloquesTajadosFabricaOriginal: this.bloquesTajadosFabricaOriginal,
+      bloquesTajadosAcumulados: this.bloquesTajadosAcumulados,
       sueltosEntero: this.sueltosEntero.value,
       sueltosTajado: this.sueltosTajado.value,
       estado: newEstado,
@@ -457,6 +470,7 @@ export class Lote {
       bloquesTajadosDeFabrica: this.bloquesTajadosDeFabrica,
       bloquesEnterosOriginal: this.bloquesEnterosOriginal,
       bloquesTajadosFabricaOriginal: this.bloquesTajadosFabricaOriginal,
+      bloquesTajadosAcumulados: this.bloquesTajadosAcumulados,
       sueltosEntero: this.sueltosEntero.value,
       sueltosTajado: this.sueltosTajado.value,
       estado: newEstado,
@@ -479,6 +493,7 @@ export class Lote {
       bloquesEnteros: 0,
       bloquesTajados: 0,
       bloquesTajadosDeFabrica: 0,
+      bloquesTajadosAcumulados: this.bloquesTajadosAcumulados, // preserve: total tajados ever produced
       sueltosEntero: '0',
       sueltosTajado: '0',
       estado: EstadoLote.AGOTADO,
@@ -508,6 +523,7 @@ export class Lote {
       bloquesTajadosDeFabrica: this.bloquesTajadosDeFabrica,
       bloquesEnterosOriginal: this.bloquesEnterosOriginal,
       bloquesTajadosFabricaOriginal: this.bloquesTajadosFabricaOriginal,
+      bloquesTajadosAcumulados: this.bloquesTajadosAcumulados,
       sueltosEntero: this.sueltosEntero.value,
       sueltosTajado: this.sueltosTajado.value,
       estado: EstadoLote.AGOTADO,
@@ -552,6 +568,7 @@ export class Lote {
       bloquesTajadosDeFabrica: this.bloquesTajadosDeFabrica,
       bloquesEnterosOriginal: this.bloquesEnterosOriginal,
       bloquesTajadosFabricaOriginal: this.bloquesTajadosFabricaOriginal,
+      bloquesTajadosAcumulados: this.bloquesTajadosAcumulados,
       sueltosEntero: this.sueltosEntero.value,
       sueltosTajado: this.sueltosTajado.value,
       estado: this.estado,
@@ -582,6 +599,7 @@ export class Lote {
       bloquesTajadosDeFabrica: this.bloquesTajadosDeFabrica,
       bloquesEnterosOriginal: this.bloquesEnterosOriginal,
       bloquesTajadosFabricaOriginal: this.bloquesTajadosFabricaOriginal,
+      bloquesTajadosAcumulados: this.bloquesTajadosAcumulados,
       sueltosEntero: this.sueltosEntero.value,
       sueltosTajado: this.sueltosTajado.value,
       estado: this.estado,
@@ -612,6 +630,7 @@ export class Lote {
       bloquesTajadosDeFabrica: this.bloquesTajadosDeFabrica,
       bloquesEnterosOriginal: this.bloquesEnterosOriginal,
       bloquesTajadosFabricaOriginal: this.bloquesTajadosFabricaOriginal,
+      bloquesTajadosAcumulados: this.bloquesTajadosAcumulados,
       sueltosEntero: this.sueltosEntero.value,
       sueltosTajado: this.sueltosTajado.value,
       estado: this.estado,
@@ -643,6 +662,7 @@ export class Lote {
       bloquesTajadosDeFabrica: this.bloquesTajadosDeFabrica,
       bloquesEnterosOriginal: this.bloquesEnterosOriginal,
       bloquesTajadosFabricaOriginal: this.bloquesTajadosFabricaOriginal,
+      bloquesTajadosAcumulados: this.bloquesTajadosAcumulados,
       sueltosEntero: this.sueltosEntero.value,
       sueltosTajado: this.sueltosTajado.value,
       estado: this.estado,
