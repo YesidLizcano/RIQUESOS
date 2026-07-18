@@ -834,11 +834,19 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
           const hasEnteroStock = lote!.bloquesEnteros > 0 || Number(lote!.sueltosEntero) > 0;
           const hasTajadoStock = lote!.bloquesTajados > 0 || lote!.bloquesTajadosDeFabrica > 0 || Number(lote!.sueltosTajado) > 0;
           let precio: number;
-          if (hasEnteroStock && !hasTajadoStock) {
+          // Determine price based on which variety the user is actually selling
+          if (kgEntero > 0 && kgTajado === 0) {
+            // Selling only enteros — use entero price
+            precio = Number(item.precioVentaKgEntero) || Number(item.precioVentaKg) || 0;
+          } else if (kgTajado > 0 && kgEntero === 0) {
+            // Selling only tajados — use tajado price
+            precio = Number(item.precioVentaKgTajado) || Number(item.precioVentaKg) || 0;
+          } else if (hasEnteroStock && !hasTajadoStock) {
             precio = Number(item.precioVentaKgEntero) || Number(item.precioVentaKg) || 0;
           } else if (!hasEnteroStock && hasTajadoStock) {
             precio = Number(item.precioVentaKgTajado) || Number(item.precioVentaKg) || 0;
           } else {
+            // Fallback: both stocks, no dual-variety fields filled — use generic price
             precio = Number(item.precioVentaKg) || 0;
           }
           itemIngreso = cantidadKg * precio;
@@ -1378,17 +1386,25 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
         ingresoTajados = kgTajadoForm * precioVentaKgTajado;
         precioVentaKg = cantidadKg > 0 ? ingreso / cantidadKg : 0;
       } else if (isDcGranel) {
-        // DC GRANEL single variety
+        // DC GRANEL — resolve price based on which variety the user is actually selling
         const hasEnteroStock = lote!.bloquesEnteros > 0 || Number(lote!.sueltosEntero) > 0;
         const hasTajadoStock = lote!.bloquesTajados > 0 || lote!.bloquesTajadosDeFabrica > 0 || Number(lote!.sueltosTajado) > 0;
-        if (hasEnteroStock && !hasTajadoStock) {
+        if (kgEnteroForm > 0 && kgTajadoForm === 0) {
+          // Selling only enteros — use entero price
+          precioVentaKgEntero = Number(item.precioVentaKgEntero) || precioVentaKg;
+          precioVentaKg = precioVentaKgEntero;
+        } else if (kgTajadoForm > 0 && kgEnteroForm === 0) {
+          // Selling only tajados — use tajado price
+          precioVentaKgTajado = Number(item.precioVentaKgTajado) || precioVentaKg;
+          precioVentaKg = precioVentaKgTajado;
+        } else if (hasEnteroStock && !hasTajadoStock) {
           precioVentaKgEntero = Number(item.precioVentaKgEntero) || precioVentaKg;
           precioVentaKg = precioVentaKgEntero;
         } else if (!hasEnteroStock && hasTajadoStock) {
           precioVentaKgTajado = Number(item.precioVentaKgTajado) || precioVentaKg;
           precioVentaKg = precioVentaKgTajado;
         } else {
-          // Both varieties available but only one chosen
+          // Fallback: both stocks, no dual-variety fields filled — use generic price + corte
           const corte = item.origenCorte || 'ENTERO';
           if (corte === 'ENTERO') {
             precioVentaKgEntero = precioVentaKg;
@@ -1537,6 +1553,11 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
   function handleGoToSummary() {
     if (!clienteId) {
       toast.error('Seleccione un cliente');
+      return;
+    }
+
+    if (realtimeSummary.totalGeneral <= 0) {
+      toast.error('El ingreso total debe ser mayor a $0 para continuar');
       return;
     }
 
@@ -2557,7 +2578,7 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
             <Button type="button" variant="outline" onClick={() => { setOpen(false); resetForm(); }}>
               Cancelar
             </Button>
-            <Button type="button" onClick={handleGoToSummary}>
+            <Button type="button" onClick={handleGoToSummary} disabled={realtimeSummary.totalGeneral <= 0}>
               Revisar
             </Button>
           </div>
