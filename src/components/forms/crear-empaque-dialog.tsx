@@ -110,7 +110,7 @@ export function CrearEmpaqueDialog() {
       const actionResult = await registrarCompraInsumo(formData);
       if (actionResult.success) {
         toast.success('Compra registrada exitosamente');
-        refreshData();
+        await refreshData();
         setOpen(false);
         setCategoria(CategoriaInsumo.BOLSA);
         setStock('');
@@ -127,7 +127,7 @@ export function CrearEmpaqueDialog() {
       const actionResult = await crearEmpaque(formData);
       if (actionResult.success) {
         toast.success('Insumo registrado exitosamente');
-        refreshData();
+        await refreshData();
         setOpen(false);
         setCategoria(CategoriaInsumo.BOLSA);
         setStock('');

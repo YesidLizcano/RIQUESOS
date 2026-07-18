@@ -72,7 +72,7 @@ export function EditarEmpaqueDialog({ empaque, open, onOpenChange }: EditarEmpaq
     const actionResult = await actualizarEmpaque(formData);
     if (actionResult.success) {
       toast.success('Insumo actualizado exitosamente');
-      refreshData();
+      await refreshData();
       onOpenChange(false);
     } else {
       toast.error(actionResult.error || 'Error al actualizar insumo');
