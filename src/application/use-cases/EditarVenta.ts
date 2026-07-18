@@ -5,7 +5,7 @@ import { VentaItem } from '../../domain/entities/VentaItem';
 import { Lote } from '../../domain/entities/Lote';
 import { Dinero } from '../../domain/value-objects/Dinero';
 import { Kilogramo } from '../../domain/value-objects/Kilogramo';
-import { TipoProducto, TipoCliente, CategoriaInsumo, MetodoPago, OrigenCorte, type MetodoPagoAbono } from '../../domain/enums';
+import { TipoProducto, TipoCliente, CategoriaInsumo, MetodoPago, OrigenCorte, OrigenTajadoGranel, type MetodoPagoAbono } from '../../domain/enums';
 import { DOBLE_CREMA_BLOCK_KG, METODOS_PAGO_ABONO } from '../../domain/constants';
 import { PrecioClienteProveedor } from '../../domain/entities/PrecioClienteProveedor';
 import { Cliente } from '../../domain/entities/Cliente';
@@ -336,7 +336,15 @@ export class EditarVenta {
       let costoAplicadoKg: string;
       let costoAplicadoExacto: string | null = null;
       if (ventaTipo === 'GRANEL') {
-        costoAplicadoKg = lote.costoRealCalculadoKg.value;
+        // DC GRANEL: cost depends on which variety the kg come from
+        if (lote.producto === TipoProducto.DOBLE_CREMA && origenCorte === OrigenCorte.TAJADO) {
+          const origen = itemInput.origenTajadoGranel ?? OrigenTajadoGranel.INTERNO;
+          costoAplicadoKg = origen === OrigenTajadoGranel.FABRICA
+            ? lote.costoTajadoFabricaKg.value
+            : lote.costoTajadoKg.value;
+        } else {
+          costoAplicadoKg = lote.costoRealCalculadoKg.value;
+        }
       } else if (bloquesEnterosVendidos > 0 || bloquesTajadosVendidos > 0) {
         const kgEnteros = bloquesEnterosVendidos * DOBLE_CREMA_BLOCK_KG;
         const kgTajadosFabrica = tajadosFromFabrica * DOBLE_CREMA_BLOCK_KG;
@@ -402,6 +410,7 @@ export class EditarVenta {
         precioEnteroBloque: itemInput.precioEnteroBloque,
         precioTajadoBloque: itemInput.precioTajadoBloque,
         origenCorte: lote.producto === TipoProducto.DOBLE_CREMA && ventaTipo === 'GRANEL' ? origenCorte : undefined,
+        origenTajadoGranel: lote.producto === TipoProducto.DOBLE_CREMA && ventaTipo === 'GRANEL' && origenCorte === OrigenCorte.TAJADO ? (itemInput.origenTajadoGranel ?? OrigenTajadoGranel.INTERNO) : undefined,
         sueltosEnteroDelta,
         sueltosTajadoDelta,
       });

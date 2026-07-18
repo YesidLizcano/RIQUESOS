@@ -1419,7 +1419,28 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
       let costoAplicadoKg = 0;
       if (lote) {
         if (ventaTipo === 'GRANEL') {
-          costoAplicadoKg = Number(lote.costoRealCalculadoKg);
+          // DC GRANEL: cost depends on which variety the kg come from
+          if (isDobleCrema(lote.producto)) {
+            const origenCorte = item.origenCorte || 'ENTERO';
+            if (origenCorte === 'TAJADO') {
+              const origenTajado = item.origenTajadoGranel || 'INTERNO';
+              costoAplicadoKg = origenTajado === 'FABRICA'
+                ? Number(lote.costoTajadoFabricaKg)
+                : Number(lote.costoTajadoKg);
+            } else {
+              costoAplicadoKg = Number(lote.costoRealCalculadoKg);
+            }
+            // Dual-variety: weighted average of both costs
+            if (isDualVariety) {
+              const costoEntero = Number(lote.costoRealCalculadoKg);
+              const costoTajadoKg = Number(lote.costoTajadoKg);
+              const costoTotalEntero = costoEntero * kgEnteroForm;
+              const costoTotalTajado = costoTajadoKg * kgTajadoForm;
+              costoAplicadoKg = cantidadKg > 0 ? (costoTotalEntero + costoTotalTajado) / cantidadKg : costoEntero;
+            }
+          } else {
+            costoAplicadoKg = Number(lote.costoRealCalculadoKg);
+          }
         } else if (isDobleCrema(lote.producto)) {
           const kgEnteros = enteros * DOBLE_CREMA_BLOCK_KG;
           const kgTajadosFabrica = tajadosDeFabrica * DOBLE_CREMA_BLOCK_KG;

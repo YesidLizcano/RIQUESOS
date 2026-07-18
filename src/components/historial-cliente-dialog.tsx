@@ -31,7 +31,7 @@ function formatItemDetail(item: VentaItemResponse): string {
       return `${label}: ${formatDobleCremaGranel(Number(item.cantidadKg), variedad, origen)}`;
     }
   } else {
-    return `${label}: ${Number(item.cantidadKg).toFixed(1)} kg`;
+    return `${label}: ${Number(item.cantidadKg)} kg`;
   }
 }
 import {

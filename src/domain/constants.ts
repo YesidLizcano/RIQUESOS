@@ -21,7 +21,7 @@ export function bloquesCompletos(stockKg: number): number {
 
 /** Remaining kg after removing complete blocks */
 export function kgParciales(stockKg: number): number {
-  return Number((stockKg % DOBLE_CREMA_BLOCK_KG).toFixed(1));
+  return Math.round((stockKg % DOBLE_CREMA_BLOCK_KG) * 1000) / 1000;
 }
 
 /** Whether a product type is Doble Crema */
@@ -62,7 +62,7 @@ export function formatDobleCremaGranel(
 ): string {
   if (kg <= 0) return '0';
   const enteros = Math.floor(kg / DOBLE_CREMA_BLOCK_KG);
-  const restante = Number((kg % DOBLE_CREMA_BLOCK_KG).toFixed(1));
+  const restante = Math.round((kg % DOBLE_CREMA_BLOCK_KG) * 1000) / 1000;
   const tipoSuffix = variedad === 'tajado' && origenTajado ? ` ${origenTajado === 'FABRICA' ? 'TF' : 'TI'}` : '';
 
   if (enteros === 0) return `${restante} kg (de ${variedad}${tipoSuffix})`;
@@ -97,10 +97,10 @@ export function formatDobleCremaDetalle(
 ): string {
   // Convert loose kg to whole blocks per variety
   const enterosExtra = Math.floor(kgSueltosEntero / DOBLE_CREMA_BLOCK_KG);
-  const remanenteEntero = Number((kgSueltosEntero % DOBLE_CREMA_BLOCK_KG).toFixed(1));
+  const remanenteEntero = Math.round((kgSueltosEntero % DOBLE_CREMA_BLOCK_KG) * 1000) / 1000;
 
   const tajadosExtra = Math.floor(kgSueltosTajado / DOBLE_CREMA_BLOCK_KG);
-  const remanenteTajado = Number((kgSueltosTajado % DOBLE_CREMA_BLOCK_KG).toFixed(1));
+  const remanenteTajado = Math.round((kgSueltosTajado % DOBLE_CREMA_BLOCK_KG) * 1000) / 1000;
 
   const totalEnteros = enteros + enterosExtra;
   const totalTajados = tajados + tajadosExtra;
