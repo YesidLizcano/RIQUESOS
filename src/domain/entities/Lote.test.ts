@@ -421,13 +421,30 @@ describe('Lote', () => {
       expect(first.costoTajado.value).toBe('7500');
       expect(first.bloquesEnteros).toBe(35);
       expect(first.bloquesTajados).toBe(5);
-      expect(first.bloquesTajadosAcumulados).toBe(5);
+      expect(first.bloquesTajadosOriginal).toBe(5);
 
       const second = first.registrarTajado(3, '2000');
       expect(second.costoTajado.value).toBe('13500');
       expect(second.bloquesEnteros).toBe(32);
       expect(second.bloquesTajados).toBe(8);
-      expect(second.bloquesTajadosAcumulados).toBe(8);
+      expect(second.bloquesTajadosOriginal).toBe(8);
+    });
+
+    it('should increment bloquesTajadosOriginal on each tajado operation (lifetime counter)', () => {
+      const lote = new Lote({
+        ...validProps,
+        cantidadCompradaKg: '100',
+        bloquesEnteros: 40,
+        precioCompraBaseKg: '3000',
+      });
+      // bloquesTajadosOriginal starts at 0 for new lots
+      expect(lote.bloquesTajadosOriginal).toBe(0);
+
+      const first = lote.registrarTajado(5, '1500');
+      expect(first.bloquesTajadosOriginal).toBe(5);
+
+      const second = first.registrarTajado(3, '2000');
+      expect(second.bloquesTajadosOriginal).toBe(8);
     });
 
     it('should accumulate costoSeparadores across multiple tajado operations', () => {
@@ -556,7 +573,6 @@ describe('Lote', () => {
         cantidadCompradaKg: '112.5', // 45 blocks = 30 enteros + 5 tajados + 10 tajados de fábrica
         bloquesEnteros: 30,
         bloquesTajados: 5,
-        bloquesTajadosAcumulados: 5,
         bloquesTajadosDeFabrica: 10,
         precioCompraBaseKg: '3000',
         costoFlete: '10000',
@@ -573,27 +589,48 @@ describe('Lote', () => {
       expect(Number(lote.costoTajadoKg.value)).toBeLessThan(3760);
     });
 
-    it('should use bloquesTajadosAcumulados as denominator to prevent cost inflation when tajados are sold', () => {
-      // Scenario: 5 tajados produced (acumulados=5), but 3 sold (bloquesTajados=2)
-      // Without acumulados: (7500 + 750) / (2 × 2.5) = 8250/5 = 1650/kg extra (INFLATED)
-      // With acumulados: (7500 + 750) / (5 × 2.5) = 8250/12.5 = 660/kg extra (CORRECT)
+    it('should use bloquesTajadosOriginal as divisor for costoTajadoKg (not bloquesTajados)', () => {
+      // After cutting 10 blocks internally, then selling some so bloquesTajados drops to 3.
+      // The per-kg tajado cost should STILL use 10 as divisor (bloquesTajadosOriginal),
+      // NOT 3 (bloquesTajados). This prevents cost from inflating as blocks are sold.
       const lote = new Lote({
         ...validProps,
-        cantidadCompradaKg: '112.5',
+        cantidadCompradaKg: '100',
+        bloquesEnteros: 40,
+        precioCompraBaseKg: '3000',
+        costoFlete: '10000',
+        bloquesTajados: 3,          // current inventory: only 3 remain
+        bloquesTajadosOriginal: 10, // but 10 were ever cut (lifetime counter)
+        costoTajado: '15000',       // cost for 10 blocks
+        costoSeparadores: '5000',
+      });
+      // costoRealCalculadoKg = (3000 × 100 + 10000) / 100 = 3100
+      // With bloquesTajadosOriginal = 10: costoExtra = (15000 + 5000) / (10 × 2.5) = 20000 / 25 = 800
+      // costoTajadoKg = 3100 + 800 = 3900
+      // With bloquesTajados = 3 (WRONG): costoExtra = 20000 / (3 × 2.5) = 20000 / 7.5 = 2666.67 (inflated!)
+      expect(lote.costoTajadoKg.value).toBe('3900');
+    });
+
+    it('should fall back to bloquesTajados when bloquesTajadosOriginal is 0 (legacy data)', () => {
+      // Legacy lots that existed before bloquesTajadosOriginal was added will have it as 0.
+      // The formula should fall back to bloquesTajados so behavior is unchanged.
+      const lote = new Lote({
+        ...validProps,
+        cantidadCompradaKg: '100',
         bloquesEnteros: 30,
-        bloquesTajados: 2,            // only 2 remain (3 were sold)
-        bloquesTajadosAcumulados: 5,  // 5 were produced total
-        bloquesTajadosDeFabrica: 10,
+        bloquesTajados: 5,
+        bloquesTajadosOriginal: 0, // legacy — never had tajado registered via the new field
         precioCompraBaseKg: '3000',
         costoFlete: '10000',
         costoTajado: '7500',
         costoSeparadores: '750',
       });
-      // costoRealCalculadoKg = (3000×112.5 + 10000) / 112.5 ≈ 3088.89
-      // With acumulados: costoExtra = (7500 + 750) / (5 × 2.5) = 660
-      // costoTajadoKg ≈ 3088.89 + 660 = 3748.89
-      expect(Number(lote.costoTajadoKg.value)).toBeGreaterThan(3740);
-      expect(Number(lote.costoTajadoKg.value)).toBeLessThan(3760);
+      // Falls back to bloquesTajados = 5
+      // costoRealCalculadoKg = (3000 × 100 + 10000) / 100 = 3100
+      // costoExtra = (7500 + 750) / (5 × 2.5) = 8250 / 12.5 = 660
+      // costoTajadoKg = 3100 + 660 = 3760
+      expect(Number(lote.costoTajadoKg.value)).toBeGreaterThan(3750);
+      expect(Number(lote.costoTajadoKg.value)).toBeLessThan(3770);
     });
   });
 
@@ -932,7 +969,6 @@ describe('Lote', () => {
         stockDisponibleKg: '50',
         bloquesEnteros: 10,
         bloquesTajados: 3,
-        bloquesTajadosAcumulados: 3,
         bloquesTajadosDeFabrica: 2,
         sueltosEntero: '1.5',
         sueltosTajado: '0.8',
@@ -962,7 +998,6 @@ describe('Lote', () => {
         stockDisponibleKg: '50',
         bloquesEnteros: 10,
         bloquesTajados: 3,
-        bloquesTajadosAcumulados: 3,
         bloquesTajadosDeFabrica: 2,
         bloquesEnterosOriginal: 20,
         bloquesTajadosFabricaOriginal: 5,
@@ -984,8 +1019,6 @@ describe('Lote', () => {
       // Original block counts preserved
       expect(result.bloquesEnterosOriginal).toBe(20);
       expect(result.bloquesTajadosFabricaOriginal).toBe(5);
-      // bloquesTajadosAcumulados preserved (never decreases)
-      expect(result.bloquesTajadosAcumulados).toBe(3);
       // cantidadCompradaKg preserved
       expect(result.cantidadCompradaKg.value).toBe('100');
     });

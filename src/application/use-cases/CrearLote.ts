@@ -81,7 +81,6 @@ export class CrearLote {
         bloquesTajados: 0, // Initially no bloques tajados
         bloquesEnterosOriginal: bloquesEnteros,
         bloquesTajadosFabricaOriginal: bloquesTajadosDeFabrica,
-        bloquesTajadosAcumulados: 0, // Initially no tajados produced
         estadoPago: input.estadoPago,
         metodoPagoLote: input.metodoPagoLote,
       };
@@ -105,7 +104,6 @@ export class CrearLote {
         bloquesTajadosDeFabrica: 0,
         bloquesEnterosOriginal: 0,
         bloquesTajadosFabricaOriginal: 0,
-        bloquesTajadosAcumulados: 0,
         estadoPago: input.estadoPago,
         metodoPagoLote: input.metodoPagoLote,
       };
