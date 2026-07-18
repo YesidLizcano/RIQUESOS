@@ -149,8 +149,13 @@ function computeAbonoMetodoPagoBreakdown(
   }
 
   const breakdown: AbonoMetodoPagoBreakdown[] = [];
+  // Calculate percentage relative to total abonado, not ingresoTotal
+  // This ensures percentages sum to 100% and no single method exceeds 100%
+  const totalAbonado = Array.from(map.values()).reduce((sum, m) => sum.plus(m), new Prisma.Decimal(0));
   for (const [metodoPago, monto] of map) {
-    const porcentaje = Number(monto.div(ingresoTotal).mul(100).toFixed(1));
+    const porcentaje = totalAbonado.gt(0)
+      ? Number(monto.div(totalAbonado).mul(100).toFixed(1))
+      : 0;
     breakdown.push({ metodoPago, monto: monto.toFixed(0), porcentaje });
   }
 

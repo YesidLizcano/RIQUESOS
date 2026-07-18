@@ -195,34 +195,35 @@ export function createVentaColumns(
         const metodoPagoFilter = table.getColumn('metodoPago')?.getFilterValue() as string | undefined;
         const breakdown = venta.abonoMetodoPagoBreakdown;
 
-        // Build proportion badge for CREDITO ventas when filter is active
-        let badgeLabel: string | null = null;
+        // Build proportion badges for CREDITO ventas
+        let badges: Array<{ label: string; detail?: string }> = [];
 
         if (mp === 'CREDITO' && breakdown && breakdown.length > 0) {
           if (metodoPagoFilter) {
-            // Find matching breakdown entry from the active filter
             const filterMethods = String(metodoPagoFilter).split(',');
             const matchingBreakdown = breakdown.filter(b => filterMethods.includes(b.metodoPago));
-            if (matchingBreakdown.length > 0) {
-              badgeLabel = matchingBreakdown
-                .map(b => `Abono ${metodoPagoLabel[b.metodoPago] ?? b.metodoPago}: ${formatCurrency(b.monto)} — ${b.porcentaje}%`)
-                .join(' · ');
-            }
+            badges = matchingBreakdown.map(b => ({
+              label: `${metodoPagoLabel[b.metodoPago] ?? b.metodoPago} ${b.porcentaje}%`,
+              detail: `${formatCurrency(b.monto)}`,
+            }));
           } else {
-            // No filter active — show compact summary of all methods
-            badgeLabel = breakdown
-              .map(b => `${metodoPagoLabel[b.metodoPago] ?? b.metodoPago} ${b.porcentaje}%`)
-              .join(', ');
+            badges = breakdown.map(b => ({
+              label: `${metodoPagoLabel[b.metodoPago] ?? b.metodoPago} ${b.porcentaje}%`,
+            }));
           }
         }
 
         return (
           <div className="flex flex-col gap-0.5">
             <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${colorClass}`}>{label}</span>
-            {mp === 'CREDITO' && badgeLabel && (
-              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium bg-amber-50 text-amber-700">
-                {badgeLabel}
-              </span>
+            {mp === 'CREDITO' && badges.length > 0 && (
+              <div className="flex flex-wrap gap-0.5">
+                {badges.map((b, i) => (
+                  <span key={i} className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                    {b.label}
+                  </span>
+                ))}
+              </div>
             )}
             {isSaldado && (
               <span className="inline-flex items-center gap-0.5 text-xs font-medium text-green-600">
