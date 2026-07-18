@@ -1586,10 +1586,17 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
 
       // Price validation
       if (ventaTipo === 'BLOQUES' && isDobleCrema(lote.producto)) {
-        // DC BLOQUES — per-block price required
+        // DC BLOQUES — per-block price required only for varieties with quantity > 0
+        const enteros = parseInt(item.bloquesEnteros) || 0;
+        const tajados = parseInt(item.bloquesTajados) || 0;
         const precioEntero = Number(item.precioEnteroBloque);
-        if (!precioEntero || precioEntero <= 0) {
-          toast.error('Ingrese el precio por bloque entero para todos los items de Doble Crema');
+        const precioTajado = Number(item.precioTajadoBloque);
+        if (enteros > 0 && (!precioEntero || precioEntero <= 0)) {
+          toast.error('Ingrese el precio por bloque entero');
+          return;
+        }
+        if (tajados > 0 && (!precioTajado || precioTajado <= 0)) {
+          toast.error('Ingrese el precio por bloque tajado');
           return;
         }
       } else if (isDobleCrema(lote.producto)) {
