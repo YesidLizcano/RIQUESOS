@@ -17,6 +17,7 @@ import { logger } from '@/infrastructure/pino-logger';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/infrastructure/db';
 import { OrigenCorte, OrigenTajadoGranel } from '@/domain/enums';
+import { ConcurrencyError } from '@/domain/errors/ConcurrencyError';
 import type { VentaResponse, VentaItemResponse, VentaTipo, AbonoMetodoPagoBreakdown } from '../dtos';
 
 function ventaRecordToResponse(v: {
@@ -228,6 +229,13 @@ export async function registrarVenta(input: {
     logger.info({ ventaId: result.venta.id, items: result.items.length }, 'Venta registered successfully');
     return { success: true, venta: ventaResponse };
   } catch (error) {
+    if (error instanceof ConcurrencyError) {
+      return {
+        success: false,
+        error: 'Los datos del lote fueron modificados recientemente por otra operación. Se actualizará la pantalla para obtener los datos más recientes.',
+        concurrencyError: true,
+      };
+    }
     logger.warn({ err: error }, 'Venta registration failed');
     return {
       success: false,
@@ -394,6 +402,13 @@ export async function eliminarVenta(input: { ventaId: string }) {
     logger.info({ ventaId: input.ventaId }, 'Venta deleted successfully');
     return { success: true };
   } catch (error) {
+    if (error instanceof ConcurrencyError) {
+      return {
+        success: false,
+        error: 'Los datos del lote fueron modificados recientemente por otra operación. Se actualizará la pantalla para obtener los datos más recientes.',
+        concurrencyError: true,
+      };
+    }
     logger.warn({ err: error }, 'Venta deletion failed');
     return {
       success: false,
@@ -484,6 +499,13 @@ export async function editarVenta(input: {
     logger.info({ ventaId: result.venta.id, oldVentaId: input.ventaId }, 'Venta edited successfully');
     return { success: true, venta: ventaResponse };
   } catch (error) {
+    if (error instanceof ConcurrencyError) {
+      return {
+        success: false,
+        error: 'Los datos del lote fueron modificados recientemente por otra operación. Se actualizará la pantalla para obtener los datos más recientes.',
+        concurrencyError: true,
+      };
+    }
     logger.warn({ err: error }, 'Venta edit failed');
     return {
       success: false,

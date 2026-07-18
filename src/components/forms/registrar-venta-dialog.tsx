@@ -1245,7 +1245,12 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
           onEditComplete();
         }
       } else {
-        toast.error(result.error || (isEditMode ? 'Error al actualizar venta' : 'Error al registrar venta'));
+        if ((result as { concurrencyError?: boolean }).concurrencyError) {
+          toast.error(result.error || 'Conflicto de concurrencia');
+          await refreshData();
+        } else {
+          toast.error(result.error || (isEditMode ? 'Error al actualizar venta' : 'Error al registrar venta'));
+        }
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : (isEditMode ? 'Error al actualizar venta' : 'Error al registrar venta'));
