@@ -49,20 +49,11 @@ async function main() {
 
   console.log(`Proveedores upserted: ${proveedor1.nombre}, ${proveedor2.nombre}`);
 
-  // Upsert system proveedor for internal operations (recortes)
-  const proveedorInterno = await prisma.proveedor.upsert({
-    where: { id: 'proveedor-operacion-interna' },
-    update: { nombre: 'Operación Interna' },
-    create: {
-      id: 'proveedor-operacion-interna',
-      nombre: 'Operación Interna',
-      telefono: null,
-    },
-  });
+  // Delete any leftover internal proveedor from previous versions
+  await prisma.proveedor.deleteMany({ where: { id: 'proveedor-operacion-interna' } });
+  await prisma.proveedor.deleteMany({ where: { id: 'proveedor-recortes-dc' } });
 
-  console.log(`Proveedor interno upserted: ${proveedorInterno.nombre}`);
-
-  // Upsert permanent accumulation lot for recortes (DOBLE_CREMA with internal proveedor)
+  // Upsert permanent accumulation lot for recortes (DOBLE_CREMA with no proveedor — internal)
   const existingRecortesLot = await prisma.lote.findFirst({
     where: { id: 'lote-recortes-dc-permanente', deletedAt: null },
   });
@@ -71,7 +62,7 @@ async function main() {
       data: {
         id: 'lote-recortes-dc-permanente',
         producto: 'DOBLE_CREMA',
-        proveedorId: 'proveedor-operacion-interna',
+        proveedorId: null,
         cantidadCompradaKg: 0,
         precioCompraBaseKg: 0,
         stockDisponibleKg: 0,
@@ -80,6 +71,12 @@ async function main() {
       },
     });
     console.log('Created permanent Recortes Doble Crema lot');
+  } else {
+    // Migrate existing recortes lot: set proveedorId to null
+    await prisma.lote.updateMany({
+      where: { id: 'lote-recortes-dc-permanente' },
+      data: { proveedorId: null },
+    });
   }
 
   // Seed default insumos with initial CompraInsumo lots

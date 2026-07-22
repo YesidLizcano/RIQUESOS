@@ -8,7 +8,7 @@ import type { TajadoRepository } from '../../domain/ports/TajadoRepository';
 import type { ClienteRepository } from '../../domain/ports/ClienteRepository';
 import type { VentaItemRepository } from '../../domain/ports/VentaItemRepository';
 import type { ProveedorRepository } from '../../domain/ports/ProveedorRepository';
-import { OPERACION_INTERNA_PROVEEDOR_ID, RECORTES_DC_PERMANENT_LOT_ID } from '../../domain/constants';
+import { RECORTES_DC_PERMANENT_LOT_ID } from '../../domain/constants';
 
 export interface MetricasPeriodo {
   ingresoTotal: string;
@@ -228,7 +228,7 @@ export class ObtenerMetricas {
     // Exclude internal lots (recortes) from inventory valuation — they are byproducts with no purchase cost
     let inventarioValor = Dinero.zero();
     for (const lote of lotesActivos) {
-      if (lote.proveedorId === OPERACION_INTERNA_PROVEEDOR_ID) continue;
+      if (!lote.proveedorId) continue;
       if (lote.cantidadCompradaKg.isZero()) continue;
       const proporcionRestante = Number(lote.stockDisponibleKg.value) / Number(lote.cantidadCompradaKg.value);
       const valorLote = lote.costoTotalLote.multiply(String(proporcionRestante.toFixed(6)));
@@ -366,7 +366,7 @@ export class ObtenerMetricas {
       const loteInfo = loteMap.get(item.loteId);
       if (!loteInfo) continue;
       if (loteInfo.producto === 'DOBLE_CREMA') {
-        if (loteInfo.proveedorId === OPERACION_INTERNA_PROVEEDOR_ID) {
+        if (!loteInfo.proveedorId) {
           // Recortes lot — track separately, not in DC/SS volume
           recortesKg += Number(item.cantidadKg.value);
         } else {
@@ -386,7 +386,7 @@ export class ObtenerMetricas {
       const loteInfo = loteMap.get(item.loteId);
       if (!loteInfo) continue;
       if (loteInfo.producto === 'DOBLE_CREMA') {
-        if (loteInfo.proveedorId === OPERACION_INTERNA_PROVEEDOR_ID) {
+        if (!loteInfo.proveedorId) {
           // Recortes lot — tracked separately as volumenRecortesKg
           recortesKg += Number(item.cantidadKg.value);
         } else if (item.ventaTipo === 'BLOQUES') {

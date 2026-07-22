@@ -331,7 +331,7 @@ export function createLoteColumns(
               restoreAction={restaurarLote}
               deleteToastLabel="Lote"
               renderEditDialog={(open, onOpenChange) => (
-                <EditarLoteDialog lote={row.original} open={open} onOpenChange={onOpenChange} proveedorNombre={proveedorMap?.get(row.original.proveedorId ?? '') ?? (row.original.proveedorId ? undefined : 'Operación Interna')} />
+                <EditarLoteDialog lote={row.original} open={open} onOpenChange={onOpenChange} proveedorNombre={proveedorMap?.get(row.original.proveedorId ?? '') ?? (row.original.proveedorId ? undefined : '(Interno)')} />
               )}
             />
           </div>
