@@ -94,7 +94,6 @@ model Lote {
   bloquesTajadosDeFabrica Int         @default(0)
   bloquesEnterosOriginal      Int          @default(0)
   bloquesTajadosFabricaOriginal Int     @default(0)
-  bloquesTajadosOriginal       Int          @default(0)
   sueltosEntero            Decimal      @default(0)
   sueltosTajado            Decimal      @default(0)
   precioPorBloqueEntero  Decimal      @default("0")

@@ -54,7 +54,6 @@ function loteToResponse(lote: import('@/domain/entities/Lote').Lote): LoteRespon
     bloquesTajadosDeFabrica: lote.bloquesTajadosDeFabrica,
     bloquesEnterosOriginal: lote.bloquesEnterosOriginal,
     bloquesTajadosFabricaOriginal: lote.bloquesTajadosFabricaOriginal,
-    bloquesTajadosOriginal: lote.bloquesTajadosOriginal,
     sueltosEntero: lote.sueltosEntero.value,
     sueltosTajado: lote.sueltosTajado.value,
     bloquesTajadosDisponibles: lote.bloquesTajados + lote.bloquesTajadosDeFabrica,
@@ -63,7 +62,6 @@ function loteToResponse(lote: import('@/domain/entities/Lote').Lote): LoteRespon
     metodoPagoLote: lote.metodoPagoLote,
     version: lote.version,
     deletedAt: lote.deletedAt?.toISOString() ?? null,
-    costBreakdown: lote.costBreakdown,
   };
 }
 

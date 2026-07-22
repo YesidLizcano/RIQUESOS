@@ -1,5 +1,6 @@
 'use client';
 
+import { Fragment } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import type { LoteResponse } from '@/presentation/dtos';
 import { EditarLoteDialog } from '@/components/forms/editar-lote-dialog';
@@ -107,26 +108,40 @@ export function createLoteColumns(
     {
       accessorKey: 'costoRealCalculadoKg',
       header: 'Costo Real',
-      size: 95,
+      size: 120,
       enableGlobalFilter: false,
       cell: ({ row }) => {
         const costoKg = Number(row.getValue('costoRealCalculadoKg'));
         const producto = row.original.producto;
         if (isDobleCrema(producto)) {
           const tieneEnteros = row.original.bloquesEnteros > 0;
-          const tieneTajados = row.original.bloquesTajados > 0 || row.original.bloquesTajadosDeFabrica > 0;
+          const tieneTajadosFabrica = row.original.bloquesTajadosDeFabrica > 0;
+          const tieneTajadosInternos = row.original.bloquesTajados > 0;
+          const tieneTajados = tieneTajadosFabrica || tieneTajadosInternos;
           const costoBloqueEntero = Math.round(costoKg * DOBLE_CREMA_BLOCK_KG);
-          const costoTajadoKg = Number(row.original.costoTajadoKg) || costoKg;
-          const costoTajadoFabricaKg = Number(row.original.costoTajadoFabricaKg) || costoKg;
-          const maxCostoTajadoKg = Math.max(costoTajadoKg, costoTajadoFabricaKg);
-          const costoBloqueTajado = Math.round(maxCostoTajadoKg * DOBLE_CREMA_BLOCK_KG);
 
           if (tieneEnteros && tieneTajados) {
+            const lines: React.ReactNode[] = [];
+            lines.push(
+              <span key="E" className="text-green-700 dark:text-green-400">${costoBloqueEntero.toLocaleString('es-AR')}/E</span>
+            );
+            if (tieneTajadosFabrica) {
+              const costoTF = Math.round(Number(row.original.costoTajadoFabricaKg) * DOBLE_CREMA_BLOCK_KG);
+              lines.push(
+                <span key="TF" className="text-amber-700 dark:text-amber-400">${costoTF.toLocaleString('es-AR')}/TF</span>
+              );
+            }
+            if (tieneTajadosInternos) {
+              const costoTI = Math.round(Number(row.original.costoTajadoKg) * DOBLE_CREMA_BLOCK_KG);
+              lines.push(
+                <span key="TI" className="text-blue-700 dark:text-blue-400">${costoTI.toLocaleString('es-AR')}/TI</span>
+              );
+            }
             return (
               <span className="whitespace-nowrap text-xs leading-tight">
-                <span className="text-green-700 dark:text-green-400">${costoBloqueEntero.toLocaleString('es-AR')}/E</span>
-                <br />
-                <span className="text-amber-700 dark:text-amber-400">${costoBloqueTajado.toLocaleString('es-AR')}/T</span>
+                {lines.map((l, i) => (
+                  <Fragment key={i}>{i > 0 && <br />}{l}</Fragment>
+                ))}
               </span>
             );
           }
@@ -134,7 +149,29 @@ export function createLoteColumns(
             return <span className="whitespace-nowrap text-green-700 dark:text-green-400">${costoBloqueEntero.toLocaleString('es-AR')}/E</span>;
           }
           if (tieneTajados) {
-            return <span className="whitespace-nowrap text-amber-700 dark:text-amber-400">${costoBloqueTajado.toLocaleString('es-AR')}/T</span>;
+            const lines: React.ReactNode[] = [];
+            if (tieneTajadosFabrica) {
+              const costoTF = Math.round(Number(row.original.costoTajadoFabricaKg) * DOBLE_CREMA_BLOCK_KG);
+              lines.push(
+                <span key="TF" className="text-amber-700 dark:text-amber-400">${costoTF.toLocaleString('es-AR')}/TF</span>
+              );
+            }
+            if (tieneTajadosInternos) {
+              const costoTI = Math.round(Number(row.original.costoTajadoKg) * DOBLE_CREMA_BLOCK_KG);
+              lines.push(
+                <span key="TI" className="text-blue-700 dark:text-blue-400">${costoTI.toLocaleString('es-AR')}/TI</span>
+              );
+            }
+            if (lines.length === 1) {
+              return <span className="whitespace-nowrap">{lines[0]}</span>;
+            }
+            return (
+              <span className="whitespace-nowrap text-xs leading-tight">
+                {lines.map((l, i) => (
+                  <Fragment key={i}>{i > 0 && <br />}{l}</Fragment>
+                ))}
+              </span>
+            );
           }
           return <span className="whitespace-nowrap">${costoBloqueEntero.toLocaleString('es-AR')}/bl</span>;
         }

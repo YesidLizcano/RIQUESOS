@@ -55,7 +55,6 @@ export interface LoteResponse {
   bloquesTajadosDeFabrica: number;
   bloquesEnterosOriginal: number;
   bloquesTajadosFabricaOriginal: number;
-  bloquesTajadosOriginal: number;
   sueltosEntero: string;
   sueltosTajado: string;
   /** Computed: total tajados available for sale (internal + de fábrica) */
@@ -65,8 +64,6 @@ export interface LoteResponse {
   metodoPagoLote: string;
   version: number;
   deletedAt: string | null;
-  /** Detailed cost breakdown for auditing DC block cost calculations */
-  costBreakdown?: Record<string, string>;
 }
 
 export interface LoteListResponse {

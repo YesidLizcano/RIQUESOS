@@ -65,7 +65,6 @@ export class PrismaLoteRepo implements LoteRepository {
       bloquesTajadosDeFabrica: lote.bloquesTajadosDeFabrica,
        bloquesEnterosOriginal: lote.bloquesEnterosOriginal,
        bloquesTajadosFabricaOriginal: lote.bloquesTajadosFabricaOriginal,
-       bloquesTajadosOriginal: lote.bloquesTajadosOriginal,
         sueltosEntero: new Prisma.Decimal(lote.sueltosEntero.value),
         sueltosTajado: new Prisma.Decimal(lote.sueltosTajado.value),
         estado: lote.estado as EstadoLote,
@@ -203,7 +202,6 @@ export class PrismaLoteRepo implements LoteRepository {
       data: {
         bloquesEnteros: lote.bloquesEnteros,
         bloquesTajados: lote.bloquesTajados,
-        bloquesTajadosOriginal: lote.bloquesTajadosOriginal,
        sueltosEntero: new Prisma.Decimal(lote.sueltosEntero.value),
        sueltosTajado: new Prisma.Decimal(lote.sueltosTajado.value),
         costoTajado: new Prisma.Decimal(lote.costoTajado.value),
@@ -308,7 +306,6 @@ export class PrismaLoteRepo implements LoteRepository {
       bloquesTajadosDeFabrica: record.bloquesTajadosDeFabrica,
       bloquesEnterosOriginal: record.bloquesEnterosOriginal,
       bloquesTajadosFabricaOriginal: record.bloquesTajadosFabricaOriginal,
-      bloquesTajadosOriginal: record.bloquesTajadosOriginal,
       sueltosEntero: record.sueltosEntero.toString(),
       sueltosTajado: record.sueltosTajado.toString(),
       estado: asEstadoLote(record.estado),
