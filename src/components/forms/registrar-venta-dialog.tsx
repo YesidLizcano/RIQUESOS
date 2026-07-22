@@ -225,7 +225,7 @@ function SummaryStep({ summary, clienteLabel, domiciliario, valorDomicilio, cost
               <TableBody>
                 {summary.items.map((s, i) => {
                   const producto = s.lote ? s.lote.producto : '';
-                  const proveedor = s.lote ? (proveedorMap.get(s.lote.proveedorId) ?? '') : '';
+                  const proveedor = s.lote ? (s.lote.proveedorId ? (proveedorMap.get(s.lote.proveedorId) ?? '') : 'Operación Interna') : '';
                   const loteLabel = [proveedor].filter(Boolean).join(' — ');
                   const isDcBloques = s.ventaTipo === 'BLOQUES' && s.lote && isDobleCrema(s.lote.producto);
 
@@ -341,7 +341,7 @@ function SummaryStep({ summary, clienteLabel, domiciliario, valorDomicilio, cost
               <div className="space-y-1">
                 {summary.items.map((s, i) => {
                   const producto = s.lote ? s.lote.producto : '';
-                  const proveedor = s.lote ? (proveedorMap.get(s.lote.proveedorId) ?? '') : '';
+                  const proveedor = s.lote ? (s.lote.proveedorId ? (proveedorMap.get(s.lote.proveedorId) ?? '') : 'Operación Interna') : '';
                   const isDcBloques = s.ventaTipo === 'BLOQUES' && s.lote && isDobleCrema(s.lote.producto);
                   return (
                     <div key={i} className="space-y-0.5">
@@ -641,7 +641,7 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
       const lote = getLoteForItem(item);
       if (!lote || !isDobleCrema(lote.producto)) return item;
       if (getEffectiveVentaTipo(item) !== 'BLOQUES') return item;
-      const proveedorPrecio = preciosMemoria.get(lote.proveedorId);
+      const proveedorPrecio = lote.proveedorId ? preciosMemoria.get(lote.proveedorId) : undefined;
       if (!proveedorPrecio) return item;
       // Only auto-fill if empty and memorized price is > 0 — don't overwrite manual entry
       const updates: Partial<VentaItemForm> = {};
@@ -664,7 +664,7 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
     if (firstItemWithLote) {
       const lote = getLoteForItem(firstItemWithLote);
       if (lote) {
-        const proveedorPrecio = preciosMemoria.get(lote.proveedorId);
+        const proveedorPrecio = lote.proveedorId ? preciosMemoria.get(lote.proveedorId) : undefined;
         if (proveedorPrecio) {
           if (Number(proveedorPrecio.valorDomicilio) > 0) {
             setValorDomicilio(proveedorPrecio.valorDomicilio);
@@ -726,7 +726,7 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
     if (selectedCliente.tipo === TipoCliente.MAYORISTA) {
       if (lote.producto === TipoProducto.DOBLE_CREMA) {
         // Check proveedor-specific prices first
-        const proveedorPrecio = preciosMemoria.get(lote.proveedorId);
+        const proveedorPrecio = lote.proveedorId ? preciosMemoria.get(lote.proveedorId) : undefined;
         const memEntero = proveedorPrecio?.precioEntero && Number(proveedorPrecio.precioEntero) > 0
           ? Number(proveedorPrecio.precioEntero)
           : null;
@@ -813,7 +813,7 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
             ? formatDobleCremaDetalle(enteros, tajados, 0, 0) + ` (${reempacados} reempacados)`
             : formatDobleCremaDetalle(enteros, tajados, 0, 0);
           breakdownItems.push({
-            name: formatProductName(lote.producto) + ' — ' + (proveedorMap.get(lote.proveedorId) ?? 'Sin proveedor'),
+            name: formatProductName(lote.producto) + ' — ' + (lote.proveedorId ? (proveedorMap.get(lote.proveedorId) ?? 'Sin proveedor') : 'Operación Interna'),
             quantity,
           });
         }
@@ -873,7 +873,7 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
             quantity = `${cantidadKg.toLocaleString('es-AR')} kg`;
           }
           breakdownItems.push({
-            name: formatProductName(lote.producto) + ' — ' + (proveedorMap.get(lote.proveedorId) ?? 'Sin proveedor'),
+            name: formatProductName(lote.producto) + ' — ' + (lote.proveedorId ? (proveedorMap.get(lote.proveedorId) ?? 'Sin proveedor') : 'Operación Interna'),
             quantity,
           });
         }
@@ -1895,7 +1895,7 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
                         let precioEnteroBloque = '';
                         let precioTajadoBloque = '';
                         if (newLote && isDobleCrema(newLote.producto)) {
-                          const proveedorPrecio = preciosMemoria.get(newLote.proveedorId);
+                          const proveedorPrecio = newLote.proveedorId ? preciosMemoria.get(newLote.proveedorId) : undefined;
                           if (proveedorPrecio) {
                             if (proveedorPrecio.precioEntero && Number(proveedorPrecio.precioEntero) > 0) {
                               precioEnteroBloque = proveedorPrecio.precioEntero;
@@ -1930,11 +1930,11 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
                     >
                        <SelectTrigger className="w-full">
                           <SelectValue placeholder="Seleccione lote">
-                             {lote ? (
-                               isDobleCrema(lote.producto)
-                                  ? `${tipoProductoLabel[lote.producto as TipoProducto] ?? lote.producto} — ${proveedorMap.get(lote.proveedorId) ?? 'Sin proveedor'} — ${formatDobleCremaDetalle(lote.bloquesEnteros, lote.bloquesTajadosDisponibles, Number(lote.sueltosEntero), Number(lote.sueltosTajado))} (${Number(lote.stockDisponibleKg).toLocaleString('es-AR')} kg)`
-                                  : `${tipoProductoLabel[lote.producto as TipoProducto] ?? lote.producto} — ${proveedorMap.get(lote.proveedorId) ?? 'Sin proveedor'} — ${Number(lote.stockDisponibleKg).toLocaleString('es-AR')} kg disp.`
-                             ) : 'Seleccione lote'}
+                              {lote ? (
+                                isDobleCrema(lote.producto)
+                                   ? `${tipoProductoLabel[lote.producto as TipoProducto] ?? lote.producto} — ${lote.proveedorId ? (proveedorMap.get(lote.proveedorId) ?? 'Sin proveedor') : 'Operación Interna'} — ${formatDobleCremaDetalle(lote.bloquesEnteros, lote.bloquesTajadosDisponibles, Number(lote.sueltosEntero), Number(lote.sueltosTajado))} (${Number(lote.stockDisponibleKg).toLocaleString('es-AR')} kg)`
+                                   : `${tipoProductoLabel[lote.producto as TipoProducto] ?? lote.producto} — ${lote.proveedorId ? (proveedorMap.get(lote.proveedorId) ?? 'Sin proveedor') : 'Operación Interna'} — ${Number(lote.stockDisponibleKg).toLocaleString('es-AR')} kg disp.`
+                              ) : 'Seleccione lote'}
                            </SelectValue>
                         </SelectTrigger>
                        <SelectContent>
@@ -1942,10 +1942,10 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
                              .filter((l) => !items.some((it, i) => i !== index && it.loteId === l.id))
                              .map((l) => (
                             <SelectItem key={l.id} value={l.id}>
-                               {isDobleCrema(l.producto)
-                                 ? `${tipoProductoLabel[l.producto as TipoProducto] ?? l.producto} — ${proveedorMap.get(l.proveedorId) ?? 'Sin proveedor'} — ${formatDobleCremaDetalle(l.bloquesEnteros, l.bloquesTajadosDisponibles, Number(l.sueltosEntero), Number(l.sueltosTajado))} (${Number(l.stockDisponibleKg).toLocaleString('es-AR')} kg)`
-                                 : `${tipoProductoLabel[l.producto as TipoProducto] ?? l.producto} — ${proveedorMap.get(l.proveedorId) ?? 'Sin proveedor'} — ${Number(l.stockDisponibleKg).toLocaleString('es-AR')} kg disp.`
-                               }
+                                {isDobleCrema(l.producto)
+                                  ? `${tipoProductoLabel[l.producto as TipoProducto] ?? l.producto} — ${l.proveedorId ? (proveedorMap.get(l.proveedorId) ?? 'Sin proveedor') : 'Operación Interna'} — ${formatDobleCremaDetalle(l.bloquesEnteros, l.bloquesTajadosDisponibles, Number(l.sueltosEntero), Number(l.sueltosTajado))} (${Number(l.stockDisponibleKg).toLocaleString('es-AR')} kg)`
+                                  : `${tipoProductoLabel[l.producto as TipoProducto] ?? l.producto} — ${l.proveedorId ? (proveedorMap.get(l.proveedorId) ?? 'Sin proveedor') : 'Operación Interna'} — ${Number(l.stockDisponibleKg).toLocaleString('es-AR')} kg disp.`
+                                }
                             </SelectItem>
                          ))}
                        </SelectContent>

@@ -103,7 +103,7 @@ export function EditarLoteDialog({ lote, open, onOpenChange, proveedorNombre }: 
           <div className="space-y-2">
             <Label>Proveedor</Label>
             <Input
-              value={proveedorNombre ?? lote.proveedorId}
+              value={proveedorNombre ?? (lote.proveedorId ? 'Cargando...' : 'Operación Interna')}
               disabled
               className="bg-muted"
             />

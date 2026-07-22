@@ -28,7 +28,6 @@ const ESTADO_LABELS: Record<string, string> = {
 const PRODUCTO_LABELS: Record<string, string> = {
   DOBLE_CREMA: 'Doble Crema',
   SEMISALADO: 'Semisalado',
-  RECORTES_DOBLE_CREMA: 'Recortes DC',
 };
 
 const loteExportMap = [
@@ -83,7 +82,6 @@ interface LotesClientPageProps {
 const productoFilterOptions = [
   { label: 'Doble Crema', value: TipoProducto.DOBLE_CREMA },
   { label: 'Semisalado', value: TipoProducto.SEMISALADO },
-  { label: 'Recortes DC', value: TipoProducto.RECORTES_DOBLE_CREMA },
 ];
 
 const estadoFilterOptions = [
@@ -125,7 +123,7 @@ export function LotesClientPage({ lotes, proveedores, initialEstadoPago }: Lotes
 
   const columns = useMemo(
     () => createLoteColumns(proveedorMap, showDeleted, (lote) => {
-      setLoteToPagar({ id: lote.id, producto: lote.producto, proveedorNombre: proveedorMap.get(lote.proveedorId), estadoPago: lote.estadoPago });
+      setLoteToPagar({ id: lote.id, producto: lote.producto, proveedorNombre: lote.proveedorId ? proveedorMap.get(lote.proveedorId) : undefined, estadoPago: lote.estadoPago });
     }, (lote) => {
       setLoteToCerrar(lote);
     }),

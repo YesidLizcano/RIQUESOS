@@ -80,7 +80,7 @@ export function RegistrarTajadoDialog({ lotes, proveedores }: RegistrarTajadoDia
   const loteLabels = useMemo(() => {
     const map = new Map<string, string>();
     for (const l of availableLotes) {
-      const proveedor = proveedorMap.get(l.proveedorId) ?? 'S/Proveedor';
+      const proveedor = l.proveedorId ? (proveedorMap.get(l.proveedorId) ?? 'S/Proveedor') : 'Operación Interna';
       map.set(l.id, `${proveedor} — ${l.bloquesEnteros} bloques enteros (${Number(l.cantidadCompradaKg).toLocaleString('es-AR')} kg)`);
     }
     return map;
@@ -166,7 +166,7 @@ export function RegistrarTajadoDialog({ lotes, proveedores }: RegistrarTajadoDia
               </SelectTrigger>
               <SelectContent>
                 {availableLotes.map((l) => {
-                  const proveedor = proveedorMap.get(l.proveedorId) ?? 'S/Proveedor';
+      const proveedor = l.proveedorId ? (proveedorMap.get(l.proveedorId) ?? 'S/Proveedor') : 'Operación Interna';
                   return (
                     <SelectItem key={l.id} value={l.id}>
                       {proveedor} — {l.bloquesEnteros} bloques enteros ({Number(l.cantidadCompradaKg).toLocaleString('es-AR')} kg)
@@ -308,7 +308,7 @@ export function RegistrarTajadoDialog({ lotes, proveedores }: RegistrarTajadoDia
             <p className="text-sm font-medium">Resumen del tajado</p>
             {selectedLote && (
               <p className="text-sm">
-                Se descontarán <strong>{cantidad} bloques tajados</strong> del lote de <strong>{proveedorMap.get(selectedLote.proveedorId) ?? 'S/Proveedor'}</strong>
+                Se descontarán <strong>{cantidad} bloques tajados</strong> del lote de <strong>{selectedLote.proveedorId ? (proveedorMap.get(selectedLote.proveedorId) ?? 'S/Proveedor') : 'Operación Interna'}</strong>
               </p>
             )}
             <p className="text-sm">

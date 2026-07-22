@@ -4,7 +4,7 @@ import { prisma } from '../db';
 import { Venta } from '../../domain/entities/Venta';
 import { VentaItem } from '../../domain/entities/VentaItem';
 import { EstadoLote, TipoProducto, MetodoPago, OrigenCorte, OrigenTajadoGranel } from '../../domain/enums';
-import { DOBLE_CREMA_BLOCK_KG } from '../../domain/constants';
+import { DOBLE_CREMA_BLOCK_KG, RECORTES_DC_PERMANENT_LOT_ID } from '../../domain/constants';
 import type { VentaRepository } from '../../domain/ports/VentaRepository';
 import { ConcurrencyError } from '../../domain/errors/ConcurrencyError';
 
@@ -95,7 +95,7 @@ export class PrismaVentaRepo implements VentaRepository {
             }
 
             const newStock = currentStock.minus(cantidad);
-            const newEstado = newStock.isZero() && (lote.producto !== 'RECORTES_DOBLE_CREMA') ? EstadoLote.AGOTADO : lote.estado;
+            const newEstado = newStock.isZero() && lote.id !== RECORTES_DC_PERMANENT_LOT_ID ? EstadoLote.AGOTADO : lote.estado;
 
             const loteUpdateData: Prisma.LoteUpdateManyMutationInput = {
               stockDisponibleKg: newStock,
@@ -716,7 +716,7 @@ export class PrismaVentaRepo implements VentaRepository {
             }
 
             const newStock = currentStock.minus(cantidad);
-            const newEstado = newStock.isZero() && (lote.producto !== 'RECORTES_DOBLE_CREMA') ? EstadoLote.AGOTADO : lote.estado;
+            const newEstado = newStock.isZero() && lote.id !== RECORTES_DC_PERMANENT_LOT_ID ? EstadoLote.AGOTADO : lote.estado;
 
             const loteUpdateData: Prisma.LoteUpdateManyMutationInput = {
               stockDisponibleKg: newStock,

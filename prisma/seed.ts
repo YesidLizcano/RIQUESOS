@@ -49,20 +49,20 @@ async function main() {
 
   console.log(`Proveedores upserted: ${proveedor1.nombre}, ${proveedor2.nombre}`);
 
-  // Upsert system proveedor for recortes
-  const proveedorRecortes = await prisma.proveedor.upsert({
-    where: { id: 'proveedor-recortes-dc' },
-    update: { nombre: 'Recortes Doble Crema (Sistema)' },
+  // Upsert system proveedor for internal operations (recortes)
+  const proveedorInterno = await prisma.proveedor.upsert({
+    where: { id: 'proveedor-operacion-interna' },
+    update: { nombre: 'Operación Interna' },
     create: {
-      id: 'proveedor-recortes-dc',
-      nombre: 'Recortes Doble Crema (Sistema)',
+      id: 'proveedor-operacion-interna',
+      nombre: 'Operación Interna',
       telefono: null,
     },
   });
 
-  console.log(`Proveedor recortes upserted: ${proveedorRecortes.nombre}`);
+  console.log(`Proveedor interno upserted: ${proveedorInterno.nombre}`);
 
-  // Upsert permanent accumulation lot for recortes
+  // Upsert permanent accumulation lot for recortes (DOBLE_CREMA with internal proveedor)
   const existingRecortesLot = await prisma.lote.findFirst({
     where: { id: 'lote-recortes-dc-permanente', deletedAt: null },
   });
@@ -70,8 +70,8 @@ async function main() {
     await prisma.lote.create({
       data: {
         id: 'lote-recortes-dc-permanente',
-        producto: 'RECORTES_DOBLE_CREMA',
-        proveedorId: 'proveedor-recortes-dc',
+        producto: 'DOBLE_CREMA',
+        proveedorId: 'proveedor-operacion-interna',
         cantidadCompradaKg: 0,
         precioCompraBaseKg: 0,
         stockDisponibleKg: 0,

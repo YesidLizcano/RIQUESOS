@@ -2,14 +2,14 @@
 // Application layer: can import from Domain but NOT from Infrastructure
 import { Lote, type LoteProps } from '../../domain/entities/Lote';
 import { EstadoLote, TipoProducto, EstadoPagoLote, MetodoPago } from '../../domain/enums';
-import { DOBLE_CREMA_BLOCK_KG, RECORTES_DC_PERMANENT_LOT_ID } from '../../domain/constants';
+import { DOBLE_CREMA_BLOCK_KG, RECORTES_DC_PERMANENT_LOT_ID, OPERACION_INTERNA_PROVEEDOR_ID } from '../../domain/constants';
 import { Dinero } from '../../domain/value-objects/Dinero';
 import type { LoteRepository } from '../../domain/ports/LoteRepository';
 import type { ProveedorRepository } from '../../domain/ports/ProveedorRepository';
 
 export interface CrearLoteInput {
   producto: TipoProducto;
-  proveedorId: string;
+  proveedorId: string | null;
   cantidadCompradaKg: string;
   precioCompraBaseKg: string;
   precioPorBloqueEntero?: string;
@@ -33,15 +33,17 @@ export class CrearLote {
   ) {}
 
   async execute(input: CrearLoteInput): Promise<CrearLoteOutput> {
-    // Prevent manual creation of Recortes Doble Crema lots — managed by the system
-    if (input.producto === TipoProducto.RECORTES_DOBLE_CREMA) {
-      throw new Error('No se pueden crear lotes de Recortes Doble Crema manualmente. Este lote se gestiona automáticamente.');
+    // Prevent manual creation of the permanent recortes lot — managed by the system
+    if (input.producto === TipoProducto.DOBLE_CREMA && input.proveedorId === OPERACION_INTERNA_PROVEEDOR_ID) {
+      throw new Error('No se pueden crear lotes de operación interna manualmente. El lote de recortes se gestiona automáticamente.');
     }
 
-    // Validate proveedor exists
-    const proveedor = await this.proveedorRepo.findById(input.proveedorId);
-    if (!proveedor) {
-      throw new Error(`Proveedor not found: ${input.proveedorId}`);
+    // Validate proveedor exists (skip for internal lots)
+    if (input.proveedorId && input.proveedorId !== OPERACION_INTERNA_PROVEEDOR_ID) {
+      const proveedor = await this.proveedorRepo.findById(input.proveedorId);
+      if (!proveedor) {
+        throw new Error(`Proveedor not found: ${input.proveedorId}`);
+      }
     }
 
     // Build Lote props based on product type

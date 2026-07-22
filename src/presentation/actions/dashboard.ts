@@ -165,15 +165,17 @@ export async function getCuentasPorPagarDetalle() {
     const lotes = await loteRepo.findAll();
     const pendientes = lotes.filter((l) => l.estadoPago === 'PENDIENTE');
 
-    // Collect unique proveedor IDs
-    const proveedorIds = [...new Set(pendientes.map((l) => l.proveedorId))];
-    const proveedores = await proveedorRepo.findByIds(proveedorIds);
+    // Collect unique proveedor IDs (exclude null — internal lots)
+    const proveedorIds = [...new Set(pendientes.map((l) => l.proveedorId).filter((id): id is string => id !== null))];
+    const proveedores = proveedorIds.length > 0 ? await proveedorRepo.findByIds(proveedorIds) : [];
     const proveedorMap = new Map(proveedores.map((p) => [p.id, p.nombre]));
 
     // Group by proveedor
     const grupos = new Map<string, { proveedorId: string; proveedorNombre: string; lotes: typeof pendientes }>();
 
     for (const lote of pendientes) {
+      // Skip internal lots (null proveedorId) from pending payments
+      if (!lote.proveedorId) continue;
       const nombre = proveedorMap.get(lote.proveedorId) ?? 'Desconocido';
       if (!grupos.has(lote.proveedorId)) {
         grupos.set(lote.proveedorId, { proveedorId: lote.proveedorId, proveedorNombre: nombre, lotes: [] });

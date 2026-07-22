@@ -27,7 +27,6 @@ import { formatSSKg } from '@/domain/formatters';
 const PRODUCTO_LABELS: Record<string, string> = {
   DOBLE_CREMA: 'Doble Crema',
   SEMISALADO: 'Semisalado',
-  RECORTES_DOBLE_CREMA: 'Recortes DC',
 };
 
 const ventaExportMap = [
@@ -129,7 +128,6 @@ interface VentasClientPageProps {
 const productoFilterOptions = [
   { label: 'Doble Crema', value: TipoProducto.DOBLE_CREMA },
   { label: 'Semisalado', value: TipoProducto.SEMISALADO },
-  { label: 'Recortes DC', value: TipoProducto.RECORTES_DOBLE_CREMA },
 ];
 
 const metodoPagoFilterOptions = [
@@ -180,7 +178,7 @@ export function VentasClientPage({ initialVentas, clientes, lotes, proveedores, 
   );
 
   const loteProveedorNombreMap = useMemo(
-    () => new Map(lotes.map((l) => [l.id, proveedorMap.get(l.proveedorId) ?? ''])),
+    () => new Map(lotes.map((l) => [l.id, l.proveedorId ? (proveedorMap.get(l.proveedorId) ?? '') : ''])),
     [lotes, proveedores]
   );
 

@@ -5,7 +5,6 @@ import { TipoProducto, TipoCliente, EstadoLote, RolUsuario, CategoriaInsumo, Met
 export const tipoProductoLabel: Record<TipoProducto, string> = {
   [TipoProducto.DOBLE_CREMA]: 'Doble Crema',
   [TipoProducto.SEMISALADO]: 'Semisalado',
-  [TipoProducto.RECORTES_DOBLE_CREMA]: 'Recortes DC',
 };
 
 export const tipoClienteLabel: Record<TipoCliente, string> = {

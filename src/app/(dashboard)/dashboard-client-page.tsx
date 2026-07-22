@@ -62,7 +62,6 @@ const DAILY_SALES_CONFIG: ChartConfig = {
 const INVENTARIO_TIPO_CONFIG: ChartConfig = {
   DOBLE_CREMA: { label: 'Doble Crema', theme: { light: '#8b5cf6', dark: '#a78bfa' } },
   SEMISALADO: { label: 'Semisalado', theme: { light: '#f59e0b', dark: '#fbbf24' } },
-  RECORTES_DOBLE_CREMA: { label: 'Recortes DC', theme: { light: '#d97706', dark: '#f59e0b' } },
 };
 
 // --- Empty state component ---
@@ -327,7 +326,7 @@ export function DashboardClientPage({ initialMetricas, initialInicio, initialFin
   const inventarioTipoData = metricas.inventarioPorTipo.map((it) => ({
     tipo: it.tipo,
     stock: Number(it.stockKg),
-    fill: it.tipo === 'DOBLE_CREMA' ? 'var(--color-DOBLE_CREMA)' : it.tipo === 'RECORTES_DOBLE_CREMA' ? 'var(--color-RECORTES_DOBLE_CREMA)' : 'var(--color-SEMISALADO)',
+    fill: it.tipo === 'DOBLE_CREMA' ? 'var(--color-DOBLE_CREMA)' : 'var(--color-SEMISALADO)',
     bloquesEnteros: it.bloquesEnteros,
     bloquesTajados: it.bloquesTajados + it.bloquesTajadosDeFabrica,
     sueltosEntero: Number(it.sueltosEntero),
@@ -547,19 +546,16 @@ export function DashboardClientPage({ initialMetricas, initialInicio, initialFin
               <CardFooter className="flex flex-col gap-1 text-sm">
                 {metricas.inventarioPorTipo.map((it) => {
                   const isDC = it.tipo === 'DOBLE_CREMA';
-                  const isRecortes = it.tipo === 'RECORTES_DOBLE_CREMA';
-                  const bloquesTajados = it.bloquesTajados + it.bloquesTajadosDeFabrica;
-                   const sueltosEntero = Number(it.sueltosEntero);
-                   const sueltosTajado = Number(it.sueltosTajado);
-                   const detail = isDC
-                      ? formatDobleCremaDetalle(it.bloquesEnteros, bloquesTajados, sueltosEntero, sueltosTajado)
-                      : isRecortes
-                      ? `${Number(it.stockKg).toLocaleString('es-AR')} kg`
-                      : formatSSKg(Number(it.stockKg));
-                  const lotesDisplay = `${it.lotes} ${it.lotes === 1 ? 'lote' : 'lotes'}`;
-                  return (
-                    <div key={it.tipo} className="flex items-center justify-between w-full">
-                      <span>{isDC ? 'Doble Crema' : isRecortes ? 'Recortes DC' : 'Semisalado'}</span>
+                   const bloquesTajados = it.bloquesTajados + it.bloquesTajadosDeFabrica;
+                    const sueltosEntero = Number(it.sueltosEntero);
+                    const sueltosTajado = Number(it.sueltosTajado);
+                    const detail = isDC
+                       ? formatDobleCremaDetalle(it.bloquesEnteros, bloquesTajados, sueltosEntero, sueltosTajado)
+                       : formatSSKg(Number(it.stockKg));
+                   const lotesDisplay = `${it.lotes} ${it.lotes === 1 ? 'lote' : 'lotes'}`;
+                   return (
+                     <div key={it.tipo} className="flex items-center justify-between w-full">
+                       <span>{isDC ? 'Doble Crema' : 'Semisalado'}</span>
                       <span className="font-medium">
                         {detail} · {lotesDisplay}
                       </span>

@@ -8,6 +8,7 @@ import type { TajadoRepository } from '../../domain/ports/TajadoRepository';
 import type { ClienteRepository } from '../../domain/ports/ClienteRepository';
 import type { VentaItemRepository } from '../../domain/ports/VentaItemRepository';
 import type { ProveedorRepository } from '../../domain/ports/ProveedorRepository';
+import { OPERACION_INTERNA_PROVEEDOR_ID, RECORTES_DC_PERMANENT_LOT_ID } from '../../domain/constants';
 
 export interface MetricasPeriodo {
   ingresoTotal: string;
@@ -224,9 +225,11 @@ export class ObtenerMetricas {
     );
 
     // 5. Inventory value (sum of costoTotalLote proportionally to remaining stock for active lotes)
+    // Exclude internal lots (recortes) from inventory valuation — they are byproducts with no purchase cost
     let inventarioValor = Dinero.zero();
     for (const lote of lotesActivos) {
-      if (lote.cantidadCompradaKg.isZero()) continue; // Skip zero-kg lots (recortes)
+      if (lote.proveedorId === OPERACION_INTERNA_PROVEEDOR_ID) continue;
+      if (lote.cantidadCompradaKg.isZero()) continue;
       const proporcionRestante = Number(lote.stockDisponibleKg.value) / Number(lote.cantidadCompradaKg.value);
       const valorLote = lote.costoTotalLote.multiply(String(proporcionRestante.toFixed(6)));
       inventarioValor = inventarioValor.add(valorLote);
@@ -363,14 +366,18 @@ export class ObtenerMetricas {
       const loteInfo = loteMap.get(item.loteId);
       if (!loteInfo) continue;
       if (loteInfo.producto === 'DOBLE_CREMA') {
-        // bloquesTajadosVendidos already includes bloquesTajadosDeFabricaVendidos + bloquesTajadosInternosVendidos
-        // bloquesReempacados is a subset of bloquesTajadosInternosVendidos (re-packaged), so do NOT add it again
-        const bloques = item.bloquesEnterosVendidos + item.bloquesTajadosVendidos;
-        tc.dcBloques += bloques;
+        if (loteInfo.proveedorId === OPERACION_INTERNA_PROVEEDOR_ID) {
+          // Recortes lot — track separately, not in DC/SS volume
+          recortesKg += Number(item.cantidadKg.value);
+        } else {
+          // bloquesTajadosVendidos already includes bloquesTajadosDeFabricaVendidos + bloquesTajadosInternosVendidos
+          // bloquesReempacados is a subset of bloquesTajadosInternosVendidos (re-packaged), so do NOT add it again
+          const bloques = item.bloquesEnterosVendidos + item.bloquesTajadosVendidos;
+          tc.dcBloques += bloques;
+        }
       } else if (loteInfo.producto === 'SEMISALADO') {
         tc.ssKg += Number(item.cantidadKg.value);
       }
-      // RECORTES_DOBLE_CREMA: not counted in top client DC/SS volume
     }
 
     // 9a. Volume breakdown — count what was INVOICED, not inventory deductions
@@ -379,7 +386,10 @@ export class ObtenerMetricas {
       const loteInfo = loteMap.get(item.loteId);
       if (!loteInfo) continue;
       if (loteInfo.producto === 'DOBLE_CREMA') {
-        if (item.ventaTipo === 'BLOQUES') {
+        if (loteInfo.proveedorId === OPERACION_INTERNA_PROVEEDOR_ID) {
+          // Recortes lot — tracked separately as volumenRecortesKg
+          recortesKg += Number(item.cantidadKg.value);
+        } else if (item.ventaTipo === 'BLOQUES') {
           // Whole blocks sold — count as enteros/tajados vendidos
           dcEnterosVendidos += item.bloquesEnterosVendidos;
           dcTajadosVendidos += item.bloquesTajadosVendidos;
@@ -394,9 +404,8 @@ export class ObtenerMetricas {
         }
       } else if (loteInfo.producto === 'SEMISALADO') {
         ssKg += Number(item.cantidadKg.value);
-      } else if (loteInfo.producto === 'RECORTES_DOBLE_CREMA') {
-        recortesKg += Number(item.cantidadKg.value);
       }
+      // Recortes lot (DOBLE_CREMA with internal proveedor): tracked as volumenRecortesKg below
     }
 
     // Group by product
@@ -439,11 +448,13 @@ export class ObtenerMetricas {
       dcKgGranelTajado: String(data.dcKgGranelTajado),
     }));
 
-    // Group by proveedor
+    // Group by proveedor (exclude internal lots — they have null proveedorId)
     const porProveedorMap = new Map<string, { ingreso: Dinero; costoAplicado: Dinero; kg: number; count: number; dcEnteros: number; dcTajados: number; dcKgGranelEntero: number; dcKgGranelTajado: number }>();
     for (const item of allItems) {
       const loteInfo = loteMap.get(item.loteId);
       if (!loteInfo) continue;
+      // Skip internal lots (recortes) — no proveedor to attribute to
+      if (!loteInfo.proveedorId) continue;
       const key = loteInfo.proveedorId;
       const existing = porProveedorMap.get(key) ?? { ingreso: Dinero.zero(), costoAplicado: Dinero.zero(), kg: 0, count: 0, dcEnteros: 0, dcTajados: 0, dcKgGranelEntero: 0, dcKgGranelTajado: 0 };
       existing.ingreso = existing.ingreso.add(item.ingreso);

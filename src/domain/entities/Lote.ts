@@ -4,13 +4,13 @@
 import { TipoProducto, EstadoLote, EstadoPagoLote, MetodoPago } from '../enums';
 import { Dinero } from '../value-objects/Dinero';
 import { Kilogramo } from '../value-objects/Kilogramo';
-import { DOBLE_CREMA_BLOCK_KG, isRecortesDobleCrema } from '../constants';
+import { DOBLE_CREMA_BLOCK_KG, isRecortesLot, RECORTES_DC_PERMANENT_LOT_ID } from '../constants';
 
 export interface LoteProps {
   id?: string;
   producto: TipoProducto;
   fechaIngreso?: Date;
-  proveedorId: string;
+  proveedorId: string | null;
   cantidadCompradaKg: string;
   precioCompraBaseKg: string;
   precioPorBloqueEntero?: string;
@@ -38,7 +38,7 @@ export class Lote {
   readonly id: string;
   readonly producto: TipoProducto;
   readonly fechaIngreso: Date;
-  readonly proveedorId: string;
+  readonly proveedorId: string | null;
   readonly cantidadCompradaKg: Kilogramo;
   readonly precioCompraBaseKg: Dinero;
   readonly precioPorBloqueEntero: Dinero;
@@ -66,7 +66,7 @@ export class Lote {
     this.id = props.id ?? '';
     this.producto = props.producto;
     this.fechaIngreso = props.fechaIngreso ?? new Date();
-    this.proveedorId = props.proveedorId;
+    this.proveedorId = props.proveedorId ?? null;
     this.deletedAt = props.deletedAt ?? null;
 
     // Block-based fields — default to 0 for SEMISALADO or when not provided
@@ -147,7 +147,7 @@ export class Lote {
     }
 
     // Non-DC or edge case: simple average
-    // RECORTES_DOBLE_CREMA lots start with zero quantity — cost is $0/kg (byproduct)
+    // Internal lots (recortes) start with zero quantity — cost is $0/kg (byproduct)
     if (this.cantidadCompradaKg.isZero()) {
       return Dinero.zero();
     }
@@ -222,10 +222,10 @@ export class Lote {
   }
 
   private validate(): void {
-    if (!this.proveedorId) {
+    if (!this.proveedorId && this.id !== RECORTES_DC_PERMANENT_LOT_ID) {
       throw new Error('Lote proveedorId is required');
     }
-    if (this.cantidadCompradaKg.isZero() && !isRecortesDobleCrema(this.producto)) {
+    if (this.cantidadCompradaKg.isZero() && !isRecortesLot(this.id)) {
       throw new Error('Lote cantidadCompradaKg cannot be zero');
     }
     if (this.precioCompraBaseKg.isNegative()) {
@@ -309,7 +309,7 @@ export class Lote {
     }
 
     const newStock = this.stockDisponibleKg.subtract(cantidad);
-    const newEstado = newStock.isZero() && !isRecortesDobleCrema(this.producto) ? EstadoLote.AGOTADO : this.estado;
+    const newEstado = newStock.isZero() && !isRecortesLot(this.id) ? EstadoLote.AGOTADO : this.estado;
 
     // bloquesEnteros is NOT recalculated here — for granel/kg sales of DC products,
     // the caller (repo) is responsible for recalculating bloquesEnteros from stock.
@@ -380,7 +380,7 @@ export class Lote {
 
     const newStock = this.stockDisponibleKg.subtract(kgDeducted);
     const newBloquesEnteros = this.bloquesEnteros - cantidadBloques;
-    const newEstado = newStock.isZero() && !isRecortesDobleCrema(this.producto) ? EstadoLote.AGOTADO : this.estado;
+    const newEstado = newStock.isZero() && !isRecortesLot(this.id) ? EstadoLote.AGOTADO : this.estado;
 
     return new Lote({
       id: this.id,
@@ -597,10 +597,10 @@ export class Lote {
     };
   }
 
-  /** Accumulate recortes kg into this permanent lot. Only valid for RECORTES_DOBLE_CREMA lots. */
+  /** Accumulate recortes kg into this permanent lot. Only valid for the permanent recortes lot. */
   acumularRecortes(recortesKg: string): Lote {
-    if (!isRecortesDobleCrema(this.producto)) {
-      throw new Error('Solo se puede acumular recortes en lotes de Recortes Doble Crema');
+    if (!isRecortesLot(this.id)) {
+      throw new Error('Solo se puede acumular recortes en el lote permanente de recortes');
     }
     const adicional = new Kilogramo(recortesKg);
     // Kilogramo constructor already rejects negative values

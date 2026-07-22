@@ -5,6 +5,7 @@ import { Lote } from '../../domain/entities/Lote';
 import { EstadoLote, TipoProducto, EstadoPagoLote, MetodoPago } from '../../domain/enums';
 import { asTipoProducto, asEstadoLote, asEstadoPagoLote } from '../../domain/mappers';
 import { ConcurrencyError } from '../../domain/errors/ConcurrencyError';
+import { RECORTES_DC_PERMANENT_LOT_ID } from '../../domain/constants';
 import type { LoteRepository } from '../../domain/ports/LoteRepository';
 
 export class PrismaLoteRepo implements LoteRepository {
@@ -49,7 +50,7 @@ export class PrismaLoteRepo implements LoteRepository {
   async save(lote: Lote): Promise<Lote> {
     const data = {
       producto: lote.producto as TipoProducto,
-      proveedorId: lote.proveedorId,
+      proveedorId: lote.proveedorId ?? undefined,
       cantidadCompradaKg: new Prisma.Decimal(lote.cantidadCompradaKg.value),
        precioCompraBaseKg: new Prisma.Decimal(lote.precioCompraBaseKg.value),
        precioPorBloqueEntero: new Prisma.Decimal(lote.precioPorBloqueEntero.value),
@@ -108,7 +109,7 @@ export class PrismaLoteRepo implements LoteRepository {
     }
 
     const newStock = currentStock.minus(cantidad);
-    const newEstado = newStock.isZero() && (current.producto !== 'RECORTES_DOBLE_CREMA') ? EstadoLote.AGOTADO : asEstadoLote(current.estado);
+    const newEstado = newStock.isZero() && current.id !== RECORTES_DC_PERMANENT_LOT_ID ? EstadoLote.AGOTADO : asEstadoLote(current.estado);
 
     // Optimistic locking: updateMany with version check
     const result = await prisma.lote.updateMany({
@@ -291,7 +292,7 @@ export class PrismaLoteRepo implements LoteRepository {
       id: record.id,
       producto: asTipoProducto(record.producto),
       fechaIngreso: record.fechaIngreso,
-      proveedorId: record.proveedorId,
+      proveedorId: record.proveedorId ?? null,
       cantidadCompradaKg: record.cantidadCompradaKg.toString(),
       precioCompraBaseKg: record.precioCompraBaseKg.toString(),
        precioPorBloqueEntero: record.precioPorBloqueEntero.toString(),

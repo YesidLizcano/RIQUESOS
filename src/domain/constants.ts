@@ -32,9 +32,12 @@ export function isDobleCrema(producto: string): boolean {
 /** ID of the permanent accumulation lot for Recortes Doble Crema */
 export const RECORTES_DC_PERMANENT_LOT_ID = 'lote-recortes-dc-permanente';
 
-/** Whether a product type is Recortes Doble Crema */
-export function isRecortesDobleCrema(producto: string): boolean {
-  return producto === 'RECORTES_DOBLE_CREMA';
+/** ID of the internal proveedor used for system-managed lots (e.g., recortes) */
+export const OPERACION_INTERNA_PROVEEDOR_ID = 'proveedor-operacion-interna';
+
+/** Whether a lot is the permanent recortes accumulation lot */
+export function isRecortesLot(loteId: string): boolean {
+  return loteId === RECORTES_DC_PERMANENT_LOT_ID;
 }
 
 /**

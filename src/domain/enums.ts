@@ -3,7 +3,6 @@
 export enum TipoProducto {
   DOBLE_CREMA = 'DOBLE_CREMA',
   SEMISALADO = 'SEMISALADO',
-  RECORTES_DOBLE_CREMA = 'RECORTES_DOBLE_CREMA',
 }
 
 export enum TipoCliente {

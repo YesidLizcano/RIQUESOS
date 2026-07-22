@@ -843,8 +843,9 @@ describe('Lote', () => {
 
   describe('acumularRecortes', () => {
     const recortesProps = {
-      proveedorId: 'proveedor-recortes-dc',
-      producto: TipoProducto.RECORTES_DOBLE_CREMA as TipoProducto,
+      id: 'lote-recortes-dc-permanente' as const,
+      proveedorId: null as string | null,
+      producto: TipoProducto.DOBLE_CREMA,
       cantidadCompradaKg: '0',
       precioCompraBaseKg: '0',
       estado: EstadoLote.ACTIVO,
@@ -874,7 +875,7 @@ describe('Lote', () => {
     it('should throw error when accumulating on a non-recortes lot', () => {
       const lote = new Lote(validProps);
       expect(() => lote.acumularRecortes('1')).toThrow(
-        'Solo se puede acumular recortes en lotes de Recortes Doble Crema'
+        'Solo se puede acumular recortes en el lote permanente de recortes'
       );
     });
 
@@ -884,11 +885,12 @@ describe('Lote', () => {
     });
   });
 
-  describe('RECORTES_DOBLE_CREMA — zero quantity validation', () => {
-    it('should allow zero cantidadCompradaKg for RECORTES_DOBLE_CREMA', () => {
+  describe('Recortes lot — zero quantity validation', () => {
+    it('should allow zero cantidadCompradaKg for the permanent recortes lot', () => {
       const lote = new Lote({
-        proveedorId: 'proveedor-recortes-dc',
-        producto: TipoProducto.RECORTES_DOBLE_CREMA as TipoProducto,
+        id: 'lote-recortes-dc-permanente',
+        proveedorId: null,
+        producto: TipoProducto.DOBLE_CREMA,
         cantidadCompradaKg: '0',
         precioCompraBaseKg: '0',
         estado: EstadoLote.ACTIVO,
@@ -980,10 +982,11 @@ describe('Lote', () => {
     });
   });
 
-  describe('RECORTES_DOBLE_CREMA — AGOTADO skip on deduct', () => {
+  describe('Recortes lot — AGOTADO skip on deduct', () => {
     const recortesProps = {
-      proveedorId: 'proveedor-recortes-dc',
-      producto: TipoProducto.RECORTES_DOBLE_CREMA as TipoProducto,
+      id: 'lote-recortes-dc-permanente' as const,
+      proveedorId: null as string | null,
+      producto: TipoProducto.DOBLE_CREMA,
       cantidadCompradaKg: '5',
       precioCompraBaseKg: '0',
       stockDisponibleKg: '5',

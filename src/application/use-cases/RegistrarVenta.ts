@@ -482,7 +482,7 @@ export class RegistrarVenta {
           for (const itemInput of input.items) {
             const lote = loteMap.get(itemInput.loteId)!;
             const ventaTipo: VentaTipo = itemInput.ventaTipo ?? 'GRANEL';
-            if (lote.producto === TipoProducto.DOBLE_CREMA && ventaTipo === 'BLOQUES') {
+            if (lote.producto === TipoProducto.DOBLE_CREMA && ventaTipo === 'BLOQUES' && lote.proveedorId) {
               const precioEntero = itemInput.precioEnteroBloque;
               const precioTajado = itemInput.precioTajadoBloque;
               if (precioEntero || precioTajado) {
@@ -509,9 +509,9 @@ export class RegistrarVenta {
 
         // Save domicilio memory per proveedor for any venta with domicilio values
         if (this.precioClienteProveedorRepo && (input.valorDomicilio || input.costoDomiciliario)) {
-          // Use the first item's proveedor as the domicilio reference
+          // Use the first item's proveedor as the domicilio reference (skip if internal lot)
           const firstLote = loteMap.get(input.items[0].loteId);
-          if (firstLote) {
+          if (firstLote && firstLote.proveedorId) {
             const existing = await this.precioClienteProveedorRepo.findByClienteAndProveedor(input.clienteId, firstLote.proveedorId);
             const finalPrecioEntero = existing?.precioEntero.value ?? '0';
             const finalPrecioTajado = existing?.precioTajado.value ?? '0';

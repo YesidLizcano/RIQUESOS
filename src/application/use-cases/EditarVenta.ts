@@ -528,7 +528,7 @@ export class EditarVenta {
           for (const itemInput of input.items) {
             const lote = loteMap.get(itemInput.loteId)!;
             const ventaTipo: VentaTipo = itemInput.ventaTipo ?? 'GRANEL';
-            if (lote.producto === TipoProducto.DOBLE_CREMA && ventaTipo === 'BLOQUES') {
+            if (lote.producto === TipoProducto.DOBLE_CREMA && ventaTipo === 'BLOQUES' && lote.proveedorId) {
               const precioEntero = itemInput.precioEnteroBloque;
               const precioTajado = itemInput.precioTajadoBloque;
               if (precioEntero || precioTajado) {
@@ -555,7 +555,7 @@ export class EditarVenta {
         // Save domicilio memory per proveedor
         if (this.precioClienteProveedorRepo && (input.valorDomicilio || input.costoDomiciliario)) {
           const firstLote = loteMap.get(input.items[0].loteId);
-          if (firstLote) {
+          if (firstLote && firstLote.proveedorId) {
             const existing = await this.precioClienteProveedorRepo.findByClienteAndProveedor(input.clienteId, firstLote.proveedorId);
             const finalPrecioEntero = existing?.precioEntero.value ?? '0';
             const finalPrecioTajado = existing?.precioTajado.value ?? '0';

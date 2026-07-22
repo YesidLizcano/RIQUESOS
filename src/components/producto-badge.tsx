@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/badge';
 const PRODUCTO_STYLES: Record<string, string> = {
   DOBLE_CREMA: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
   SEMISALADO: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
-  RECORTES_DOBLE_CREMA: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
 };
 
 interface ProductoBadgeProps {

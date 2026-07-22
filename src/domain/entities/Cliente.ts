@@ -76,7 +76,7 @@ export class Cliente {
           return customPrice;
         }
       }
-      // RECORTES_DOBLE_CREMA and unknown products: fall through to standard price
+      // Unknown products: fall through to standard price
     }
     // MINORISTA or MAYORISTA without custom price → standard price
     return standardPrice;

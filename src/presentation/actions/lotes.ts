@@ -35,7 +35,7 @@ function loteToResponse(lote: import('@/domain/entities/Lote').Lote): LoteRespon
     id: lote.id,
     producto: lote.producto,
     fechaIngreso: lote.fechaIngreso.toISOString(),
-    proveedorId: lote.proveedorId,
+    proveedorId: lote.proveedorId ?? '',
     cantidadCompradaKg: lote.cantidadCompradaKg.value,
     precioCompraBaseKg: lote.precioCompraBaseKg.value,
     precioPorBloqueEntero: lote.precioPorBloqueEntero.value,

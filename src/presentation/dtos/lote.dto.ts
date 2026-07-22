@@ -3,7 +3,7 @@ import { TipoProducto, EstadoPagoLote, MetodoPago } from '@/domain/enums';
 
 export interface CrearLoteRequest {
   producto: TipoProducto;
-  proveedorId: string;
+  proveedorId: string | null;
   cantidadCompradaKg: string;
   precioCompraBaseKg: string;
   precioPorBloqueEntero?: string;
@@ -35,8 +35,8 @@ export interface LoteResponse {
   id: string;
   producto: TipoProducto;
   fechaIngreso: string;
-  proveedorId: string;
-  proveedorNombre?: string;
+  proveedorId: string | null;
+  proveedorNombre?: string | null;
   cantidadCompradaKg: string;
   precioCompraBaseKg: string;
   precioPorBloqueEntero: string;

@@ -141,7 +141,7 @@ export async function getTajados(inicio?: string, fin?: string) {
     const lotes = loteIds.length > 0 ? await loteRepo.findByIds(loteIds) : [];
     const loteMap = new Map(lotes.map((l) => [l.id, l]));
 
-    const proveedorIds = [...new Set(lotes.map((l) => l.proveedorId))];
+    const proveedorIds = [...new Set(lotes.map((l) => l.proveedorId).filter((id): id is string => id !== null))];
     const proveedores = proveedorIds.length > 0 ? await proveedorRepo.findByIds(proveedorIds) : [];
     const proveedorMap = new Map(proveedores.map((p) => [p.id, p.nombre]));
 
@@ -152,7 +152,7 @@ export async function getTajados(inicio?: string, fin?: string) {
         const loteInfo = lote
           ? {
               producto: lote.producto,
-              proveedor: proveedorMap.get(lote.proveedorId) ?? 'Desconocido',
+              proveedor: lote.proveedorId ? (proveedorMap.get(lote.proveedorId) ?? 'Desconocido') : 'Operación Interna',
             }
           : undefined;
         return {

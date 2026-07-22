@@ -114,7 +114,7 @@ async function main() {
     data: { nombre: 'San Carlos', telefono: '351-444-0003' },
   });
   const provRecortes = await prisma.proveedor.create({
-    data: { id: 'proveedor-recortes-dc', nombre: 'Recortes Doble Crema (Sistema)', telefono: null },
+    data: { id: 'proveedor-operacion-interna', nombre: 'Operación Interna', telefono: null },
   });
 
   // Precios cliente-proveedor para El Sabor
@@ -129,13 +129,13 @@ async function main() {
     },
   });
 
-  // ── Lote Permanente de Recortes Doble Crema ──
+  // ── Lote Permanente de Recortes Doble Crema (DOBLE_CREMA with internal proveedor) ──
   // Stock inicial inyectado: 8.5 kg de recortes acumulados de tajados previos
   // Costo forzado a $0 — ganancia bruta del 100% al vender
   const loteRecortes = await prisma.lote.create({
     data: {
       id: 'lote-recortes-dc-permanente',
-      producto: TipoProducto.RECORTES_DOBLE_CREMA,
+      producto: TipoProducto.DOBLE_CREMA,
       proveedorId: provRecortes.id,
       cantidadCompradaKg: '8.5',   // acumulado de tajados previos
       precioCompraBaseKg: '0',     // costo forzado a $0

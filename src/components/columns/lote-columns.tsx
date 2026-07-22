@@ -39,7 +39,7 @@ export function createLoteColumns(
       size: 100,
       accessorFn: (row) => {
         if (proveedorMap) {
-          return proveedorMap.get(row.proveedorId) ?? '—';
+          return proveedorMap.get(row.proveedorId ?? '') ?? '—';
         }
         return '—';
       },
@@ -229,9 +229,6 @@ export function createLoteColumns(
           }
           return <span className="whitespace-nowrap text-xs leading-tight">{parts.join(' + ')} <span className="text-muted-foreground">({stockValue.toLocaleString('es-AR')}kg)</span></span>;
         }
-        if (producto === 'RECORTES_DOBLE_CREMA') {
-          return <span className="whitespace-nowrap">{stockValue.toLocaleString('es-AR')} kg <span className="text-muted-foreground">Recortes</span></span>;
-        }
         return <span className="whitespace-nowrap">{stockValue.toLocaleString('es-AR')} kg</span>;
       },
     },
@@ -334,7 +331,7 @@ export function createLoteColumns(
               restoreAction={restaurarLote}
               deleteToastLabel="Lote"
               renderEditDialog={(open, onOpenChange) => (
-                <EditarLoteDialog lote={row.original} open={open} onOpenChange={onOpenChange} proveedorNombre={proveedorMap?.get(row.original.proveedorId)} />
+                <EditarLoteDialog lote={row.original} open={open} onOpenChange={onOpenChange} proveedorNombre={proveedorMap?.get(row.original.proveedorId ?? '') ?? (row.original.proveedorId ? undefined : 'Operación Interna')} />
               )}
             />
           </div>

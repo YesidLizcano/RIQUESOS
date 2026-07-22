@@ -10,7 +10,6 @@ datasource db {
 enum TipoProducto {
   DOBLE_CREMA
   SEMISALADO
-  RECORTES_DOBLE_CREMA
 }
 
 enum TipoCliente {
@@ -79,8 +78,8 @@ model Lote {
   id                     String       @id @default(uuid())
   producto               TipoProducto
   fechaIngreso           DateTime     @default(now())
-  proveedorId            String
-  proveedor              Proveedor    @relation(fields: [proveedorId], references: [id])
+  proveedorId            String?
+  proveedor              Proveedor?   @relation(fields: [proveedorId], references: [id])
   cantidadCompradaKg     Decimal      @default("0")
   precioCompraBaseKg     Decimal      @default("0")
   costoFlete             Decimal      @default("0")
