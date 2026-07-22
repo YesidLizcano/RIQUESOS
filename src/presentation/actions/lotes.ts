@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { requireSession } from './auth';
 import { PrismaProveedorRepo } from '@/infrastructure/repositories/PrismaProveedorRepo';
 import { PrismaLoteRepo } from '@/infrastructure/repositories/PrismaLoteRepo';
+import { RECORTES_DC_PERMANENT_LOT_ID } from '@/domain/constants';
 import { CrearLote } from '@/application/use-cases/CrearLote';
 import { ModificarLote } from '@/application/use-cases/ModificarLote';
 import { MarcarLotePagado } from '@/application/use-cases/MarcarLotePagado';
@@ -159,6 +160,10 @@ export async function eliminarLote(formData: FormData) {
   const id = formData.get('id') as string;
 
   try {
+    if (id === RECORTES_DC_PERMANENT_LOT_ID) {
+      return { success: false, error: 'No se puede eliminar el lote permanente de recortes' };
+    }
+
     const loteRepo = new PrismaLoteRepo();
     const lote = await loteRepo.findById(id);
     if (!lote) {
@@ -213,6 +218,10 @@ export async function cerrarLote(formData: FormData) {
   const id = formData.get('id') as string;
   if (!id) {
     return { success: false, error: 'ID de lote requerido' };
+  }
+
+  if (id === RECORTES_DC_PERMANENT_LOT_ID) {
+    return { success: false, error: 'No se puede cerrar el lote permanente de recortes' };
   }
 
   try {
