@@ -3,14 +3,19 @@ import { z } from 'zod';
 import { DOBLE_CREMA_BLOCK_KG } from '@/domain/constants';
 
 export const ventaItemSchema = z.object({
-  loteId: z.string().min(1, 'Seleccione un lote'),
+  loteId: z.string().uuid('Lote inválido'),
   ventaTipo: z.enum(['BLOQUES', 'GRANEL']),
   cantidadKg: z.coerce.number().positive('La cantidad debe ser mayor a 0'),
   precioVentaKg: z.coerce.number().positive('El precio debe ser mayor a 0'),
   bloquesEnterosVendidos: z.coerce.number().int().nonnegative().optional().default(0),
   bloquesTajadosVendidos: z.coerce.number().int().nonnegative().optional().default(0),
+  bloquesTajadosDeFabricaVendidos: z.coerce.number().int().nonnegative().optional().default(0),
+  bloquesTajadosInternosVendidos: z.coerce.number().int().nonnegative().optional().default(0),
   bloquesReempacados: z.coerce.number().int().nonnegative().optional().default(0),
+  precioEnteroBloque: z.coerce.number().nonnegative().optional(),
+  precioTajadoBloque: z.coerce.number().nonnegative().optional(),
   origenCorte: z.enum(['ENTERO', 'TAJADO']).optional().default('ENTERO'),
+  origenTajadoGranel: z.enum(['INTERNO', 'FABRICA']).optional(),
 }).refine(
   // Block constraint: BLOQUES mode requires integer block count (multiple of 2.5 kg)
   (data) => {
@@ -34,7 +39,8 @@ export const ventaItemSchema = z.object({
 );
 
 export const registrarVentaSchema = z.object({
-  clienteId: z.string().min(1, 'Seleccione un cliente'),
+  clienteId: z.string().uuid('Seleccione un cliente válido'),
+  sedeId: z.string().uuid('Sede inválida').optional().nullable(),
   items: z.array(ventaItemSchema).min(1, 'Al menos un item es requerido'),
   valorDomicilio: z.coerce.number().nonnegative('El valor del domicilio no puede ser negativo').optional().default(0),
   costoDomiciliario: z.coerce.number().nonnegative('El costo del domiciliario no puede ser negativo').optional().default(0),
@@ -43,4 +49,22 @@ export const registrarVentaSchema = z.object({
   metodoPagoAbono: z.enum(['EFECTIVO', 'NEQUI', 'BRE_B']).optional(),
   abono: z.string().optional(),
   observaciones: z.string().trim().max(500, 'Las observaciones no pueden superar 500 caracteres').optional(),
+});
+
+export const editarVentaSchema = z.object({
+  ventaId: z.string().uuid('ID inválido'),
+  clienteId: z.string().uuid('Seleccione un cliente válido'),
+  sedeId: z.string().uuid('Sede inválida').optional().nullable(),
+  items: z.array(ventaItemSchema).min(1, 'Al menos un item es requerido'),
+  valorDomicilio: z.coerce.number().nonnegative('El valor del domicilio no puede ser negativo').optional().default(0),
+  costoDomiciliario: z.coerce.number().nonnegative('El costo del domiciliario no puede ser negativo').optional().default(0),
+  domiciliario: z.string().trim().max(100, 'El nombre del domiciliario no puede superar 100 caracteres').optional(),
+  metodoPago: z.enum(['EFECTIVO', 'NEQUI', 'BRE_B', 'CREDITO']).optional(),
+  metodoPagoAbono: z.enum(['EFECTIVO', 'NEQUI', 'BRE_B']).optional(),
+  abono: z.string().optional(),
+  observaciones: z.string().trim().max(500, 'Las observaciones no pueden superar 500 caracteres').optional(),
+});
+
+export const eliminarVentaSchema = z.object({
+  ventaId: z.string().uuid('ID inválido'),
 });

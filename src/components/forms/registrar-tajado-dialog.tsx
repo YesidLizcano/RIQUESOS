@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useRefresh } from '@/components/refresh-context';
 import { registrarTajado } from '@/presentation/actions/tajados';
 import { getEmpaques } from '@/presentation/actions/empaques';
@@ -47,6 +47,7 @@ export function RegistrarTajadoDialog({ lotes, proveedores }: RegistrarTajadoDia
   const [separadoresKg, setSeparadoresKg] = useState<string>('0');
   const [separadorStock, setSeparadorStock] = useState<number>(0);
   const [recortesKg, setRecortesKg] = useState<string>('');
+  const submittingRef = useRef(false);
 
   // Fetch separador stock on mount
   useEffect(() => {
@@ -108,6 +109,9 @@ export function RegistrarTajadoDialog({ lotes, proveedores }: RegistrarTajadoDia
   }
 
   async function handleConfirm() {
+    // Prevent double-submit: check ref immediately (synchronous), before any async work
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setLoading(true);
     const formData = new FormData();
     formData.set('loteId', loteId);
@@ -121,13 +125,21 @@ export function RegistrarTajadoDialog({ lotes, proveedores }: RegistrarTajadoDia
 
     if (result.success) {
       toast.success('Tajado registrado exitosamente');
-      refreshData();
+      await refreshData();
       setOpen(false);
       resetForm();
     } else {
-      toast.error(result.error || 'Error al registrar tajado');
-      setStep('form');
+      if (result.concurrencyError) {
+        toast.error('Los datos del lote cambiaron. Cerrando formulario — abra el tajado nuevamente con datos actualizados.');
+        await refreshData();
+        setOpen(false);
+        resetForm();
+      } else {
+        toast.error(result.error || 'Error al registrar tajado');
+        setStep('form');
+      }
     }
+    submittingRef.current = false;
   }
 
   function resetForm() {
@@ -138,6 +150,7 @@ export function RegistrarTajadoDialog({ lotes, proveedores }: RegistrarTajadoDia
     setTajador('');
     setSeparadoresKg('0');
     setRecortesKg('');
+    submittingRef.current = false;
   }
 
   return (

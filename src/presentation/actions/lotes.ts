@@ -143,7 +143,8 @@ export async function modificarLote(formData: FormData) {
     if (error instanceof ConcurrencyError) {
       return {
         success: false,
-        error: 'El lote fue modificado por otro usuario. Recargue la página e intente de nuevo.',
+        error: 'Los datos del lote fueron modificados recientemente. Por favor, recargue la página e intente nuevamente.',
+        concurrencyError: true,
       };
     }
     logger.error({ err: error }, 'Error modifying lote');
@@ -158,14 +159,18 @@ export async function eliminarLote(formData: FormData) {
   const session = await requireSession();
 
   const id = formData.get('id') as string;
+  const idResult = z.string().uuid().safeParse(id);
+  if (!idResult.success) {
+    return { success: false, error: 'ID inválido' };
+  }
 
   try {
-    if (id === RECORTES_DC_PERMANENT_LOT_ID) {
+    if (idResult.data === RECORTES_DC_PERMANENT_LOT_ID) {
       return { success: false, error: 'No se puede eliminar el lote permanente de recortes' };
     }
 
     const loteRepo = new PrismaLoteRepo();
-    const lote = await loteRepo.findById(id);
+    const lote = await loteRepo.findById(idResult.data);
     if (!lote) {
       return { success: false, error: 'Lote no encontrado' };
     }
@@ -173,7 +178,7 @@ export async function eliminarLote(formData: FormData) {
     // Allow soft delete regardless of stock status.
     // The lote will be hidden from active lists but data remains for historical records.
     // Stock may still be non-zero — that's OK, the lote is just archived.
-    await loteRepo.softDelete(id);
+    await loteRepo.softDelete(idResult.data);
 
     revalidatePath('/lotes');
     revalidatePath('/ventas');
@@ -196,10 +201,14 @@ export async function restaurarLote(formData: FormData) {
   const session = await requireSession();
 
   const id = formData.get('id') as string;
+  const idResult = z.string().uuid().safeParse(id);
+  if (!idResult.success) {
+    return { success: false, error: 'ID inválido' };
+  }
 
   try {
     const loteRepo = new PrismaLoteRepo();
-    await loteRepo.restore(id);
+    await loteRepo.restore(idResult.data);
 
     revalidatePath('/lotes');
     return { success: true };
@@ -216,17 +225,18 @@ export async function cerrarLote(formData: FormData) {
   await requireSession();
 
   const id = formData.get('id') as string;
-  if (!id) {
-    return { success: false, error: 'ID de lote requerido' };
+  const idResult = z.string().uuid().safeParse(id);
+  if (!idResult.success) {
+    return { success: false, error: 'ID inválido' };
   }
 
-  if (id === RECORTES_DC_PERMANENT_LOT_ID) {
+  if (idResult.data === RECORTES_DC_PERMANENT_LOT_ID) {
     return { success: false, error: 'No se puede cerrar el lote permanente de recortes' };
   }
 
   try {
     const loteRepo = new PrismaLoteRepo();
-    const lote = await loteRepo.findById(id);
+    const lote = await loteRepo.findById(idResult.data);
     if (!lote) {
       return { success: false, error: 'Lote no encontrado' };
     }
@@ -238,7 +248,7 @@ export async function cerrarLote(formData: FormData) {
     }
 
     const closedLote = lote.cerrarLote();
-    await loteRepo.cerrarLote(id, closedLote, lote.version);
+    await loteRepo.cerrarLote(idResult.data, closedLote, lote.version);
 
     revalidatePath('/lotes');
     revalidatePath('/ventas');
@@ -248,7 +258,8 @@ export async function cerrarLote(formData: FormData) {
     if (error instanceof ConcurrencyError) {
       return {
         success: false,
-        error: 'El lote fue modificado por otro usuario. Recargue la página e intente de nuevo.',
+        error: 'Los datos del lote fueron modificados recientemente. Por favor, recargue la página e intente nuevamente.',
+        concurrencyError: true,
       };
     }
     logger.error({ err: error }, 'Error closing lote');

@@ -7,7 +7,7 @@ import { EditarLoteDialog } from '@/components/forms/editar-lote-dialog';
 import { EntityActions } from '@/components/entity-actions';
 import { eliminarLote, restaurarLote } from '@/presentation/actions/lotes';
 import { ProductoBadge } from '@/components/producto-badge';
-import { bloquesCompletos, isDobleCrema, DOBLE_CREMA_BLOCK_KG } from '@/domain/constants';
+import { bloquesCompletos, isDobleCrema, DOBLE_CREMA_BLOCK_KG, formatDobleCremaStockLabel, formatDobleCremaPurchasedLabel } from '@/domain/constants';
 import { TipoProducto, EstadoLote, EstadoPagoLote } from '@/domain/enums';
 import { tipoProductoLabel, estadoLoteLabel, metodoPagoLabel } from '@/domain/labels';
 import { ArchiveIcon } from 'lucide-react';
@@ -65,12 +65,11 @@ export function createLoteColumns(
         const kg = Number(row.getValue('cantidadCompradaKg'));
         const producto = row.original.producto;
         if (isDobleCrema(producto)) {
-          const entOriginales = row.original.bloquesEnterosOriginal;
-          const tajFabricaOriginal = row.original.bloquesTajadosFabricaOriginal;
-          const parts: string[] = [];
-          if (entOriginales > 0) parts.push(`${entOriginales}E`);
-          if (tajFabricaOriginal > 0) parts.push(`${tajFabricaOriginal}TF`);
-          const detail = parts.length > 0 ? parts.join('+') : `${bloquesCompletos(kg)}bl`;
+          const detail = formatDobleCremaPurchasedLabel(
+            row.original.bloquesEnterosOriginal,
+            row.original.bloquesTajadosFabricaOriginal,
+            kg,
+          );
           return <span className="whitespace-nowrap">{detail} <span className="text-muted-foreground">({kg.toLocaleString('es-AR')}kg)</span></span>;
         }
         return <span className="whitespace-nowrap">{kg.toLocaleString('es-AR')} kg</span>;
@@ -211,23 +210,19 @@ export function createLoteColumns(
         const producto = row.original.producto;
 
         if (isDobleCrema(producto)) {
-          const enteros = row.original.bloquesEnteros;
-          const tajadosFabrica = row.original.bloquesTajadosDeFabrica;
-          const tajadosInternos = row.original.bloquesTajados;
-          const sueltosEntero = Number(row.original.sueltosEntero);
-          const sueltosTajado = Number(row.original.sueltosTajado);
+          const detail = formatDobleCremaStockLabel(
+            row.original.bloquesEnteros,
+            row.original.bloquesTajados,
+            row.original.bloquesTajadosDeFabrica,
+            Number(row.original.sueltosEntero),
+            Number(row.original.sueltosTajado),
+            stockValue,
+          );
 
-          const parts: string[] = [];
-          if (enteros > 0) parts.push(`${enteros}E`);
-          if (tajadosFabrica > 0) parts.push(`${tajadosFabrica}TF`);
-          if (tajadosInternos > 0) parts.push(`${tajadosInternos}TI`);
-          if (sueltosEntero > 0) parts.push(`${sueltosEntero}kg(E)`);
-          if (sueltosTajado > 0) parts.push(`${sueltosTajado}kg(T)`);
-
-          if (parts.length === 0) {
+          if (detail === '0') {
             return <span className="whitespace-nowrap">{stockValue.toLocaleString('es-AR')} kg</span>;
           }
-          return <span className="whitespace-nowrap text-xs leading-tight">{parts.join(' + ')} <span className="text-muted-foreground">({stockValue.toLocaleString('es-AR')}kg)</span></span>;
+          return <span className="whitespace-nowrap text-xs leading-tight">{detail} <span className="text-muted-foreground">({stockValue.toLocaleString('es-AR')}kg)</span></span>;
         }
         return <span className="whitespace-nowrap">{stockValue.toLocaleString('es-AR')} kg</span>;
       },

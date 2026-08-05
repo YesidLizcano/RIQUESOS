@@ -130,7 +130,7 @@ export const crearLotesBatchSchema = z.object({
 });
 
 export const actualizarLoteSchema = z.object({
-  id: z.string().min(1, 'ID es obligatorio'),
+  id: z.string().uuid('ID inválido'),
   version: z.coerce.number().int().min(1, 'Version es obligatoria'),
   precioCompraBaseKg: z.coerce.number().nonnegative('El precio no puede ser negativo').optional(),
   precioPorBloqueEntero: z.coerce.number().nonnegative('El precio por bloque entero no puede ser negativo').optional(),

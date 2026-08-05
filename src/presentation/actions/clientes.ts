@@ -2,6 +2,7 @@
 
 // Cliente Server Actions — thin controllers, delegate to use cases
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { requireSession } from './auth';
 import { PrismaClienteRepo } from '@/infrastructure/repositories/PrismaClienteRepo';
@@ -136,10 +137,14 @@ export async function restaurarCliente(formData: FormData) {
   const session = await requireSession();
 
   const id = formData.get('id') as string;
+  const idResult = z.string().uuid().safeParse(id);
+  if (!idResult.success) {
+    return { success: false, error: 'ID inválido' };
+  }
 
   try {
     const useCase = await getGestionarClientesUseCase();
-    const cliente = await useCase.restaurar(id);
+    const cliente = await useCase.restaurar(idResult.data);
 
     revalidatePath('/clientes');
     return { success: true, cliente: clienteToResponse(cliente) };

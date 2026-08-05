@@ -1,7 +1,7 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { isDobleCrema, formatDobleCremaDetalle, DOBLE_CREMA_BLOCK_KG } from '@/domain/constants';
+import { isDobleCrema, formatDobleCremaStockLabel, DOBLE_CREMA_BLOCK_KG } from '@/domain/constants';
 import type { LoteResponse } from '@/presentation/dtos';
 import { Badge } from '@/components/ui/badge';
 import { ProductoBadge } from '@/components/producto-badge';
@@ -26,7 +26,7 @@ export const lotesColumns: ColumnDef<LoteResponse, unknown>[] = [
       if (!isDobleCrema(lote.producto)) {
         return `${stockValue.toLocaleString('es-AR')} kg`;
       }
-      const text = formatDobleCremaDetalle(lote.bloquesEnteros, lote.bloquesTajadosDisponibles, Number(lote.sueltosEntero), Number(lote.sueltosTajado));
+      const text = formatDobleCremaStockLabel(lote.bloquesEnteros, lote.bloquesTajados, lote.bloquesTajadosDeFabrica, Number(lote.sueltosEntero), Number(lote.sueltosTajado), stockValue);
       return text === '0' ? `${stockValue.toLocaleString('es-AR')} kg` : `${text} • Total: ${stockValue.toLocaleString('es-AR')} kg`;
     },
   },

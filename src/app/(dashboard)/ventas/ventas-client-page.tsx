@@ -58,14 +58,16 @@ const ventaExportMap = [
     if (ssItems.length === 0) {
       // Pure DC venta — aggregate blocks from items
       let totalEnteros = 0;
-      let totalTajados = 0;
+      let totalTajadosInternos = 0;
+      let totalTajadosFabrica = 0;
       let totalKgSueltosEntero = 0;
       let totalKgSueltosTajado = 0;
 
       for (const item of dcItems) {
         if (item.ventaTipo === 'BLOQUES') {
           totalEnteros += item.bloquesEnterosVendidos;
-          totalTajados += item.bloquesTajadosVendidos + item.bloquesTajadosDeFabricaVendidos;
+          totalTajadosInternos += item.bloquesTajadosInternosVendidos ?? 0;
+          totalTajadosFabrica += item.bloquesTajadosDeFabricaVendidos ?? 0;
         } else {
           // GRANEL — convert kg to blocks within variety
           const kg = Number(item.cantidadKg);
@@ -78,19 +80,21 @@ const ventaExportMap = [
         }
       }
 
-      return formatDobleCremaDetalle(totalEnteros, totalTajados, totalKgSueltosEntero, totalKgSueltosTajado);
+      return formatDobleCremaDetalle(totalEnteros, totalTajadosInternos, totalTajadosFabrica, totalKgSueltosEntero, totalKgSueltosTajado);
     }
 
     // Mixed: DC + SS — show both separated by " | "
     let totalEnteros = 0;
-    let totalTajados = 0;
+    let totalTajadosInternos = 0;
+    let totalTajadosFabrica = 0;
     let totalKgSueltosEntero = 0;
     let totalKgSueltosTajado = 0;
 
     for (const item of dcItems) {
       if (item.ventaTipo === 'BLOQUES') {
         totalEnteros += item.bloquesEnterosVendidos;
-        totalTajados += item.bloquesTajadosVendidos + item.bloquesTajadosDeFabricaVendidos;
+        totalTajadosInternos += item.bloquesTajadosInternosVendidos ?? 0;
+        totalTajadosFabrica += item.bloquesTajadosDeFabricaVendidos ?? 0;
       } else {
         const kg = Number(item.cantidadKg);
         const variedad = item.origenCorte === 'TAJADO' ? 'tajado' : 'entero';
@@ -102,7 +106,7 @@ const ventaExportMap = [
       }
     }
 
-    const dcPart = formatDobleCremaDetalle(totalEnteros, totalTajados, totalKgSueltosEntero, totalKgSueltosTajado);
+    const dcPart = formatDobleCremaDetalle(totalEnteros, totalTajadosInternos, totalTajadosFabrica, totalKgSueltosEntero, totalKgSueltosTajado);
     const ssKg = ssItems.reduce((sum, item) => sum + Number(item.cantidadKg), 0);
     return `${dcPart} | ${formatSSKg(ssKg)}`;
   }},

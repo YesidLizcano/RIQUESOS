@@ -2,6 +2,7 @@
 
 // Empaque Server Actions — thin controllers, delegate to use cases
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 import { requireSession } from './auth';
 import { PrismaEmpaqueRepo } from '@/infrastructure/repositories/PrismaEmpaqueRepo';
 import { PrismaCompraInsumoRepo } from '@/infrastructure/repositories/PrismaCompraInsumoRepo';
@@ -100,10 +101,14 @@ export async function eliminarEmpaque(formData: FormData) {
   const session = await requireSession();
 
   const id = formData.get('id') as string;
+  const idResult = z.string().uuid().safeParse(id);
+  if (!idResult.success) {
+    return { success: false, error: 'ID inválido' };
+  }
 
   try {
     const empaqueRepo = new PrismaEmpaqueRepo();
-    await empaqueRepo.softDelete(id);
+    await empaqueRepo.softDelete(idResult.data);
 
     revalidatePath('/insumos');
     return { success: true };
@@ -124,10 +129,14 @@ export async function restaurarEmpaque(formData: FormData) {
   const session = await requireSession();
 
   const id = formData.get('id') as string;
+  const idResult = z.string().uuid().safeParse(id);
+  if (!idResult.success) {
+    return { success: false, error: 'ID inválido' };
+  }
 
   try {
     const empaqueRepo = new PrismaEmpaqueRepo();
-    await empaqueRepo.restore(id);
+    await empaqueRepo.restore(idResult.data);
 
     revalidatePath('/insumos');
     return { success: true };

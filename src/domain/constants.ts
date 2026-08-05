@@ -74,24 +74,25 @@ export function formatDobleCremaGranel(
 }
 
 /**
- * Format Doble Crema aggregated detail from 4 accumulators.
+ * Format Doble Crema aggregated detail from block counts.
  *
- * Business rule: kilos sold granel from enteros and tajados CANNOT mix.
- * Each variety converts its own kg to whole blocks independently, then
- * the remainder kg keeps the variety suffix.
+ * Shows Enteros, TI, and TF separately with suffix labels.
+ * Loose kg from each variety are converted to whole blocks + remainder.
  *
- * @param enteros - Whole blocks sold from ENTERO variety
- * @param tajados - Whole blocks sold from TAJADO variety
- * @param kgSueltosEntero - Loose kg from ENTERO variety (granel sales)
- * @param kgSueltosTajado - Loose kg from TAJADO variety (granel sales)
+ * @param enteros - Whole blocks from ENTERO variety
+ * @param tajadosInternos - Whole blocks from TAJADO INTERNO variety
+ * @param tajadosFabrica - Whole blocks from TAJADO DE FÁBRICA variety
+ * @param kgSueltosEntero - Loose kg from ENTERO variety
+ * @param kgSueltosTajado - Loose kg from TAJADO variety (TI gets priority for sueltos)
  *
  * Example:
- *   formatDobleCremaDetalle(26, 5, 2, 1)
- *   → "26 enteros + 5 tajados + 2 kg (de entero) + 1 kg (de tajado)"
+ *   formatDobleCremaDetalle(26, 3, 2, 1.5, 0.5)
+ *   → "26 E + 3 TI + 2 TF + 1.5 kg (de entero) + 0.5 kg (de tajado)"
  */
 export function formatDobleCremaDetalle(
   enteros: number,
-  tajados: number,
+  tajadosInternos: number,
+  tajadosFabrica: number,
   kgSueltosEntero: number,
   kgSueltosTajado: number,
 ): string {
@@ -103,16 +104,21 @@ export function formatDobleCremaDetalle(
   const remanenteTajado = Math.round((kgSueltosTajado % DOBLE_CREMA_BLOCK_KG) * 1000) / 1000;
 
   const totalEnteros = enteros + enterosExtra;
-  const totalTajados = tajados + tajadosExtra;
+  // Sueltos tajados go to TI (internally cut)
+  const totalTI = tajadosInternos + tajadosExtra;
+  const totalTF = tajadosFabrica;
 
   // Build output: only include non-zero segments
   const parts: string[] = [];
 
   if (totalEnteros > 0) {
-    parts.push(`${totalEnteros} enteros`);
+    parts.push(`${totalEnteros} E`);
   }
-  if (totalTajados > 0) {
-    parts.push(`${totalTajados} tajados`);
+  if (totalTI > 0) {
+    parts.push(`${totalTI} TI`);
+  }
+  if (totalTF > 0) {
+    parts.push(`${totalTF} TF`);
   }
   if (remanenteEntero > 0) {
     parts.push(`${remanenteEntero} kg (de entero)`);
@@ -122,4 +128,82 @@ export function formatDobleCremaDetalle(
   }
 
   return parts.length > 0 ? parts.join(' + ') : '0';
+}
+
+/**
+ * Format a DC lote's block composition as a compact label.
+ * Used in lote table columns and venta lote selectors.
+ *
+ * Rules:
+ * - Original E/TF blocks shown with suffix
+ * - Recortes/internal lots (no original blocks, proveedorId null): all stock is TI
+ * - Remainder kg shown if not an exact multiple of 2.5
+ *
+ * Examples:
+ *   formatDobleCremaStockLabel(36, 0, 4, 0, 0) → "36E + 4TF"
+ *   formatDobleCremaStockLabel(0, 0, 2, 0, 0) → "2TF"
+ *   formatDobleCremaStockLabel(0, 0, 0, 0, 0, 3) → "1TI + 0.5kg"  (recortes)
+ *   formatDobleCremaStockLabel(10, 3, 2, 1.5, 0.8) → "10E + 3TI + 2TF + 1.5kg(E) + 0.8kg(T)"
+ */
+export function formatDobleCremaStockLabel(
+  bloquesEnteros: number,
+  bloquesTajados: number,
+  bloquesTajadosDeFabrica: number,
+  sueltosEntero: number,
+  sueltosTajado: number,
+  stockDisponibleKg?: number,
+): string {
+  const parts: string[] = [];
+
+  if (bloquesEnteros > 0) parts.push(`${bloquesEnteros}E`);
+  if (bloquesTajadosDeFabrica > 0) parts.push(`${bloquesTajadosDeFabrica}TF`);
+  if (bloquesTajados > 0) parts.push(`${bloquesTajados}TI`);
+
+  // Convert loose kg to blocks + remainder per variety
+  const enterosExtra = Math.floor(sueltosEntero / DOBLE_CREMA_BLOCK_KG);
+  const remanenteEntero = Math.round((sueltosEntero % DOBLE_CREMA_BLOCK_KG) * 1000) / 1000;
+  const tajadosExtra = Math.floor(sueltosTajado / DOBLE_CREMA_BLOCK_KG);
+  const remanenteTajado = Math.round((sueltosTajado % DOBLE_CREMA_BLOCK_KG) * 1000) / 1000;
+
+  if (enterosExtra > 0) parts.push(`${enterosExtra}E`);
+  if (tajadosExtra > 0) parts.push(`${tajadosExtra}TI`);
+  if (remanenteEntero > 0) parts.push(`${remanenteEntero}kg(E)`);
+  if (remanenteTajado > 0) parts.push(`${remanenteTajado}kg(T)`);
+
+  // Recortes/internal lots: no blocks at all but has stock → treat as TI
+  if (parts.length === 0 && stockDisponibleKg && stockDisponibleKg > 0) {
+    const blocks = Math.floor(stockDisponibleKg / DOBLE_CREMA_BLOCK_KG);
+    const remainder = Math.round((stockDisponibleKg - blocks * DOBLE_CREMA_BLOCK_KG) * 1000) / 1000;
+    if (blocks > 0) parts.push(`${blocks}TI`);
+    if (remainder > 0) parts.push(`${remainder}kg`);
+  }
+
+  return parts.length > 0 ? parts.join(' + ') : '0';
+}
+
+/**
+ * Format a DC lote's purchased composition as a compact label.
+ * Uses original block counts (not current, which change with tajados).
+ * Same logic as formatDobleCremaStockLabel but for the "Cant. Comprada" column.
+ *
+ * Recortes/internal lots: all kg are TI sueltos.
+ */
+export function formatDobleCremaPurchasedLabel(
+  bloquesEnterosOriginal: number,
+  bloquesTajadosFabricaOriginal: number,
+  cantidadCompradaKg: number,
+): string {
+  const parts: string[] = [];
+  if (bloquesEnterosOriginal > 0) parts.push(`${bloquesEnterosOriginal}E`);
+  if (bloquesTajadosFabricaOriginal > 0) parts.push(`${bloquesTajadosFabricaOriginal}TF`);
+
+  // Recortes/internal lots: no original blocks, all kg are TI
+  if (parts.length === 0 && cantidadCompradaKg > 0) {
+    const blocks = Math.floor(cantidadCompradaKg / DOBLE_CREMA_BLOCK_KG);
+    const remainder = Math.round((cantidadCompradaKg - blocks * DOBLE_CREMA_BLOCK_KG) * 1000) / 1000;
+    if (blocks > 0) parts.push(`${blocks}TI`);
+    if (remainder > 0) parts.push(`${remainder}kg`);
+  }
+
+  return parts.length > 0 ? parts.join('+') : '0';
 }

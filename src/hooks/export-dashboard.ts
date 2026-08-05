@@ -106,7 +106,8 @@ function buildResumenSheet(wb: Workbook, metricas: DashboardMetricasResponse) {
   // DC block notation volume
   const dcVolume = formatDobleCremaDetalle(
     p.volumenDobleCremaEnteros,
-    p.volumenDobleCremaTajados,
+    p.volumenDobleCremaTajadosInternos,
+    p.volumenDobleCremaTajadosFabrica,
     Number(p.volumenDobleCremaKgGranelEntero),
     Number(p.volumenDobleCremaKgGranelTajado),
   );
@@ -268,10 +269,10 @@ function buildInventarioSheet(wb: Workbook, metricas: DashboardMetricasResponse)
     let stockDisponible: string;
 
     if (isDC) {
-      const bloquesTajados = item.bloquesTajados + item.bloquesTajadosDeFabrica;
       detalle = formatDobleCremaDetalle(
         item.bloquesEnteros,
-        bloquesTajados,
+        item.bloquesTajados,
+        item.bloquesTajadosDeFabrica,
         Number(item.sueltosEntero),
         Number(item.sueltosTajado),
       );
@@ -344,7 +345,8 @@ function buildDetalleVentasSheet(wb: Workbook, ventas: VentaResponse[]) {
         if (item.ventaTipo === 'BLOQUES') {
           cantidad = formatDobleCremaDetalle(
             item.bloquesEnterosVendidos ?? 0,
-            item.bloquesTajadosVendidos ?? 0,
+            item.bloquesTajadosInternosVendidos ?? 0,
+            item.bloquesTajadosDeFabricaVendidos ?? 0,
             0,
             0,
           );
@@ -494,7 +496,8 @@ export function getDashboardPreviewData(
   // ── Sheet 1: Resumen ────────────────────────────────────────────────────
   const dcVolume = formatDobleCremaDetalle(
     p.volumenDobleCremaEnteros,
-    p.volumenDobleCremaTajados,
+    p.volumenDobleCremaTajadosInternos,
+    p.volumenDobleCremaTajadosFabrica,
     Number(p.volumenDobleCremaKgGranelEntero),
     Number(p.volumenDobleCremaKgGranelTajado),
   );
@@ -554,10 +557,10 @@ export function getDashboardPreviewData(
     let stockDisponible: string;
 
     if (isDC) {
-      const bloquesTajados = item.bloquesTajados + item.bloquesTajadosDeFabrica;
       detalle = formatDobleCremaDetalle(
         item.bloquesEnteros,
-        bloquesTajados,
+        item.bloquesTajados,
+        item.bloquesTajadosDeFabrica,
         Number(item.sueltosEntero),
         Number(item.sueltosTajado),
       );
@@ -601,7 +604,8 @@ export function getDashboardPreviewData(
           if (item.ventaTipo === 'BLOQUES') {
             cantidad = formatDobleCremaDetalle(
               item.bloquesEnterosVendidos ?? 0,
-              item.bloquesTajadosVendidos ?? 0,
+              item.bloquesTajadosInternosVendidos ?? 0,
+              item.bloquesTajadosDeFabricaVendidos ?? 0,
               0,
               0,
             );

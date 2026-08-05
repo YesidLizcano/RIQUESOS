@@ -13,5 +13,5 @@ export const actualizarProveedorSchema = z.object({
 });
 
 export const eliminarProveedorSchema = z.object({
-  id: z.string().min(1, 'ID es obligatorio'),
+  id: z.string().uuid('ID inválido'),
 });

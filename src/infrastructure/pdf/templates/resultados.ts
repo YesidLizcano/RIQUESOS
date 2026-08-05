@@ -12,11 +12,12 @@ function formatCantidad(args: {
   producto?: string;
   kgVendidos: string;
   dcEnteros: number;
-  dcTajados: number;
+  dcTajadosInternos: number;
+  dcTajadosFabrica: number;
   dcKgGranelEntero: string;
   dcKgGranelTajado: string;
 }): string {
-  const hasDC = (args.dcEnteros + args.dcTajados) > 0
+  const hasDC = (args.dcEnteros + args.dcTajadosInternos + args.dcTajadosFabrica) > 0
     || Number(args.dcKgGranelEntero ?? 0) > 0
     || Number(args.dcKgGranelTajado ?? 0) > 0
     || (args.producto ? isDobleCrema(args.producto) : false);
@@ -25,10 +26,11 @@ function formatCantidad(args: {
     // Non-DC: just show kg
     return `${Number(args.kgVendidos).toLocaleString('es-AR')} kg`;
   }
-  // DC: use formatDobleCremaDetalle with 4 accumulators
+  // DC: use formatDobleCremaDetalle with 5 accumulators
   return formatDobleCremaDetalle(
     args.dcEnteros ?? 0,
-    args.dcTajados ?? 0,
+    args.dcTajadosInternos ?? 0,
+    args.dcTajadosFabrica ?? 0,
     Number(args.dcKgGranelEntero ?? 0),
     Number(args.dcKgGranelTajado ?? 0),
   );

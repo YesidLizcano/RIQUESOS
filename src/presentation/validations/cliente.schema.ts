@@ -21,5 +21,5 @@ export const actualizarClienteSchema = z.object({
 });
 
 export const eliminarClienteSchema = z.object({
-  id: z.string().min(1, 'ID es obligatorio'),
+  id: z.string().uuid('ID inválido'),
 });

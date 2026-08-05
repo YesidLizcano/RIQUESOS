@@ -2,6 +2,7 @@
 
 // Proveedor Server Actions — thin controllers, delegate to use cases
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 import { requireSession } from './auth';
 import { PrismaProveedorRepo } from '@/infrastructure/repositories/PrismaProveedorRepo';
 import { GestionarProveedores } from '@/application/use-cases/GestionarProveedores';
@@ -125,10 +126,14 @@ export async function restaurarProveedor(formData: FormData) {
   const session = await requireSession();
 
   const id = formData.get('id') as string;
+  const idResult = z.string().uuid().safeParse(id);
+  if (!idResult.success) {
+    return { success: false, error: 'ID inválido' };
+  }
 
   try {
     const useCase = await getGestionarProveedoresUseCase();
-    const proveedor = await useCase.restaurar(id);
+    const proveedor = await useCase.restaurar(idResult.data);
 
     revalidatePath('/proveedores');
     return { success: true, proveedor: proveedorToResponse(proveedor) };

@@ -1,4 +1,6 @@
 import { getTajados } from '@/presentation/actions/tajados';
+import { getLotes } from '@/presentation/actions/lotes';
+import { getProveedores } from '@/presentation/actions/proveedores';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/infrastructure/auth';
 import { redirect } from 'next/navigation';
@@ -13,12 +15,19 @@ export default async function TajadosPage({ searchParams }: { searchParams: Prom
 
   const { inicio, fin, estado } = await searchParams;
 
-  const result = await getTajados(inicio, fin);
-  const tajados = result.success && result.tajados ? result.tajados : [];
+  const [tajadosResult, lotesResult, proveedoresResult] = await Promise.all([
+    getTajados(inicio, fin),
+    getLotes(),
+    getProveedores(),
+  ]);
+
+  const tajados = tajadosResult.success && tajadosResult.tajados ? tajadosResult.tajados : [];
+  const lotes = lotesResult.success && lotesResult.lotes ? lotesResult.lotes : [];
+  const proveedores = proveedoresResult.success && proveedoresResult.proveedores ? proveedoresResult.proveedores : [];
 
   return (
     <Suspense fallback={null}>
-      <TajadosClientPage tajados={tajados} initialEstado={estado} />
+      <TajadosClientPage tajados={tajados} lotes={lotes} proveedores={proveedores} initialEstado={estado} />
     </Suspense>
   );
 }

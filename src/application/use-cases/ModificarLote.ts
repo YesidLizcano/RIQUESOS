@@ -37,14 +37,12 @@ export class ModificarLote {
     }
 
     // Doble Crema block constraint: if updating quantity, validate block multiple
+    // Valid quantities are multiples of 0.5 kg (half a 2.5 kg block).
+    // Check: cantidadKg * 2 must be an integer — pure string arithmetic, no float64.
     if (existing.producto === TipoProducto.DOBLE_CREMA && input.cantidadCompradaKg !== undefined) {
       const cantidadKg = new Dinero(input.cantidadCompradaKg);
-      // Use Dinero division to avoid float64 precision loss
-      const blockRatio = cantidadKg.divide(String(DOBLE_CREMA_BLOCK_KG));
-      // Check if the ratio is close enough to an integer (within 0.001)
-      const remainder = blockRatio.value.split('.')[1]; // fractional part
-      const fracPart = remainder ? parseFloat('0.' + remainder) : 0;
-      if (fracPart >= 0.001 && fracPart <= 0.999) {
+      const doubled = cantidadKg.multiply('2');
+      if (doubled.value.includes('.')) {
         throw new Error('Para Doble Crema, la cantidad debe ser múltiplo de 2.5 kg');
       }
     }

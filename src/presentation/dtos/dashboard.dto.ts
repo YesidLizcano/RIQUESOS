@@ -17,8 +17,10 @@ export interface MetricasPeriodoResponse {
   margenBrutoPct: string;
   /** DC enteros sold: whole blocks (BLOQUES) */
   volumenDobleCremaEnteros: number;
-  /** DC tajados sold: whole blocks (BLOQUES) */
-  volumenDobleCremaTajados: number;
+  /** DC tajados internos sold: whole blocks (BLOQUES) */
+  volumenDobleCremaTajadosInternos: number;
+  /** DC tajados de fábrica sold: whole blocks (BLOQUES) */
+  volumenDobleCremaTajadosFabrica: number;
   /** DC kg granel from ENTERO variety (to be converted to blocks + residuo by formatDobleCremaDetalle) */
   volumenDobleCremaKgGranelEntero: string;
   /** DC kg granel from TAJADO variety (to be converted to blocks + residuo by formatDobleCremaDetalle) */
@@ -81,8 +83,10 @@ export interface DesglosePorProductoResponse {
   ventasCount: number;
   /** DC block volume: whole enteros sold */
   dcEnteros: number;
-  /** DC block volume: whole tajados sold */
-  dcTajados: number;
+  /** DC block volume: whole tajados internos sold */
+  dcTajadosInternos: number;
+  /** DC block volume: whole tajados de fábrica sold */
+  dcTajadosFabrica: number;
   /** DC granel volume: kg sold as ENTERO variety */
   dcKgGranelEntero: string;
   /** DC granel volume: kg sold as TAJADO variety */
@@ -90,7 +94,7 @@ export interface DesglosePorProductoResponse {
 }
 
 export interface DesglosePorProveedorResponse {
-  proveedorId: string;
+  proveedorId: string | null;
   proveedorNombre: string;
   ingreso: string;
   costoAplicado: string;
@@ -99,8 +103,10 @@ export interface DesglosePorProveedorResponse {
   ventasCount: number;
   /** DC block volume: whole enteros sold */
   dcEnteros: number;
-  /** DC block volume: whole tajados sold */
-  dcTajados: number;
+  /** DC block volume: whole tajados internos sold */
+  dcTajadosInternos: number;
+  /** DC block volume: whole tajados de fábrica sold */
+  dcTajadosFabrica: number;
   /** DC granel volume: kg sold as ENTERO variety */
   dcKgGranelEntero: string;
   /** DC granel volume: kg sold as TAJADO variety */

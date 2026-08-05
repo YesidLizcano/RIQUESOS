@@ -74,7 +74,13 @@ export function EditarLoteDialog({ lote, open, onOpenChange, proveedorNombre }: 
       refreshData();
       onOpenChange(false);
     } else {
-      toast.error(result.error || 'Error al actualizar lote');
+      if (result.concurrencyError) {
+        toast.error('Los datos del lote cambiaron. Cerrando formulario — intente nuevamente.');
+        await refreshData();
+        onOpenChange(false);
+      } else {
+        toast.error(result.error || 'Error al actualizar lote');
+      }
     }
   }
 

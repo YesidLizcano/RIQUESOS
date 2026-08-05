@@ -77,6 +77,7 @@ interface InventarioTipoTooltipPayload {
   stock: number;
   bloquesEnteros: number;
   bloquesTajados: number;
+  bloquesTajadosDeFabrica: number;
   sueltosEntero: number;
   sueltosTajado: number;
 }
@@ -86,7 +87,7 @@ function InventarioTipoTooltip({ active, payload }: { active?: boolean; payload?
   const data = payload[0].payload;
   const isDC = data.tipo === 'DOBLE_CREMA';
   const formatted = isDC
-    ? `Doble Crema: ${formatDobleCremaDetalle(data.bloquesEnteros, data.bloquesTajados, data.sueltosEntero, data.sueltosTajado)}`
+    ? `Doble Crema: ${formatDobleCremaDetalle(data.bloquesEnteros, data.bloquesTajados, data.bloquesTajadosDeFabrica, data.sueltosEntero, data.sueltosTajado)}`
     : `Semisalado: ${formatSSKg(data.stock)}`;
   return (
     <div className="rounded-lg border bg-background px-3 py-2 text-sm shadow-md">
@@ -190,10 +191,11 @@ const desgloseProductoColumns: ColumnDef<DesglosePorProductoResponse, unknown>[]
       const data = row.original;
       if (data.producto === 'DOBLE_CREMA') {
         const dcEnteros = data.dcEnteros;
-        const dcTajados = data.dcTajados;
+        const dcTajadosInternos = data.dcTajadosInternos;
+        const dcTajadosFabrica = data.dcTajadosFabrica;
         const kgGranelEntero = Number(data.dcKgGranelEntero) || 0;
         const kgGranelTajado = Number(data.dcKgGranelTajado) || 0;
-        return formatDobleCremaDetalle(dcEnteros, dcTajados, kgGranelEntero, kgGranelTajado);
+        return formatDobleCremaDetalle(dcEnteros, dcTajadosInternos, dcTajadosFabrica, kgGranelEntero, kgGranelTajado);
       }
       return `${Number(data.kgVendidos).toLocaleString('es-AR')} kg`;
     },
@@ -231,11 +233,12 @@ const desgloseProveedorColumns: ColumnDef<DesglosePorProveedorResponse, unknown>
     cell: ({ row }) => {
       const data = row.original;
       const dcEnteros = data.dcEnteros;
-      const dcTajados = data.dcTajados;
+      const dcTajadosInternos = data.dcTajadosInternos;
+      const dcTajadosFabrica = data.dcTajadosFabrica;
       const kgGranelEntero = Number(data.dcKgGranelEntero) || 0;
       const kgGranelTajado = Number(data.dcKgGranelTajado) || 0;
-      if (dcEnteros > 0 || dcTajados > 0 || kgGranelEntero > 0 || kgGranelTajado > 0) {
-        return formatDobleCremaDetalle(dcEnteros, dcTajados, kgGranelEntero, kgGranelTajado);
+      if (dcEnteros > 0 || dcTajadosInternos > 0 || dcTajadosFabrica > 0 || kgGranelEntero > 0 || kgGranelTajado > 0) {
+        return formatDobleCremaDetalle(dcEnteros, dcTajadosInternos, dcTajadosFabrica, kgGranelEntero, kgGranelTajado);
       }
       return `${Number(data.kgVendidos).toLocaleString('es-AR')} kg`;
     },
@@ -493,7 +496,7 @@ export function DashboardClientPage({ initialMetricas, initialInicio, initialFin
               value={
                 <>
                   <span className="block text-lg">
-                    Doble Crema: {formatDobleCremaDetalle(p.volumenDobleCremaEnteros, p.volumenDobleCremaTajados, Number(p.volumenDobleCremaKgGranelEntero), Number(p.volumenDobleCremaKgGranelTajado))}
+                    Doble Crema: {formatDobleCremaDetalle(p.volumenDobleCremaEnteros, p.volumenDobleCremaTajadosInternos, p.volumenDobleCremaTajadosFabrica, Number(p.volumenDobleCremaKgGranelEntero), Number(p.volumenDobleCremaKgGranelTajado))}
                   </span>
                   <span className="block text-lg">
                     Semisalado: {formatSSKg(Number(p.volumenSemisaladoKg))}
@@ -545,12 +548,11 @@ export function DashboardClientPage({ initialMetricas, initialInicio, initialFin
             {hasInventarioTipoData && (
               <CardFooter className="flex flex-col gap-1 text-sm">
                 {metricas.inventarioPorTipo.map((it) => {
-                  const isDC = it.tipo === 'DOBLE_CREMA';
-                   const bloquesTajados = it.bloquesTajados + it.bloquesTajadosDeFabrica;
+                   const isDC = it.tipo === 'DOBLE_CREMA';
                     const sueltosEntero = Number(it.sueltosEntero);
                     const sueltosTajado = Number(it.sueltosTajado);
                     const detail = isDC
-                       ? formatDobleCremaDetalle(it.bloquesEnteros, bloquesTajados, sueltosEntero, sueltosTajado)
+                       ? formatDobleCremaDetalle(it.bloquesEnteros, it.bloquesTajados, it.bloquesTajadosDeFabrica, sueltosEntero, sueltosTajado)
                        : formatSSKg(Number(it.stockKg));
                    const lotesDisplay = `${it.lotes} ${it.lotes === 1 ? 'lote' : 'lotes'}`;
                    return (

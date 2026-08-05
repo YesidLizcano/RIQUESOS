@@ -7,10 +7,11 @@ import { DataTable } from '@/components/data-table';
 import { DataTableToolbar, FilterConfig } from '@/components/data-table-toolbar';
 import { createTajadoColumns } from '@/components/columns/tajado-columns';
 import { DateRangePicker } from '@/components/date-range-picker';
+import { RegistrarTajadoDialog } from '@/components/forms/registrar-tajado-dialog';
 import { getTajados, marcarTajadoPagado } from '@/presentation/actions/tajados';
 import { RefreshContext } from '@/components/refresh-context';
 import { DeferredMount } from '@/components/deferred-mount';
-import type { TajadoResponse } from '@/presentation/dtos';
+import type { TajadoResponse, LoteResponse, ProveedorResponse } from '@/presentation/dtos';
 
 const estadoFilterOptions = [
   { label: 'Pendientes', value: 'PENDIENTE' },
@@ -19,10 +20,12 @@ const estadoFilterOptions = [
 
 interface TajadosClientPageProps {
   tajados: TajadoResponse[];
+  lotes: LoteResponse[];
+  proveedores: ProveedorResponse[];
   initialEstado?: string;
 }
 
-export function TajadosClientPage({ tajados, initialEstado }: TajadosClientPageProps) {
+export function TajadosClientPage({ tajados, lotes, proveedores, initialEstado }: TajadosClientPageProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [data, setData] = useState<TajadoResponse[]>(tajados);
   const [inicio, setInicio] = useState<string>(() => {
@@ -116,19 +119,28 @@ export function TajadosClientPage({ tajados, initialEstado }: TajadosClientPageP
     refreshData();
   }, [inicio, fin, refreshData]);
 
+  const hasDcWithEnteros = lotes.some(
+    (l) => l.producto === 'DOBLE_CREMA' && l.bloquesEnteros > 0 && l.estado === 'ACTIVO' && !l.deletedAt
+  );
+
   return (
     <RefreshContext.Provider value={refreshData}>
       <div className="space-y-4">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Historial de Tajados</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Tajados</h1>
             <p className="text-muted-foreground">Registro de cortes y pagos a tajadores</p>
           </div>
-          <DateRangePicker
-            inicio={inicio}
-            fin={fin}
-            onDateRangeChange={handleDateRangeChange}
-          />
+          <div className="flex items-center gap-2">
+            {hasDcWithEnteros && (
+              <RegistrarTajadoDialog lotes={lotes} proveedores={proveedores} />
+            )}
+            <DateRangePicker
+              inicio={inicio}
+              fin={fin}
+              onDateRangeChange={handleDateRangeChange}
+            />
+          </div>
         </div>
 
         <Card>

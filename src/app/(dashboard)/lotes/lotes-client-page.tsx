@@ -7,7 +7,6 @@ import { DataTable } from '@/components/data-table';
 import { DataTableToolbar, FilterConfig } from '@/components/data-table-toolbar';
 import { createLoteColumns } from '@/components/columns/lote-columns';
 import { CrearLoteDialog } from '@/components/forms/crear-lote-dialog';
-import { RegistrarTajadoDialog } from '@/components/forms/registrar-tajado-dialog';
 import { PagarLoteDialog } from '@/components/forms/pagar-lote-dialog';
 import { CerrarLoteDialog } from '@/components/forms/cerrar-lote-dialog';
 import { getLotes, getLotesIncludeDeleted } from '@/presentation/actions/lotes';
@@ -18,7 +17,7 @@ import { RefreshContext } from '@/components/refresh-context';
 import { DeferredMount } from '@/components/deferred-mount';
 import type { LoteResponse, ProveedorResponse } from '@/presentation/dtos';
 import { TipoProducto, EstadoLote } from '@/domain/enums';
-import { isDobleCrema, formatDobleCremaDetalle } from '@/domain/constants';
+import { isDobleCrema, formatDobleCremaStockLabel, formatDobleCremaPurchasedLabel } from '@/domain/constants';
 
 const ESTADO_LABELS: Record<string, string> = {
   ACTIVO: 'Activo',
@@ -36,11 +35,10 @@ const loteExportMap = [
   { key: 'cantidadCompradaKg', header: 'Cant. Comprada', type: 'decimal' as ColumnType, format: (_v: unknown, row: unknown) => {
     const lote = row as LoteResponse;
     if (isDobleCrema(lote.producto)) {
-      return formatDobleCremaDetalle(
+      return formatDobleCremaPurchasedLabel(
         lote.bloquesEnterosOriginal,
         lote.bloquesTajadosFabricaOriginal,
-        0, // purchased lotes have no loose kg at purchase time
-        0,
+        Number(lote.cantidadCompradaKg),
       );
     }
     return Number(lote.cantidadCompradaKg);
@@ -60,11 +58,13 @@ const loteExportMap = [
   { key: 'stockDisponibleKg', header: 'Stock Disponible', type: 'decimal' as ColumnType, format: (_v: unknown, row: unknown) => {
     const lote = row as LoteResponse;
     if (isDobleCrema(lote.producto)) {
-      return formatDobleCremaDetalle(
+      return formatDobleCremaStockLabel(
         lote.bloquesEnteros,
-        lote.bloquesTajados + lote.bloquesTajadosDeFabrica,
+        lote.bloquesTajados,
+        lote.bloquesTajadosDeFabrica,
         Number(lote.sueltosEntero),
         Number(lote.sueltosTajado),
+        Number(lote.stockDisponibleKg),
       );
     }
     return Number(lote.stockDisponibleKg);
@@ -207,7 +207,7 @@ export function LotesClientPage({ lotes, proveedores, initialEstadoPago }: Lotes
   }, [getPreviewData]) as () => Promise<void>;
 
   return (
-    <RefreshContext.Provider value={refreshData}>
+     <RefreshContext.Provider value={refreshData}>
     <div className="space-y-4">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
@@ -215,9 +215,6 @@ export function LotesClientPage({ lotes, proveedores, initialEstadoPago }: Lotes
           <p className="text-muted-foreground">Gestión de lotes de queso</p>
         </div>
         <CrearLoteDialog proveedores={proveedores} />
-        {lotes.some((l) => l.producto === 'DOBLE_CREMA' && l.bloquesEnteros > 0 && l.estado === 'ACTIVO' && !l.deletedAt) && (
-          <RegistrarTajadoDialog lotes={lotes} proveedores={proveedores} />
-        )}
       </div>
 
       <Card>

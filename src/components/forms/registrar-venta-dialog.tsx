@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useRefresh } from '@/components/refresh-context';
 import { registrarVenta, eliminarVenta, editarVenta } from '@/presentation/actions/ventas';
 import { obtenerSedesPorCliente } from '@/presentation/actions/sedes';
-import { decimalSub } from '@/lib/utils';
+import { decimalSub, formatTajadosBreakdown } from '@/lib/utils';
 import { getPreciosByCliente } from '@/presentation/actions/precios-cliente-proveedor';
 import { toast } from 'sonner';
 import { TipoProducto, TipoCliente } from '@/domain/enums';
@@ -60,7 +60,8 @@ interface VentaItemForm {
   bloquesTajadosInternos: string;
   cantidadKg: string;
   cantidadKgEntero: string;  // DC GRANEL: kg from enteros variety
-  cantidadKgTajado: string;   // DC GRANEL: kg from tajados variety
+  cantidadKgTajadoInterno: string;  // DC GRANEL: kg from tajados internos (TI)
+  cantidadKgTajadoFabrica: string;  // DC GRANEL: kg from tajados de fábrica (TF)
   precioVentaKg: string;
   precioVentaKgEntero: string;  // DC GRANEL: price per kg for enteros variety
   precioVentaKgTajado: string;  // DC GRANEL: price per kg for tajados variety
@@ -72,7 +73,7 @@ interface VentaItemForm {
 }
 
 import { formatCurrency, formatProductName } from '@/domain/formatters';
-import { formatDobleCremaDetalle, formatDobleCremaGranel } from '@/domain/constants';
+import { formatDobleCremaDetalle, formatDobleCremaGranel, formatDobleCremaStockLabel } from '@/domain/constants';
 
 function formatBloquesDC(summary: SummaryData): string {
   // Block-equivalent normalization: convert granel kg to blocks + residuo per variety
@@ -131,7 +132,9 @@ interface SummaryItem {
   reempacados: number;
   origenCorte?: string;
   cantidadKgEntero: number;
-  cantidadKgTajado: number;
+  cantidadKgTajadoInterno: number;
+  cantidadKgTajadoFabrica: number;
+  cantidadKgTajado: number; // derived: cantidadKgTajadoInterno + cantidadKgTajadoFabrica
 }
 
 interface BreakdownItem {
@@ -253,9 +256,7 @@ function SummaryStep({ summary, clienteLabel, domiciliario, valorDomicilio, cost
                     }
 
                     if (s.tajados > 0) {
-                       const cantidadText = s.reempacados > 0
-                         ? `${s.tajados} tajados (${s.reempacados} reempacados)`
-                         : `${s.tajados} tajados`;
+                       const cantidadText = formatTajadosBreakdown(s.tajados, s.tajadosDeFabrica, s.reempacados);
                       rows.push(
                         <TableRow key={`${i}-taj`}>
                           <TableCell className="py-1.5 text-xs">{s.enteros > 0 ? '' : loteCell}</TableCell>
@@ -272,10 +273,13 @@ function SummaryStep({ summary, clienteLabel, domiciliario, valorDomicilio, cost
 
                     // Granel / Semisalado — may be dual-variety for DC
                     const isDcGranel = s.lote && isDobleCrema(s.lote.producto);
-                    const isDualVariety = isDcGranel && s.cantidadKgEntero > 0 && s.cantidadKgTajado > 0;
+                    const hasEntero = isDcGranel && s.cantidadKgEntero > 0;
+                    const hasTI = isDcGranel && s.cantidadKgTajadoInterno > 0;
+                    const hasTF = isDcGranel && s.cantidadKgTajadoFabrica > 0;
+                    const isMultiRow = isDcGranel && (hasEntero ? 1 : 0) + (hasTI ? 1 : 0) + (hasTF ? 1 : 0) > 1;
 
-                    if (isDualVariety) {
-                      // DC GRANEL dual-variety: two rows
+                    if (isMultiRow) {
+                      // DC GRANEL multi-variety: up to 3 rows
                       const loteCell = (
                         <div className="flex items-center gap-1.5">
                           {producto && <ProductoBadge producto={producto} compact />}
@@ -283,7 +287,8 @@ function SummaryStep({ summary, clienteLabel, domiciliario, valorDomicilio, cost
                         </div>
                       );
                       const rows: React.ReactElement[] = [];
-                      if (s.cantidadKgEntero > 0) {
+                      let rowIdx = 0;
+                      if (hasEntero) {
                         rows.push(
                           <TableRow key={`${i}-ent`}>
                             <TableCell className="py-1.5 text-xs">{loteCell}</TableCell>
@@ -293,17 +298,31 @@ function SummaryStep({ summary, clienteLabel, domiciliario, valorDomicilio, cost
                             <TableCell className="py-1.5 text-right text-xs font-medium">{formatCurrency(s.cantidadKgEntero * s.precioVentaKgEntero)}</TableCell>
                           </TableRow>
                         );
+                        rowIdx++;
                       }
-                      if (s.cantidadKgTajado > 0) {
+                      if (hasTI) {
                         rows.push(
-                          <TableRow key={`${i}-taj`}>
-                            <TableCell className="py-1.5 text-xs">{s.cantidadKgEntero > 0 ? '' : loteCell}</TableCell>
-                            <TableCell className="py-1.5 text-xs"><Badge variant="outline" className="text-[10px] px-1 py-0">Granel (taj.)</Badge></TableCell>
-                            <TableCell className="py-1.5 text-xs">{s.cantidadKgTajado.toLocaleString('es-AR')} kg</TableCell>
+                          <TableRow key={`${i}-ti`}>
+                            <TableCell className="py-1.5 text-xs">{rowIdx > 0 ? '' : loteCell}</TableCell>
+                            <TableCell className="py-1.5 text-xs"><Badge variant="outline" className="text-[10px] px-1 py-0">Granel (TI)</Badge></TableCell>
+                            <TableCell className="py-1.5 text-xs">{s.cantidadKgTajadoInterno.toLocaleString('es-AR')} kg</TableCell>
                             <TableCell className="py-1.5 text-right text-xs">{formatCurrency(s.precioVentaKgTajado)}/kg</TableCell>
-                            <TableCell className="py-1.5 text-right text-xs font-medium">{formatCurrency(s.cantidadKgTajado * s.precioVentaKgTajado)}</TableCell>
+                            <TableCell className="py-1.5 text-right text-xs font-medium">{formatCurrency(s.cantidadKgTajadoInterno * s.precioVentaKgTajado)}</TableCell>
                           </TableRow>
                         );
+                        rowIdx++;
+                      }
+                      if (hasTF) {
+                        rows.push(
+                          <TableRow key={`${i}-tf`}>
+                            <TableCell className="py-1.5 text-xs">{rowIdx > 0 ? '' : loteCell}</TableCell>
+                            <TableCell className="py-1.5 text-xs"><Badge variant="outline" className="text-[10px] px-1 py-0">Granel (TF)</Badge></TableCell>
+                            <TableCell className="py-1.5 text-xs">{s.cantidadKgTajadoFabrica.toLocaleString('es-AR')} kg</TableCell>
+                            <TableCell className="py-1.5 text-right text-xs">{formatCurrency(s.precioVentaKgTajado)}/kg</TableCell>
+                            <TableCell className="py-1.5 text-right text-xs font-medium">{formatCurrency(s.cantidadKgTajadoFabrica * s.precioVentaKgTajado)}</TableCell>
+                          </TableRow>
+                        );
+                        rowIdx++;
                       }
                       return rows;
                     }
@@ -464,7 +483,8 @@ function createEmptyItem(): VentaItemForm {
     bloquesTajadosInternos: '',
     cantidadKg: '',
     cantidadKgEntero: '',
-    cantidadKgTajado: '',
+    cantidadKgTajadoInterno: '',
+    cantidadKgTajadoFabrica: '',
     precioVentaKg: '',
     precioVentaKgEntero: '',
     precioVentaKgTajado: '',
@@ -538,7 +558,8 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
           bloquesTajadosInternos: String(item.bloquesTajadosInternosVendidos ?? 0),
           cantidadKg: item.cantidadKg,
           cantidadKgEntero: item.origenCorte === 'ENTERO' ? item.cantidadKg : '',
-          cantidadKgTajado: item.origenCorte === 'TAJADO' ? item.cantidadKg : '',
+          cantidadKgTajadoInterno: item.origenCorte === 'TAJADO' && item.origenTajadoGranel !== 'FABRICA' ? item.cantidadKg : '',
+          cantidadKgTajadoFabrica: item.origenCorte === 'TAJADO' && item.origenTajadoGranel === 'FABRICA' ? item.cantidadKg : '',
           precioVentaKg: item.precioVentaKg,
           precioVentaKgEntero: item.origenCorte === 'ENTERO' ? item.precioVentaKg : '',
           precioVentaKgTajado: item.origenCorte === 'TAJADO' ? item.precioVentaKg : '',
@@ -756,11 +777,13 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
       const tajados = parseInt(item.bloquesTajados) || 0;
       return String((enteros + tajados) * DOBLE_CREMA_BLOCK_KG || 0);
     }
-    // For DC GRANEL with dual-variety fields, sum both
+    // For DC GRANEL with dual-variety fields, sum all three
     const lote = getLoteForItem(item);
     if (lote && isDobleCrema(lote.producto) && ventaTipo === 'GRANEL') {
       const kgEntero = Number(item.cantidadKgEntero) || 0;
-      const kgTajado = Number(item.cantidadKgTajado) || 0;
+      const kgTajadoInterno = Number(item.cantidadKgTajadoInterno) || 0;
+      const kgTajadoFabrica = Number(item.cantidadKgTajadoFabrica) || 0;
+      const kgTajado = kgTajadoInterno + kgTajadoFabrica;
       if (kgEntero > 0 || kgTajado > 0) {
         return String(kgEntero + kgTajado);
       }
@@ -810,8 +833,8 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
         if (lote) {
           const reempacados = parseInt(item.bloquesReempacados) || 0;
           const quantity = reempacados > 0
-            ? formatDobleCremaDetalle(enteros, tajados, 0, 0) + ` (${reempacados} reempacados)`
-            : formatDobleCremaDetalle(enteros, tajados, 0, 0);
+            ? formatDobleCremaDetalle(enteros, parseInt(item.bloquesTajadosInternos) || 0, parseInt(item.bloquesTajadosDeFabrica) || 0, 0, 0) + ` (${reempacados} reempacados)`
+            : formatDobleCremaDetalle(enteros, parseInt(item.bloquesTajadosInternos) || 0, parseInt(item.bloquesTajadosDeFabrica) || 0, 0, 0);
           breakdownItems.push({
             name: formatProductName(lote.producto) + ' — ' + (lote.proveedorId ? (proveedorMap.get(lote.proveedorId) ?? 'Sin proveedor') : 'Operación Interna'),
             quantity,
@@ -820,7 +843,9 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
       } else {
         const isDcGranel = lote && isDobleCrema(lote.producto) && ventaTipo === 'GRANEL';
         const kgEntero = Number(item.cantidadKgEntero) || 0;
-        const kgTajado = Number(item.cantidadKgTajado) || 0;
+        const kgTajadoInterno = Number(item.cantidadKgTajadoInterno) || 0;
+        const kgTajadoFabrica = Number(item.cantidadKgTajadoFabrica) || 0;
+        const kgTajado = kgTajadoInterno + kgTajadoFabrica;
         const isDualVariety = isDcGranel && kgEntero > 0 && kgTajado > 0;
 
         if (isDualVariety) {
@@ -832,7 +857,9 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
           if (kgTajado > 0 && precioTajado <= 0) hasZeroPrice = true;
         } else if (isDcGranel) {
           const hasEnteroStock = lote!.bloquesEnteros > 0 || Number(lote!.sueltosEntero) > 0;
-          const hasTajadoStock = lote!.bloquesTajados > 0 || lote!.bloquesTajadosDeFabrica > 0 || Number(lote!.sueltosTajado) > 0;
+          const hasTajadoInternoStock = lote!.bloquesTajados > 0 || Number(lote!.sueltosTajado) > 0;
+          const hasTajadoFabricaStock = lote!.bloquesTajadosDeFabrica > 0;
+          const hasTajadoStock = hasTajadoInternoStock || hasTajadoFabricaStock;
           let precio: number;
           // Determine price based on which variety the user is actually selling
           if (kgEntero > 0 && kgTajado === 0) {
@@ -861,10 +888,16 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
         if (lote) {
           let quantity: string;
           if (isDualVariety) {
-            // Show both varieties in breakdown
+            // Show both varieties in breakdown with TI/TF split
             const enteroPart = formatDobleCremaGranel(kgEntero, 'entero');
-            const tajadoPart = formatDobleCremaGranel(kgTajado, 'tajado', item.origenTajadoGranel === 'FABRICA' ? 'FABRICA' : 'INTERNO');
-            quantity = `${enteroPart} + ${tajadoPart}`;
+            const parts: string[] = [enteroPart];
+            if (kgTajadoInterno > 0) {
+              parts.push(formatDobleCremaGranel(kgTajadoInterno, 'tajado', 'INTERNO'));
+            }
+            if (kgTajadoFabrica > 0) {
+              parts.push(formatDobleCremaGranel(kgTajadoFabrica, 'tajado', 'FABRICA'));
+            }
+            quantity = parts.join(' + ');
           } else if (isDcGranel) {
             const variedad = kgEntero > 0 ? 'entero' : 'tajado';
             const origenTajado = variedad === 'tajado' ? (item.origenTajadoGranel === 'FABRICA' ? 'FABRICA' : 'INTERNO') : undefined;
@@ -955,26 +988,32 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
         // DC GRANEL dual-variety stock validation
         if (isDobleCrema(lote.producto)) {
           const kgEntero = Number(item.cantidadKgEntero) || 0;
-          const kgTajado = Number(item.cantidadKgTajado) || 0;
+          const kgTajadoInterno = Number(item.cantidadKgTajadoInterno) || 0;
+          const kgTajadoFabrica = Number(item.cantidadKgTajadoFabrica) || 0;
           const stockEnteroKg = lote.bloquesEnteros * DOBLE_CREMA_BLOCK_KG + Number(lote.sueltosEntero);
-          const stockTajadoKg = (lote.bloquesTajados + lote.bloquesTajadosDeFabrica) * DOBLE_CREMA_BLOCK_KG + Number(lote.sueltosTajado);
+          const stockTajadoInternoKg = lote.bloquesTajados * DOBLE_CREMA_BLOCK_KG + Number(lote.sueltosTajado);
+          const stockTajadoFabricaKg = lote.bloquesTajadosDeFabrica * DOBLE_CREMA_BLOCK_KG;
           if (kgEntero > 0 && kgEntero > stockEnteroKg) {
             toast.error(`Stock entero insuficiente: disponible ${stockEnteroKg.toLocaleString('es-AR')} kg de entero`);
             return;
           }
-          if (kgTajado > 0 && kgTajado > stockTajadoKg) {
-            toast.error(`Stock tajado insuficiente: disponible ${stockTajadoKg.toLocaleString('es-AR')} kg de tajado`);
+          if (kgTajadoInterno > 0 && kgTajadoInterno > stockTajadoInternoKg) {
+            toast.error(`Stock tajado interno insuficiente: disponible ${stockTajadoInternoKg.toLocaleString('es-AR')} kg`);
             return;
           }
-          // If using single-field mode, validate against the corresponding variety stock
-          if (kgEntero === 0 && kgTajado === 0) {
+          if (kgTajadoFabrica > 0 && kgTajadoFabrica > stockTajadoFabricaKg) {
+            toast.error(`Stock tajado fábrica insuficiente: disponible ${stockTajadoFabricaKg.toLocaleString('es-AR')} kg`);
+            return;
+          }
+          // If using single-field mode (all three new fields are 0), validate against corresponding variety stock
+          if (kgEntero === 0 && kgTajadoInterno === 0 && kgTajadoFabrica === 0) {
             const corte = item.origenCorte || 'ENTERO';
             if (corte === 'ENTERO' && kg > stockEnteroKg) {
               toast.error(`Stock entero insuficiente: disponible ${stockEnteroKg.toLocaleString('es-AR')} kg de entero`);
               return;
             }
-            if (corte === 'TAJADO' && kg > stockTajadoKg) {
-              toast.error(`Stock tajado insuficiente: disponible ${stockTajadoKg.toLocaleString('es-AR')} kg de tajado`);
+            if (corte === 'TAJADO' && kg > stockTajadoInternoKg + stockTajadoFabricaKg) {
+              toast.error(`Stock tajado insuficiente: disponible ${(stockTajadoInternoKg + stockTajadoFabricaKg).toLocaleString('es-AR')} kg de tajado`);
               return;
             }
           }
@@ -1021,17 +1060,21 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
         }
       }
 
-      // DC GRANEL dual-variety: produce two request items
+      // DC GRANEL: produce up to 3 request items (entero, TI, TF)
       if (isDcGranel) {
         const kgEntero = Number(item.cantidadKgEntero) || 0;
-        const kgTajado = Number(item.cantidadKgTajado) || 0;
+        const kgTajadoInterno = Number(item.cantidadKgTajadoInterno) || 0;
+        const kgTajadoFabrica = Number(item.cantidadKgTajadoFabrica) || 0;
 
         // Validate prices per variety
         const hasEnteroStock = lote.bloquesEnteros > 0 || Number(lote.sueltosEntero) > 0;
-        const hasTajadoStock = lote.bloquesTajados > 0 || lote.bloquesTajadosDeFabrica > 0 || Number(lote.sueltosTajado) > 0;
+        const hasTajadoInternoStock = lote.bloquesTajados > 0 || Number(lote.sueltosTajado) > 0;
+        const hasTajadoFabricaStock = lote.bloquesTajadosDeFabrica > 0;
+        const hasTajadoStock = hasTajadoInternoStock || hasTajadoFabricaStock;
+        const hasAnyTajadoKg = kgTajadoInterno > 0 || kgTajadoFabrica > 0;
 
-        if (kgEntero > 0 && kgTajado > 0) {
-          // Dual variety: both prices required
+        if (kgEntero > 0 && hasAnyTajadoKg) {
+          // Dual variety: entero + tajado prices required
           const precioEntero = Number(item.precioVentaKgEntero) || Number(item.precioVentaKg);
           const precioTajado = Number(item.precioVentaKgTajado) || Number(item.precioVentaKg);
           if (!precioEntero || precioEntero <= 0) {
@@ -1043,14 +1086,14 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
             return [undefined] as undefined[];
           }
         } else if (kgEntero > 0) {
-          // Only entero: validate entero price
+          // Only enteros: validate entero price
           const precioEntero = Number(item.precioVentaKgEntero) || Number(item.precioVentaKg);
           if (!precioEntero || precioEntero <= 0) {
             toast.error('Ingrese un precio de venta válido');
             return [undefined] as undefined[];
           }
-        } else if (kgTajado > 0) {
-          // Only tajado: validate tajado price
+        } else if (hasAnyTajadoKg) {
+          // Only tajados: validate tajado price
           const precioTajado = Number(item.precioVentaKgTajado) || Number(item.precioVentaKg);
           if (!precioTajado || precioTajado <= 0) {
             toast.error('Ingrese un precio de venta válido');
@@ -1094,42 +1137,7 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
           origenTajadoGranel?: string;
         } | undefined> = [];
 
-        if (kgEntero > 0 && kgTajado > 0) {
-          // Dual variety: two separate request items with separate prices
-          const precioEntero = Number(item.precioVentaKgEntero) || Number(item.precioVentaKg);
-          const precioTajado = Number(item.precioVentaKgTajado) || Number(item.precioVentaKg);
-          results.push({
-            loteId: item.loteId,
-            ventaTipo,
-            cantidadKg: String(kgEntero),
-            precioVentaKg: String(precioEntero),
-            bloquesEnterosVendidos: 0,
-            bloquesTajadosVendidos: 0,
-            bloquesTajadosDeFabricaVendidos: undefined,
-            bloquesTajadosInternosVendidos: undefined,
-            bloquesReempacados: 0,
-            precioEnteroBloque: undefined,
-            precioTajadoBloque: undefined,
-            origenCorte: 'ENTERO',
-            origenTajadoGranel: undefined,
-          });
-          results.push({
-            loteId: item.loteId,
-            ventaTipo,
-            cantidadKg: String(kgTajado),
-            precioVentaKg: String(precioTajado),
-            bloquesEnterosVendidos: 0,
-            bloquesTajadosVendidos: 0,
-            bloquesTajadosDeFabricaVendidos: undefined,
-            bloquesTajadosInternosVendidos: undefined,
-            bloquesReempacados: 0,
-            precioEnteroBloque: undefined,
-            precioTajadoBloque: undefined,
-            origenCorte: 'TAJADO',
-            origenTajadoGranel: item.origenTajadoGranel || 'INTERNO',
-          });
-        } else if (kgEntero > 0) {
-          // Only entero
+        if (kgEntero > 0) {
           const precioEntero = Number(item.precioVentaKgEntero) || Number(item.precioVentaKg);
           results.push({
             loteId: item.loteId,
@@ -1146,13 +1154,14 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
             origenCorte: 'ENTERO',
             origenTajadoGranel: undefined,
           });
-        } else if (kgTajado > 0) {
-          // Only tajado
+        }
+
+        if (kgTajadoInterno > 0) {
           const precioTajado = Number(item.precioVentaKgTajado) || Number(item.precioVentaKg);
           results.push({
             loteId: item.loteId,
             ventaTipo,
-            cantidadKg: String(kgTajado),
+            cantidadKg: String(kgTajadoInterno),
             precioVentaKg: String(precioTajado),
             bloquesEnterosVendidos: 0,
             bloquesTajadosVendidos: 0,
@@ -1162,12 +1171,31 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
             precioEnteroBloque: undefined,
             precioTajadoBloque: undefined,
             origenCorte: 'TAJADO',
-            origenTajadoGranel: item.origenTajadoGranel || 'INTERNO',
+            origenTajadoGranel: 'INTERNO',
           });
-        } else {
-          // Single-field mode (legacy): use variety-specific price if available
-          const hasEnteroStock = lote.bloquesEnteros > 0 || Number(lote.sueltosEntero) > 0;
-          const hasTajadoStock = lote.bloquesTajados > 0 || lote.bloquesTajadosDeFabrica > 0 || Number(lote.sueltosTajado) > 0;
+        }
+
+        if (kgTajadoFabrica > 0) {
+          const precioTajado = Number(item.precioVentaKgTajado) || Number(item.precioVentaKg);
+          results.push({
+            loteId: item.loteId,
+            ventaTipo,
+            cantidadKg: String(kgTajadoFabrica),
+            precioVentaKg: String(precioTajado),
+            bloquesEnterosVendidos: 0,
+            bloquesTajadosVendidos: 0,
+            bloquesTajadosDeFabricaVendidos: undefined,
+            bloquesTajadosInternosVendidos: undefined,
+            bloquesReempacados: 0,
+            precioEnteroBloque: undefined,
+            precioTajadoBloque: undefined,
+            origenCorte: 'TAJADO',
+            origenTajadoGranel: 'FABRICA',
+          });
+        }
+
+        if (results.length === 0) {
+          // Fallback: single-field mode (legacy) — use variety-specific price if available
           let precio = effectivePrice;
           if (hasEnteroStock && !hasTajadoStock) {
             precio = String(Number(item.precioVentaKgEntero) || Number(item.precioVentaKg));
@@ -1289,8 +1317,13 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
         }
       } else {
         if ((result as { concurrencyError?: boolean }).concurrencyError) {
-          toast.error(result.error || 'Conflicto de concurrencia');
+          toast.error('Los datos del lote cambiaron. Cerrando formulario — abra la venta nuevamente con datos actualizados.');
           await refreshData();
+          setOpen(false);
+          resetForm();
+          if (isEditMode && onEditComplete) {
+            onEditComplete();
+          }
         } else {
           toast.error(result.error || (isEditMode ? 'Error al actualizar venta' : 'Error al registrar venta'));
         }
@@ -1360,7 +1393,9 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
       let ingresoTajados = 0;
       const isDcGranel = ventaTipo === 'GRANEL' && lote && isDobleCrema(lote.producto);
       const kgEnteroForm = Number(item.cantidadKgEntero) || 0;
-      const kgTajadoForm = Number(item.cantidadKgTajado) || 0;
+      const kgTajadoInternoForm = Number(item.cantidadKgTajadoInterno) || 0;
+      const kgTajadoFabricaForm = Number(item.cantidadKgTajadoFabrica) || 0;
+      const kgTajadoForm = kgTajadoInternoForm + kgTajadoFabricaForm;
       const isDualVariety = isDcGranel && kgEnteroForm > 0 && kgTajadoForm > 0;
       let precioVentaKgEntero = 0;
       let precioVentaKgTajado = 0;
@@ -1388,7 +1423,9 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
       } else if (isDcGranel) {
         // DC GRANEL — resolve price based on which variety the user is actually selling
         const hasEnteroStock = lote!.bloquesEnteros > 0 || Number(lote!.sueltosEntero) > 0;
-        const hasTajadoStock = lote!.bloquesTajados > 0 || lote!.bloquesTajadosDeFabrica > 0 || Number(lote!.sueltosTajado) > 0;
+        const hasTajadoInternoStock = lote!.bloquesTajados > 0 || Number(lote!.sueltosTajado) > 0;
+        const hasTajadoFabricaStock = lote!.bloquesTajadosDeFabrica > 0;
+        const hasTajadoStock = hasTajadoInternoStock || hasTajadoFabricaStock;
         if (kgEnteroForm > 0 && kgTajadoForm === 0) {
           // Selling only enteros — use entero price
           precioVentaKgEntero = Number(item.precioVentaKgEntero) || precioVentaKg;
@@ -1421,22 +1458,26 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
         if (ventaTipo === 'GRANEL') {
           // DC GRANEL: cost depends on which variety the kg come from
           if (isDobleCrema(lote.producto)) {
-            const origenCorte = item.origenCorte || 'ENTERO';
-            if (origenCorte === 'TAJADO') {
-              const origenTajado = item.origenTajadoGranel || 'INTERNO';
-              costoAplicadoKg = origenTajado === 'FABRICA'
-                ? Number(lote.costoTajadoFabricaKg)
-                : Number(lote.costoTajadoKg);
-            } else {
-              costoAplicadoKg = Number(lote.costoRealCalculadoKg);
-            }
-            // Dual-variety: weighted average of both costs
-            if (isDualVariety) {
+            const kgEntero = Number(item.cantidadKgEntero) || 0;
+            const kgTajadoInterno = Number(item.cantidadKgTajadoInterno) || 0;
+            const kgTajadoFabrica = Number(item.cantidadKgTajadoFabrica) || 0;
+            // Dual-variety or multi-origin: weighted average of costs
+            if (isDualVariety || (kgTajadoInterno > 0 && kgTajadoFabrica > 0)) {
               const costoEntero = Number(lote.costoRealCalculadoKg);
-              const costoTajadoKg = Number(lote.costoTajadoKg);
-              const costoTotalEntero = costoEntero * kgEnteroForm;
-              const costoTotalTajado = costoTajadoKg * kgTajadoForm;
-              costoAplicadoKg = cantidadKg > 0 ? (costoTotalEntero + costoTotalTajado) / cantidadKg : costoEntero;
+              const costoTajadoInterno = Number(lote.costoTajadoKg);
+              const costoTajadoFabrica = Number(lote.costoTajadoFabricaKg);
+              const costoTotalAll = costoEntero * kgEntero + costoTajadoInterno * kgTajadoInterno + costoTajadoFabrica * kgTajadoFabrica;
+              costoAplicadoKg = cantidadKg > 0 ? costoTotalAll / cantidadKg : costoEntero;
+            } else {
+              const origenCorte = item.origenCorte || 'ENTERO';
+              if (origenCorte === 'TAJADO') {
+                const origenTajado = item.origenTajadoGranel || 'INTERNO';
+                costoAplicadoKg = origenTajado === 'FABRICA'
+                  ? Number(lote.costoTajadoFabricaKg)
+                  : Number(lote.costoTajadoKg);
+              } else {
+                costoAplicadoKg = Number(lote.costoRealCalculadoKg);
+              }
             }
           } else {
             costoAplicadoKg = Number(lote.costoRealCalculadoKg);
@@ -1495,9 +1536,11 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
           // Accumulate granel kg by variedad for block-equivalent normalization
           if (ventaTipo === 'GRANEL') {
             const kgEntero = Number(item.cantidadKgEntero) || 0;
-            const kgTajado = Number(item.cantidadKgTajado) || 0;
+            const kgTajadoInterno = Number(item.cantidadKgTajadoInterno) || 0;
+            const kgTajadoFabrica = Number(item.cantidadKgTajadoFabrica) || 0;
+            const kgTajado = kgTajadoInterno + kgTajadoFabrica;
             if (kgEntero > 0 || kgTajado > 0) {
-              // Dual-variety or single-variety fields
+              // New fields: split TI and TF into tajado
               kgGranelEntero += kgEntero;
               kgGranelTajado += kgTajado;
             } else {
@@ -1541,9 +1584,11 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
         tajadosDeFabrica,
         tajadosInternos,
         origenCorte: ventaTipo === 'GRANEL' && lote && isDobleCrema(lote.producto) ? (item.origenCorte || 'ENTERO') : undefined,
-        origenTajadoGranel: ventaTipo === 'GRANEL' && lote && isDobleCrema(lote.producto) && item.origenCorte === 'TAJADO' ? (item.origenTajadoGranel || 'INTERNO') : undefined,
+        origenTajadoGranel: ventaTipo === 'GRANEL' && lote && isDobleCrema(lote.producto) && (Number(item.cantidadKgTajadoInterno) > 0 || Number(item.cantidadKgTajadoFabrica) > 0) ? (Number(item.cantidadKgTajadoFabrica) > 0 ? 'FABRICA' : 'INTERNO') : undefined,
         cantidadKgEntero: Number(item.cantidadKgEntero) || 0,
-        cantidadKgTajado: Number(item.cantidadKgTajado) || 0,
+        cantidadKgTajadoInterno: Number(item.cantidadKgTajadoInterno) || 0,
+        cantidadKgTajadoFabrica: Number(item.cantidadKgTajadoFabrica) || 0,
+        cantidadKgTajado: (Number(item.cantidadKgTajadoInterno) || 0) + (Number(item.cantidadKgTajadoFabrica) || 0),
       };
     });
 
@@ -1641,25 +1686,32 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
         // DC GRANEL dual-variety stock validation
         if (isDobleCrema(lote.producto)) {
           const kgEntero = Number(item.cantidadKgEntero) || 0;
-          const kgTajado = Number(item.cantidadKgTajado) || 0;
+          const kgTajadoInterno = Number(item.cantidadKgTajadoInterno) || 0;
+          const kgTajadoFabrica = Number(item.cantidadKgTajadoFabrica) || 0;
           const stockEnteroKg = lote.bloquesEnteros * DOBLE_CREMA_BLOCK_KG + Number(lote.sueltosEntero);
-          const stockTajadoKg = (lote.bloquesTajados + lote.bloquesTajadosDeFabrica) * DOBLE_CREMA_BLOCK_KG + Number(lote.sueltosTajado);
+          const stockTajadoInternoKg = lote.bloquesTajados * DOBLE_CREMA_BLOCK_KG + Number(lote.sueltosTajado);
+          const stockTajadoFabricaKg = lote.bloquesTajadosDeFabrica * DOBLE_CREMA_BLOCK_KG;
           if (kgEntero > 0 && kgEntero > stockEnteroKg) {
             toast.error(`Stock entero insuficiente: disponible ${stockEnteroKg.toLocaleString('es-AR')} kg de entero`);
             return;
           }
-          if (kgTajado > 0 && kgTajado > stockTajadoKg) {
-            toast.error(`Stock tajado insuficiente: disponible ${stockTajadoKg.toLocaleString('es-AR')} kg de tajado`);
+          if (kgTajadoInterno > 0 && kgTajadoInterno > stockTajadoInternoKg) {
+            toast.error(`Stock tajado interno insuficiente: disponible ${stockTajadoInternoKg.toLocaleString('es-AR')} kg`);
             return;
           }
-          if (kgEntero === 0 && kgTajado === 0) {
+          if (kgTajadoFabrica > 0 && kgTajadoFabrica > stockTajadoFabricaKg) {
+            toast.error(`Stock tajado fábrica insuficiente: disponible ${stockTajadoFabricaKg.toLocaleString('es-AR')} kg`);
+            return;
+          }
+          // If using single-field mode (all three new fields are 0), validate against corresponding variety stock
+          if (kgEntero === 0 && kgTajadoInterno === 0 && kgTajadoFabrica === 0) {
             const corte = item.origenCorte || 'ENTERO';
             if (corte === 'ENTERO' && kg > stockEnteroKg) {
               toast.error(`Stock entero insuficiente: disponible ${stockEnteroKg.toLocaleString('es-AR')} kg de entero`);
               return;
             }
-            if (corte === 'TAJADO' && kg > stockTajadoKg) {
-              toast.error(`Stock tajado insuficiente: disponible ${stockTajadoKg.toLocaleString('es-AR')} kg de tajado`);
+            if (corte === 'TAJADO' && kg > stockTajadoInternoKg + stockTajadoFabricaKg) {
+              toast.error(`Stock tajado insuficiente: disponible ${(stockTajadoInternoKg + stockTajadoFabricaKg).toLocaleString('es-AR')} kg de tajado`);
               return;
             }
           }
@@ -1684,11 +1736,16 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
       } else if (isDobleCrema(lote.producto)) {
         // DC GRANEL — validate separate prices per variety
         const kgEntero = Number(item.cantidadKgEntero) || 0;
-        const kgTajado = Number(item.cantidadKgTajado) || 0;
+        const kgTajadoInterno = Number(item.cantidadKgTajadoInterno) || 0;
+        const kgTajadoFabrica = Number(item.cantidadKgTajadoFabrica) || 0;
+        const kgTajado = kgTajadoInterno + kgTajadoFabrica;
         const hasEnteroStock = lote.bloquesEnteros > 0 || Number(lote.sueltosEntero) > 0;
-        const hasTajadoStock = lote.bloquesTajados > 0 || lote.bloquesTajadosDeFabrica > 0 || Number(lote.sueltosTajado) > 0;
+        const hasTajadoInternoStock = lote.bloquesTajados > 0 || Number(lote.sueltosTajado) > 0;
+        const hasTajadoFabricaStock = lote.bloquesTajadosDeFabrica > 0;
+        const hasTajadoStock = hasTajadoInternoStock || hasTajadoFabricaStock;
+        const hasAnyTajadoKg = kgTajadoInterno > 0 || kgTajadoFabrica > 0;
 
-        if (kgEntero > 0 && kgTajado > 0) {
+        if (kgEntero > 0 && hasAnyTajadoKg) {
           // Dual variety: both prices required
           const precioEntero = Number(item.precioVentaKgEntero) || Number(item.precioVentaKg);
           const precioTajado = Number(item.precioVentaKgTajado) || Number(item.precioVentaKg);
@@ -1707,8 +1764,8 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
             toast.error('Ingrese un precio de venta válido');
             return;
           }
-        } else if (kgTajado > 0) {
-          // Only tajados
+        } else if (hasAnyTajadoKg) {
+          // Only tajados (TI or TF)
           const precio = Number(item.precioVentaKgTajado) || Number(item.precioVentaKg);
           if (!precio || precio <= 0) {
             toast.error('Ingrese un precio de venta válido');
@@ -1917,7 +1974,8 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
                            bloquesTajadosInternos: '',
                            cantidadKg: '',
                            cantidadKgEntero: '',
-                           cantidadKgTajado: '',
+                           cantidadKgTajadoInterno: '',
+                           cantidadKgTajadoFabrica: '',
                            precioVentaKg: '',
                            precioVentaKgEntero: '',
                            precioVentaKgTajado: '',
@@ -1932,7 +1990,7 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
                           <SelectValue placeholder="Seleccione lote">
                               {lote ? (
                                 isDobleCrema(lote.producto)
-                                   ? `${tipoProductoLabel[lote.producto as TipoProducto] ?? lote.producto} — ${lote.proveedorId ? (proveedorMap.get(lote.proveedorId) ?? 'Sin proveedor') : 'Operación Interna'} — ${formatDobleCremaDetalle(lote.bloquesEnteros, lote.bloquesTajadosDisponibles, Number(lote.sueltosEntero), Number(lote.sueltosTajado))} (${Number(lote.stockDisponibleKg).toLocaleString('es-AR')} kg)`
+                                    ? `${tipoProductoLabel[lote.producto as TipoProducto] ?? lote.producto} — ${lote.proveedorId ? (proveedorMap.get(lote.proveedorId) ?? 'Sin proveedor') : 'Operación Interna'} — ${formatDobleCremaStockLabel(lote.bloquesEnteros, lote.bloquesTajados, lote.bloquesTajadosDeFabrica, Number(lote.sueltosEntero), Number(lote.sueltosTajado), Number(lote.stockDisponibleKg))} (${Number(lote.stockDisponibleKg).toLocaleString('es-AR')} kg)`
                                    : `${tipoProductoLabel[lote.producto as TipoProducto] ?? lote.producto} — ${lote.proveedorId ? (proveedorMap.get(lote.proveedorId) ?? 'Sin proveedor') : 'Operación Interna'} — ${Number(lote.stockDisponibleKg).toLocaleString('es-AR')} kg disp.`
                               ) : 'Seleccione lote'}
                            </SelectValue>
@@ -1943,7 +2001,7 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
                              .map((l) => (
                             <SelectItem key={l.id} value={l.id}>
                                 {isDobleCrema(l.producto)
-                                  ? `${tipoProductoLabel[l.producto as TipoProducto] ?? l.producto} — ${l.proveedorId ? (proveedorMap.get(l.proveedorId) ?? 'Sin proveedor') : 'Operación Interna'} — ${formatDobleCremaDetalle(l.bloquesEnteros, l.bloquesTajadosDisponibles, Number(l.sueltosEntero), Number(l.sueltosTajado))} (${Number(l.stockDisponibleKg).toLocaleString('es-AR')} kg)`
+                                    ? `${tipoProductoLabel[l.producto as TipoProducto] ?? l.producto} — ${l.proveedorId ? (proveedorMap.get(l.proveedorId) ?? 'Sin proveedor') : 'Operación Interna'} — ${formatDobleCremaStockLabel(l.bloquesEnteros, l.bloquesTajados, l.bloquesTajadosDeFabrica, Number(l.sueltosEntero), Number(l.sueltosTajado), Number(l.stockDisponibleKg))} (${Number(l.stockDisponibleKg).toLocaleString('es-AR')} kg)`
                                   : `${tipoProductoLabel[l.producto as TipoProducto] ?? l.producto} — ${l.proveedorId ? (proveedorMap.get(l.proveedorId) ?? 'Sin proveedor') : 'Operación Interna'} — ${Number(l.stockDisponibleKg).toLocaleString('es-AR')} kg disp.`
                                 }
                             </SelectItem>
@@ -1963,7 +2021,7 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
                            size="sm"
                            onClick={() => {
                              const hasEntero = lote.bloquesEnteros > 0;
-                              updateItem(index, { ventaTipo: 'BLOQUES', bloquesEnteros: '', bloquesTajados: '', bloquesTajadosDeFabrica: '', bloquesTajadosInternos: '', cantidadKg: '', cantidadKgEntero: '', cantidadKgTajado: '', precioVentaKg: '', precioVentaKgEntero: '', precioVentaKgTajado: '', origenCorte: hasEntero ? 'ENTERO' : 'TAJADO' });
+                              updateItem(index, { ventaTipo: 'BLOQUES', bloquesEnteros: '', bloquesTajados: '', bloquesTajadosDeFabrica: '', bloquesTajadosInternos: '', cantidadKg: '', cantidadKgEntero: '', cantidadKgTajadoInterno: '', cantidadKgTajadoFabrica: '', precioVentaKg: '', precioVentaKgEntero: '', precioVentaKgTajado: '', origenCorte: hasEntero ? 'ENTERO' : 'TAJADO' });
                            }}
                          >
                            Por Bloques
@@ -1975,7 +2033,7 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
                            onClick={() => {
                              const hasEntero = lote.bloquesEnteros > 0 || Number(lote.sueltosEntero) > 0;
                              const hasTajado = lote.bloquesTajados > 0 || lote.bloquesTajadosDeFabrica > 0 || Number(lote.sueltosTajado) > 0;
-                              updateItem(index, { ventaTipo: 'GRANEL', bloquesEnteros: '', bloquesTajados: '', bloquesTajadosDeFabrica: '', bloquesTajadosInternos: '', cantidadKg: '', cantidadKgEntero: '', cantidadKgTajado: '', precioVentaKg: '', precioVentaKgEntero: '', precioVentaKgTajado: '', origenCorte: !hasEntero && hasTajado ? 'TAJADO' : 'ENTERO' });
+                              updateItem(index, { ventaTipo: 'GRANEL', bloquesEnteros: '', bloquesTajados: '', bloquesTajadosDeFabrica: '', bloquesTajadosInternos: '', cantidadKg: '', cantidadKgEntero: '', cantidadKgTajadoInterno: '', cantidadKgTajadoFabrica: '', precioVentaKg: '', precioVentaKgEntero: '', precioVentaKgTajado: '', origenCorte: !hasEntero && hasTajado ? 'TAJADO' : 'ENTERO' });
                            }}
                          >
                            Al Granel (Kg)
@@ -1990,7 +2048,7 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
                       <div className="rounded-lg bg-muted/50 p-3 space-y-1">
                          <p className="text-sm font-medium">Stock del lote</p>
                          <p className="text-xs text-muted-foreground">
-                           {formatDobleCremaDetalle(lote.bloquesEnteros, lote.bloquesTajadosDisponibles, Number(lote.sueltosEntero), Number(lote.sueltosTajado))} — Total: {Number(lote.stockDisponibleKg).toLocaleString('es-AR')} kg
+                             {formatDobleCremaStockLabel(lote.bloquesEnteros, lote.bloquesTajados, lote.bloquesTajadosDeFabrica, Number(lote.sueltosEntero), Number(lote.sueltosTajado), Number(lote.stockDisponibleKg))} — Total: {Number(lote.stockDisponibleKg).toLocaleString('es-AR')} kg
                          </p>
                        </div>
                       <div className={`grid gap-3 ${
@@ -2112,25 +2170,55 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
                       );
                     }
 
-                    // DC GRANEL: determine which varieties have stock
+                    // DC GRANEL: always show up to 3 independent inputs based on stock availability
                     const hasEnteroStock = lote.bloquesEnteros > 0 || Number(lote.sueltosEntero) > 0;
-                    const hasTajadoStock = lote.bloquesTajados > 0 || lote.bloquesTajadosDeFabrica > 0 || Number(lote.sueltosTajado) > 0;
-                    const stockEnteroKg = lote.bloquesEnteros * DOBLE_CREMA_BLOCK_KG + Number(lote.sueltosEntero);
-                    const stockTajadoKg = (lote.bloquesTajados + lote.bloquesTajadosDeFabrica) * DOBLE_CREMA_BLOCK_KG + Number(lote.sueltosTajado);
-                    const showDualVariety = hasEnteroStock && hasTajadoStock;
+                    const hasTajadoInternoStock = lote.bloquesTajados > 0 || Number(lote.sueltosTajado) > 0;
+                    const hasTajadoFabricaStock = lote.bloquesTajadosDeFabrica > 0;
+                    const hasTajadoStock = hasTajadoInternoStock || hasTajadoFabricaStock;
+                    const stockEnteroKg = hasEnteroStock ? lote.bloquesEnteros * DOBLE_CREMA_BLOCK_KG + Number(lote.sueltosEntero) : 0;
+                    const stockTajadoInternoKg = hasTajadoInternoStock ? lote.bloquesTajados * DOBLE_CREMA_BLOCK_KG + Number(lote.sueltosTajado) : 0;
+                    const stockTajadoFabricaKg = hasTajadoFabricaStock ? lote.bloquesTajadosDeFabrica * DOBLE_CREMA_BLOCK_KG : 0;
                     const kgEntero = Number(item.cantidadKgEntero) || 0;
-                    const kgTajado = Number(item.cantidadKgTajado) || 0;
+                    const kgTajadoInterno = Number(item.cantidadKgTajadoInterno) || 0;
+                    const kgTajadoFabrica = Number(item.cantidadKgTajadoFabrica) || 0;
+                    const totalKg = kgEntero + kgTajadoInterno + kgTajadoFabrica;
 
-                    if (showDualVariety) {
-                      // BOTH varieties have stock: show two kg fields
+                    // Determine if any variety fields should be shown
+                    const showEntero = hasEnteroStock;
+                    const showTI = hasTajadoInternoStock;
+                    const showTF = hasTajadoFabricaStock;
+                    const visibleCount = (showEntero ? 1 : 0) + (showTI ? 1 : 0) + (showTF ? 1 : 0);
+
+                    if (visibleCount === 0) {
+                      // Fallback: neither variety has stock (shouldn't happen with valid lote)
                       return (
-                        <div className="space-y-3">
-                          <div className="rounded-lg bg-muted/50 p-2">
-                            <p className="text-xs text-muted-foreground">
-                              Stock entero: {stockEnteroKg.toLocaleString('es-AR')} kg — Stock tajado: {stockTajadoKg.toLocaleString('es-AR')} kg
-                            </p>
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label>Cantidad (Kg)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            placeholder="0"
+                            value={item.cantidadKg}
+                            onChange={(e) => updateItem(index, { cantidadKg: e.target.value })}
+                          />
+                          <p className="text-xs text-muted-foreground text-destructive">No hay stock disponible.</p>
+                        </div>
+                      );
+                    }
+
+                    // Derive origenCorte from which fields have values
+                    const derivedOrigenCorte = kgEntero > 0 ? 'ENTERO' : (kgTajadoInterno > 0 || kgTajadoFabrica > 0) ? 'TAJADO' : item.origenCorte;
+
+                    return (
+                      <div className="space-y-3">
+                        <div className="rounded-lg bg-muted/50 p-2">
+                          <p className="text-xs text-muted-foreground">
+                            {[stockEnteroKg > 0 ? `Entero: ${stockEnteroKg.toLocaleString('es-AR')} kg` : '', stockTajadoInternoKg > 0 ? `Tajado TI: ${stockTajadoInternoKg.toLocaleString('es-AR')} kg` : '', stockTajadoFabricaKg > 0 ? `Tajado TF: ${stockTajadoFabricaKg.toLocaleString('es-AR')} kg` : ''].filter(Boolean).join(' — ')}
+                          </p>
+                        </div>
+                        <div className={`grid gap-3 ${visibleCount === 3 ? 'grid-cols-3' : visibleCount === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                          {showEntero && (
                             <div className="space-y-2">
                               <Label>Kg Enteros</Label>
                               <Input
@@ -2143,157 +2231,41 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
                               />
                               <p className="text-xs text-muted-foreground">Stock: {stockEnteroKg.toLocaleString('es-AR')} kg</p>
                             </div>
+                          )}
+                          {showTI && (
                             <div className="space-y-2">
-                              <Label>Kg Tajados</Label>
+                              <Label>Kg Tajados Internos (TI)</Label>
                               <Input
                                 type="number"
                                 step="0.01"
                                 min="0"
                                 placeholder="0"
-                                value={item.cantidadKgTajado}
-                                onChange={(e) => updateItem(index, { cantidadKgTajado: e.target.value, cantidadKg: '' })}
+                                value={item.cantidadKgTajadoInterno}
+                                onChange={(e) => updateItem(index, { cantidadKgTajadoInterno: e.target.value, cantidadKg: '', origenCorte: derivedOrigenCorte })}
                               />
-                              <p className="text-xs text-muted-foreground">Stock: {stockTajadoKg.toLocaleString('es-AR')} kg</p>
+                              <p className="text-xs text-muted-foreground">Stock: {stockTajadoInternoKg.toLocaleString('es-AR')} kg</p>
                             </div>
-                          </div>
-                          {(kgEntero + kgTajado > 0) && (
-                            <p className="text-xs text-muted-foreground">
-                              Total: {(kgEntero + kgTajado).toLocaleString('es-AR')} kg
-                            </p>
                           )}
-                          {/* Tipo de tajado — only when tajado kg is filled */}
-                          {kgTajado > 0 && (() => {
-                            const hasInternos = lote.bloquesTajados > 0;
-                            const hasFabrica = lote.bloquesTajadosDeFabrica > 0;
-                            const both = hasInternos && hasFabrica;
-                            const autoOrigen = !hasInternos && hasFabrica ? 'FABRICA' : 'INTERNO';
-                            if (item.origenTajadoGranel !== autoOrigen && !both) {
-                              updateItem(index, { origenTajadoGranel: autoOrigen });
-                            }
-                            return both ? (
-                              <div className="space-y-2">
-                                <Label>Tipo de tajado</Label>
-                                <Select
-                                  value={item.origenTajadoGranel || 'INTERNO'}
-                                  onValueChange={(v) => updateItem(index, { origenTajadoGranel: v ?? 'INTERNO' })}
-                                >
-                                  <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Seleccione tipo">
-                                      {item.origenTajadoGranel === 'FABRICA' ? 'Tajado de Fábrica (TF)' : 'Tajado Interno (TI)'}
-                                    </SelectValue>
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="INTERNO">Tajado Interno (TI) — {lote.bloquesTajados} bloques</SelectItem>
-                                    <SelectItem value="FABRICA">Tajado de Fábrica (TF) — {lote.bloquesTajadosDeFabrica} bloques</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <p className="text-xs text-muted-foreground">
-                                  {item.origenTajadoGranel === 'FABRICA'
-                                    ? 'Se descontarán bloques de tajados de fábrica. Costo por kg incluye precio de compra de fábrica.'
-                                    : 'Se descontarán bloques de tajados internos. Costo por kg incluye separadores y mano de obra.'}
-                                </p>
-                              </div>
-                            ) : (
-                              <p className="text-xs text-muted-foreground">
-                                Origen: {autoOrigen === 'FABRICA' ? 'Tajado de Fábrica (TF)' : 'Tajado Interno (TI)'}
-                              </p>
-                            );
-                          })()}
-                        </div>
-                      );
-                    }
-
-                    // Only ONE variety has stock: show single kg field
-                    if (hasEnteroStock && !hasTajadoStock) {
-                      // Only enteros: single field, auto-set origenCorte to ENTERO
-                      if (item.origenCorte !== 'ENTERO') {
-                        updateItem(index, { origenCorte: 'ENTERO' });
-                      }
-                      return (
-                        <div className="space-y-2">
-                          <Label>Cantidad (Kg Enteros)</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0.01"
-                            placeholder="0"
-                            value={item.cantidadKgEntero || item.cantidadKg}
-                            onChange={(e) => updateItem(index, { cantidadKgEntero: e.target.value, cantidadKg: e.target.value, cantidadKgTajado: '', origenCorte: 'ENTERO' })}
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Stock entero: {stockEnteroKg.toLocaleString('es-AR')} kg — Solo quedan enteros disponibles.
-                          </p>
-                        </div>
-                      );
-                    }
-
-                    if (!hasEnteroStock && hasTajadoStock) {
-                      // Only tajados: single field, auto-set origenCorte to TAJADO
-                      if (item.origenCorte !== 'TAJADO') {
-                        updateItem(index, { origenCorte: 'TAJADO' });
-                      }
-                      const hasInternos = lote.bloquesTajados > 0;
-                      const hasFabrica = lote.bloquesTajadosDeFabrica > 0;
-                      const both = hasInternos && hasFabrica;
-                      const autoOrigen = !hasInternos && hasFabrica ? 'FABRICA' : 'INTERNO';
-                      if (item.origenTajadoGranel !== autoOrigen && !both) {
-                        updateItem(index, { origenTajadoGranel: autoOrigen });
-                      }
-                      return (
-                        <div className="space-y-2">
-                          <Label>Cantidad (Kg Tajados)</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0.01"
-                            placeholder="0"
-                            value={item.cantidadKgTajado || item.cantidadKg}
-                            onChange={(e) => updateItem(index, { cantidadKgTajado: e.target.value, cantidadKg: e.target.value, cantidadKgEntero: '', origenCorte: 'TAJADO' })}
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Stock tajado: {stockTajadoKg.toLocaleString('es-AR')} kg — Solo quedan tajados disponibles.
-                          </p>
-                          {/* Tipo de tajado — show if both TI & TF available */}
-                          {both ? (
+                          {showTF && (
                             <div className="space-y-2">
-                              <Label>Tipo de tajado</Label>
-                              <Select
-                                value={item.origenTajadoGranel || 'INTERNO'}
-                                onValueChange={(v) => updateItem(index, { origenTajadoGranel: v ?? 'INTERNO' })}
-                              >
-                                <SelectTrigger className="w-full">
-                                  <SelectValue placeholder="Seleccione tipo">
-                                    {item.origenTajadoGranel === 'FABRICA' ? 'Tajado de Fábrica (TF)' : 'Tajado Interno (TI)'}
-                                  </SelectValue>
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="INTERNO">Tajado Interno (TI) — {lote.bloquesTajados} bloques</SelectItem>
-                                  <SelectItem value="FABRICA">Tajado de Fábrica (TF) — {lote.bloquesTajadosDeFabrica} bloques</SelectItem>
-                                </SelectContent>
-                              </Select>
+                              <Label>Kg Tajados de Fábrica (TF)</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                placeholder="0"
+                                value={item.cantidadKgTajadoFabrica}
+                                onChange={(e) => updateItem(index, { cantidadKgTajadoFabrica: e.target.value, cantidadKg: '', origenCorte: derivedOrigenCorte })}
+                              />
+                              <p className="text-xs text-muted-foreground">Stock: {stockTajadoFabricaKg.toLocaleString('es-AR')} kg</p>
                             </div>
-                          ) : (
-                            <p className="text-xs text-muted-foreground">
-                              Origen: {autoOrigen === 'FABRICA' ? 'Tajado de Fábrica (TF)' : 'Tajado Interno (TI)'}
-                            </p>
                           )}
                         </div>
-                      );
-                    }
-
-                    // Fallback: neither variety has stock (shouldn't happen with valid lote)
-                    return (
-                      <div className="space-y-2">
-                        <Label>Cantidad (Kg)</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0.01"
-                          placeholder="0"
-                          value={item.cantidadKg}
-                          onChange={(e) => updateItem(index, { cantidadKg: e.target.value })}
-                        />
-                        <p className="text-xs text-muted-foreground text-destructive">No hay stock disponible.</p>
+                        {totalKg > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            Total: {totalKg.toLocaleString('es-AR')} kg
+                          </p>
+                        )}
                       </div>
                     );
                   })()}
@@ -2333,83 +2305,186 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
                          )}
                        </div>
                      </div>
-                    ) : !isBlockMode && isDC && lote && lote.bloquesEnteros > 0 && (lote.bloquesTajados > 0 || lote.bloquesTajadosDeFabrica > 0 || Number(lote.sueltosTajado) > 0) && (Number(lote.sueltosEntero) > 0 || lote.bloquesEnteros > 0) && (lote.bloquesTajados > 0 || lote.bloquesTajadosDeFabrica > 0 || Number(lote.sueltosTajado) > 0) ? (
-                      /* DC GRANEL dual-variety price: both varieties have stock */
-                      <div className="space-y-2">
-                        <Label>Precio por Variedad ($/Kg)</Label>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1">
-                            <Label htmlFor={`precioKgEntero-${index}`} className="text-xs text-muted-foreground">Entero ($/kg)</Label>
-                            <Input
-                              id={`precioKgEntero-${index}`}
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              placeholder="0.00"
-                              value={item.precioVentaKgEntero}
-                              onChange={(e) => updateItem(index, { precioVentaKgEntero: e.target.value })}
-                            />
-                            {prices.entero !== null && (
-                              <p className="text-xs text-muted-foreground">
-                                Sugerido: ${Math.round(prices.entero).toLocaleString('es-AR')}/kg
-                              </p>
-                            )}
-                          </div>
-                          <div className="space-y-1">
-                            <Label htmlFor={`precioKgTajado-${index}`} className="text-xs text-muted-foreground">Tajado ($/kg)</Label>
-                            <Input
-                              id={`precioKgTajado-${index}`}
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              placeholder="0.00"
-                              value={item.precioVentaKgTajado}
-                              onChange={(e) => updateItem(index, { precioVentaKgTajado: e.target.value })}
-                            />
-                            {prices.tajado !== null && (
-                              <p className="text-xs text-muted-foreground">
-                                Sugerido: ${Math.round(prices.tajado).toLocaleString('es-AR')}/kg
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ) : !isBlockMode && isDC && lote && (lote.bloquesEnteros > 0 || Number(lote.sueltosEntero) > 0) && !(lote.bloquesTajados > 0 || lote.bloquesTajadosDeFabrica > 0 || Number(lote.sueltosTajado) > 0) ? (
-                      /* DC GRANEL entero-only: single price field */
-                      <div className="space-y-2">
-                        <Label>Precio Entero ($/Kg)</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="0.00"
-                          value={item.precioVentaKgEntero || item.precioVentaKg}
-                          onChange={(e) => updateItem(index, { precioVentaKgEntero: e.target.value, precioVentaKg: e.target.value })}
-                        />
-                        {prices.entero !== null && (
-                          <p className="text-xs text-muted-foreground">
-                            Precio sugerido: ${Math.round(prices.entero).toLocaleString('es-AR')}/kg
-                          </p>
-                        )}
-                      </div>
-                    ) : !isBlockMode && isDC && lote && !(lote.bloquesEnteros > 0 || Number(lote.sueltosEntero) > 0) && (lote.bloquesTajados > 0 || lote.bloquesTajadosDeFabrica > 0 || Number(lote.sueltosTajado) > 0) ? (
-                      /* DC GRANEL tajado-only: single price field */
-                      <div className="space-y-2">
-                        <Label>Precio Tajado ($/Kg)</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="0.00"
-                          value={item.precioVentaKgTajado}
-                          onChange={(e) => updateItem(index, { precioVentaKgTajado: e.target.value })}
-                        />
-                        {(prices.tajado ?? prices.entero) !== null && (
-                          <p className="text-xs text-muted-foreground">
-                            Precio sugerido: ${Math.round(prices.tajado ?? prices.entero!).toLocaleString('es-AR')}/kg
-                          </p>
-                        )}
-                      </div>
+                    ) : !isBlockMode && isDC && lote ? (
+                       /* DC GRANEL price: determine from what the user is selling */
+                       (() => {
+                         const kgEntero = Number(item.cantidadKgEntero) || 0;
+                         const kgTajadoInterno = Number(item.cantidadKgTajadoInterno) || 0;
+                         const kgTajadoFabrica = Number(item.cantidadKgTajadoFabrica) || 0;
+                         const kgTajado = kgTajadoInterno + kgTajadoFabrica;
+                         const hasEnteroStock = lote.bloquesEnteros > 0 || Number(lote.sueltosEntero) > 0;
+                         const hasTajadoInternoStock = lote.bloquesTajados > 0 || Number(lote.sueltosTajado) > 0;
+                         const hasTajadoFabricaStock = lote.bloquesTajadosDeFabrica > 0;
+                         const hasAnyTajadoStock = hasTajadoInternoStock || hasTajadoFabricaStock;
+
+                         if (kgEntero > 0 && kgTajado > 0) {
+                           // Both entero and tajado kg filled: dual price
+                           return (
+                             <div className="space-y-2">
+                               <Label>Precio por Variedad ($/Kg)</Label>
+                               <div className="grid grid-cols-2 gap-3">
+                                 <div className="space-y-1">
+                                   <Label htmlFor={`precioKgEntero-${index}`} className="text-xs text-muted-foreground">Entero ($/kg)</Label>
+                                   <Input
+                                     id={`precioKgEntero-${index}`}
+                                     type="number"
+                                     step="0.01"
+                                     min="0"
+                                     placeholder="0.00"
+                                     value={item.precioVentaKgEntero}
+                                     onChange={(e) => updateItem(index, { precioVentaKgEntero: e.target.value })}
+                                   />
+                                   {prices.entero !== null && (
+                                     <p className="text-xs text-muted-foreground">
+                                       Sugerido: ${Math.round(prices.entero).toLocaleString('es-AR')}/kg
+                                     </p>
+                                   )}
+                                 </div>
+                                 <div className="space-y-1">
+                                   <Label htmlFor={`precioKgTajado-${index}`} className="text-xs text-muted-foreground">Precio/kg tajado</Label>
+                                   <Input
+                                     id={`precioKgTajado-${index}`}
+                                     type="number"
+                                     step="0.01"
+                                     min="0"
+                                     placeholder="0.00"
+                                     value={item.precioVentaKgTajado}
+                                     onChange={(e) => updateItem(index, { precioVentaKgTajado: e.target.value })}
+                                   />
+                                   {prices.tajado !== null && (
+                                     <p className="text-xs text-muted-foreground">
+                                       Sugerido: ${Math.round(prices.tajado).toLocaleString('es-AR')}/kg
+                                     </p>
+                                   )}
+                                 </div>
+                               </div>
+                             </div>
+                           );
+                         } else if (kgEntero > 0) {
+                           // Only entero kg
+                           return (
+                             <div className="space-y-2">
+                               <Label>Precio Entero ($/Kg)</Label>
+                               <Input
+                                 type="number"
+                                 step="0.01"
+                                 min="0"
+                                 placeholder="0.00"
+                                 value={item.precioVentaKgEntero || item.precioVentaKg}
+                                 onChange={(e) => updateItem(index, { precioVentaKgEntero: e.target.value, precioVentaKg: e.target.value })}
+                               />
+                               {prices.entero !== null && (
+                                 <p className="text-xs text-muted-foreground">
+                                   Precio sugerido: ${Math.round(prices.entero).toLocaleString('es-AR')}/kg
+                                 </p>
+                               )}
+                             </div>
+                           );
+                         } else if (kgTajado > 0) {
+                           // Only tajado kg (TI, TF, or both)
+                           return (
+                             <div className="space-y-2">
+                               <Label>Precio/kg tajado</Label>
+                               <Input
+                                 type="number"
+                                 step="0.01"
+                                 min="0"
+                                 placeholder="0.00"
+                                 value={item.precioVentaKgTajado}
+                                 onChange={(e) => updateItem(index, { precioVentaKgTajado: e.target.value })}
+                               />
+                               {(prices.tajado ?? prices.entero) !== null && (
+                                 <p className="text-xs text-muted-foreground">
+                                   Precio sugerido: ${Math.round(prices.tajado ?? prices.entero!).toLocaleString('es-AR')}/kg
+                                 </p>
+                               )}
+                             </div>
+                           );
+                         } else if (hasEnteroStock && !hasAnyTajadoStock) {
+                           // Only entero stock available
+                           return (
+                             <div className="space-y-2">
+                               <Label>Precio Entero ($/Kg)</Label>
+                               <Input
+                                 type="number"
+                                 step="0.01"
+                                 min="0"
+                                 placeholder="0.00"
+                                 value={item.precioVentaKgEntero || item.precioVentaKg}
+                                 onChange={(e) => updateItem(index, { precioVentaKgEntero: e.target.value, precioVentaKg: e.target.value })}
+                               />
+                               {prices.entero !== null && (
+                                 <p className="text-xs text-muted-foreground">
+                                   Precio sugerido: ${Math.round(prices.entero).toLocaleString('es-AR')}/kg
+                                 </p>
+                               )}
+                             </div>
+                           );
+                         } else if (!hasEnteroStock && hasAnyTajadoStock) {
+                           // Only tajado stock available
+                           return (
+                             <div className="space-y-2">
+                               <Label>Precio/kg tajado</Label>
+                               <Input
+                                 type="number"
+                                 step="0.01"
+                                 min="0"
+                                 placeholder="0.00"
+                                 value={item.precioVentaKgTajado}
+                                 onChange={(e) => updateItem(index, { precioVentaKgTajado: e.target.value })}
+                               />
+                               {(prices.tajado ?? prices.entero) !== null && (
+                                 <p className="text-xs text-muted-foreground">
+                                   Precio sugerido: ${Math.round(prices.tajado ?? prices.entero!).toLocaleString('es-AR')}/kg
+                                 </p>
+                               )}
+                             </div>
+                           );
+                         } else {
+                           // Both stocks available but no kg filled yet — show dual price
+                           return (
+                             <div className="space-y-2">
+                               <Label>Precio por Variedad ($/Kg)</Label>
+                               <div className="grid grid-cols-2 gap-3">
+                                 <div className="space-y-1">
+                                   <Label htmlFor={`precioKgEntero-${index}`} className="text-xs text-muted-foreground">Entero ($/kg)</Label>
+                                   <Input
+                                     id={`precioKgEntero-${index}`}
+                                     type="number"
+                                     step="0.01"
+                                     min="0"
+                                     placeholder="0.00"
+                                     value={item.precioVentaKgEntero}
+                                     onChange={(e) => updateItem(index, { precioVentaKgEntero: e.target.value })}
+                                   />
+                                   {prices.entero !== null && (
+                                     <p className="text-xs text-muted-foreground">
+                                       Sugerido: ${Math.round(prices.entero).toLocaleString('es-AR')}/kg
+                                     </p>
+                                   )}
+                                 </div>
+                                 <div className="space-y-1">
+                                   <Label htmlFor={`precioKgTajado-${index}`} className="text-xs text-muted-foreground">Precio/kg tajado</Label>
+                                   <Input
+                                     id={`precioKgTajado-${index}`}
+                                     type="number"
+                                     step="0.01"
+                                     min="0"
+                                     placeholder="0.00"
+                                     value={item.precioVentaKgTajado}
+                                     onChange={(e) => updateItem(index, { precioVentaKgTajado: e.target.value })}
+                                   />
+                                   {prices.tajado !== null && (
+                                     <p className="text-xs text-muted-foreground">
+                                       Sugerido: ${Math.round(prices.tajado).toLocaleString('es-AR')}/kg
+                                     </p>
+                                   )}
+                                 </div>
+                               </div>
+                             </div>
+                           );
+                         }
+                       })()
                     ) : (
                       <div className="space-y-2">
                         <Label>Precio de Venta ($/Kg)</Label>

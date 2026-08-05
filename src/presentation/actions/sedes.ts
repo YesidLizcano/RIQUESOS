@@ -2,6 +2,7 @@
 
 // Sede Server Actions — thin controllers, delegate to use cases
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 import { requireSession } from './auth';
 import { PrismaSedeRepo } from '@/infrastructure/repositories/PrismaSedeRepo';
 import { GestionarSedes } from '@/application/use-cases/GestionarSedes';
@@ -82,9 +83,14 @@ export async function actualizarSede(input: { id: string; nombre?: string; direc
 export async function eliminarSede(id: string) {
   await requireSession();
 
+  const idResult = z.string().uuid().safeParse(id);
+  if (!idResult.success) {
+    return { success: false, error: 'ID inválido' };
+  }
+
   try {
     const useCase = await getGestionarSedesUseCase();
-    await useCase.eliminar(id);
+    await useCase.eliminar(idResult.data);
     revalidatePath('/clientes');
     return { success: true };
   } catch (error) {

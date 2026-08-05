@@ -489,6 +489,94 @@ describe('Lote', () => {
         'La cantidad de bloques debe ser mayor a 0'
       );
     });
+
+    it('should NOT mutate costoRealCalculadoKg, costoTotalLote, or costoTajadoFabricaKg after tajado', () => {
+      // Regression: converting enteros to tajados MUST NOT change the investment-based cost calculations.
+      // The original block counts (bloquesEnterosOriginal, bloquesTajadosFabricaOriginal) must be used
+      // for flete distribution, not the current (post-tajado) counts.
+      const lote = new Lote({
+        ...validProps,
+        cantidadCompradaKg: '90', // 36 blocks × 2.5 kg
+        bloquesEnteros: 36,
+        bloquesTajadosDeFabrica: 4,
+        bloquesEnterosOriginal: 36,
+        bloquesTajadosFabricaOriginal: 4,
+        precioPorBloqueEntero: '37500',
+        precioPorBloqueTajado: '40000',
+        costoFlete: '50000',
+      });
+
+      const costoRealBefore = lote.costoRealCalculadoKg.value;
+      const costoTotalBefore = lote.costoTotalLote.value;
+      const costoTajFabricaBefore = lote.costoTajadoFabricaKg.value;
+
+      // Convert 10 blocks from enteros to tajados (interno)
+      const after = lote.registrarTajado(10, '1500');
+
+      // All investment-based costs MUST remain identical
+      expect(after.costoRealCalculadoKg.value).toBe(costoRealBefore);
+      expect(after.costoTotalLote.value).toBe(costoTotalBefore);
+      expect(after.costoTajadoFabricaKg.value).toBe(costoTajFabricaBefore);
+
+      // Stock distribution changed, but that's correct
+      expect(after.bloquesEnteros).toBe(26);
+      expect(after.bloquesTajados).toBe(10);
+      expect(after.bloquesEnterosOriginal).toBe(36); // Immutable
+      expect(after.bloquesTajadosFabricaOriginal).toBe(4); // Immutable
+    });
+  });
+
+  describe('costoTajadoKg stability across multiple tajado rounds', () => {
+    it('should keep costoTajadoKg per-block constant when same precioPorBloque is used across rounds', () => {
+      // Regression: costoTajadoKg must NOT increase between rounds when precioPorBloque is the same.
+      // Each TI block costs (costoRealCalculadoKg × 2.5 + precioPorBloque + separadores/blocks) per block.
+      // Multiple rounds at the same price should yield the same per-kg cost.
+      const lote = new Lote({
+        ...validProps,
+        cantidadCompradaKg: '90', // 36 blocks × 2.5 kg
+        bloquesEnteros: 36,
+        bloquesTajadosDeFabrica: 4,
+        precioPorBloqueEntero: '37500',
+        precioPorBloqueTajado: '40000',
+        costoFlete: '50000',
+      });
+
+      // First tajado: 10 blocks at $1500/block with $880 separadores
+      const first = lote.registrarTajado(10, '1500', '880');
+      const costoTIPerKgRound1 = Number(first.costoTajadoKg.value);
+
+      // Second tajado: 5 more blocks at the SAME $1500/block with $440 separadores
+      const second = first.registrarTajado(5, '1500', '440');
+      const costoTIPerKgRound2 = Number(second.costoTajadoKg.value);
+
+      // Per-kg cost MUST be identical when precioPorBloque is the same
+      expect(costoTIPerKgRound2).toBeCloseTo(costoTIPerKgRound1, 1);
+
+      // And costoRealCalculadoKg must be immutable throughout
+      expect(second.costoRealCalculadoKg.value).toBe(lote.costoRealCalculadoKg.value);
+    });
+
+    it('should correctly calculate costoTajadoKg when precioPorBloque differs between rounds', () => {
+      const lote = new Lote({
+        ...validProps,
+        cantidadCompradaKg: '100',
+        bloquesEnteros: 40,
+        precioCompraBaseKg: '3000',
+        costoFlete: '10000',
+      });
+
+      // First: 5 blocks at $1500/block
+      const first = lote.registrarTajado(5, '1500');
+      // costoTajadoKg = costoReal + (5×1500) / (5×2.5) = costoReal + 600
+      const extraKg1 = Number(first.costoTajadoKg.value) - Number(first.costoRealCalculadoKg.value);
+      expect(extraKg1).toBeCloseTo(600, -1); // ~$600/kg extra
+
+      // Second: 3 more blocks at $2000/block — different price, weighted average expected
+      const second = first.registrarTajado(3, '2000');
+      // Total cost: 5×1500 + 3×2000 = 13500, total kg: 8×2.5 = 20, extra/kg = 675
+      const extraKg2 = Number(second.costoTajadoKg.value) - Number(second.costoRealCalculadoKg.value);
+      expect(extraKg2).toBeCloseTo(675, -1); // ~$675/kg extra (weighted average)
+    });
   });
 
   describe('costoTajadoKg', () => {
@@ -604,6 +692,8 @@ describe('Lote', () => {
         precioPorBloqueTajado: '32000',
         bloquesEnteros: 36,
         bloquesTajadosDeFabrica: 16,
+        bloquesEnterosOriginal: 36,
+        bloquesTajadosFabricaOriginal: 16,
         costoFlete: '50000',
       });
       const costoEntero = Number(lote.costoRealCalculadoKg.value);

@@ -57,3 +57,28 @@ export function decimalSum(values: string[]): string {
 export function decimalSub(a: string, b: string): string {
   return decimalSum([a, b.startsWith('-') ? b.slice(1) : '-' + b]);
 }
+
+/**
+ * Format tajados count with TF/TI origin breakdown.
+ * Examples:
+ *   formatTajadosBreakdown(3, 0) => "3 tajados (3 TI)"
+ *   formatTajadosBreakdown(2, 2) => "2 tajados (1 TF y 1 TI)"
+ *   formatTajadosBreakdown(4, 4) => "4 tajados (4 TF)"
+ *   formatTajadosBreakdown(5, 0) => "5 tajados (5 TI)"
+ */
+export function formatTajadosBreakdown(tajados: number, tajadosDeFabrica: number, reempacados = 0): string {
+  const tajadosInternos = tajados - tajadosDeFabrica;
+
+  const parts: string[] = [];
+  if (tajadosDeFabrica > 0) parts.push(`${tajadosDeFabrica} TF`);
+  if (tajadosInternos > 0) parts.push(`${tajadosInternos} TI`);
+
+  const origin = parts.length > 0 ? ` (${parts.join(' y ')})` : '';
+  const reempacadoText = reempacados > 0 ? ` (${reempacados} reempacados)` : '';
+
+  // Combine origin and reempacado text, avoiding double parentheses
+  if (origin && reempacadoText) {
+    return `${tajados} tajados${origin.replace(')', `, ${reempacados} reempacados)`)}`;
+  }
+  return `${tajados} tajados${origin}${reempacadoText}`;
+}

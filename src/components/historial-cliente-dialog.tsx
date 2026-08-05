@@ -20,9 +20,10 @@ function formatItemDetail(item: VentaItemResponse): string {
   if (isDobleCrema(item.loteProducto ?? '')) {
     if (item.ventaTipo === 'BLOQUES') {
       const enteros = item.bloquesEnterosVendidos ?? 0;
-      const tajados = item.bloquesTajadosVendidos ?? 0;
+      const tajadosInternos = item.bloquesTajadosInternosVendidos ?? 0;
+      const tajadosFabrica = item.bloquesTajadosDeFabricaVendidos ?? 0;
       const reempacados = item.bloquesReempacados ?? 0;
-      const blocks = formatDobleCremaDetalle(enteros, tajados, 0, 0);
+      const blocks = formatDobleCremaDetalle(enteros, tajadosInternos, tajadosFabrica, 0, 0);
       const suffix = reempacados > 0 ? ` (${reempacados} reemp.)` : '';
       return `${label}: ${blocks}${suffix}`;
     } else {

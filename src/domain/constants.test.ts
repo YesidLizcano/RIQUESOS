@@ -112,61 +112,74 @@ describe('domain/constants', () => {
   });
 
   describe('formatDobleCremaDetalle', () => {
-    it('should format full example: 26 enteros + 5 tajados + 2 kg (de entero) + 1 kg (de tajado)', () => {
-      expect(formatDobleCremaDetalle(26, 5, 2, 1)).toBe(
-        '26 enteros + 5 tajados + 2 kg (de entero) + 1 kg (de tajado)',
+    it('should format full example: 26 E + 5 TI + 2 TF + 2 kg (de entero) + 1 kg (de tajado)', () => {
+      expect(formatDobleCremaDetalle(26, 5, 2, 2, 1)).toBe(
+        '26 E + 5 TI + 2 TF + 2 kg (de entero) + 1 kg (de tajado)',
       );
     });
 
-    it('should convert loose kg to extra blocks: enteros=0, tajados=0, kgEntero=10, kgTajado=0 → "4 enteros"', () => {
-      expect(formatDobleCremaDetalle(0, 0, 10, 0)).toBe('4 enteros');
+    it('should convert loose kg to extra blocks: enteros=0, TI=0, TF=0, kgEntero=10, kgTajado=0 → "4 E"', () => {
+      expect(formatDobleCremaDetalle(0, 0, 0, 10, 0)).toBe('4 E');
     });
 
-    it('should convert loose kg with remainder: enteros=0, tajados=0, kgEntero=6, kgTajado=0', () => {
-      expect(formatDobleCremaDetalle(0, 0, 6, 0)).toBe('2 enteros + 1 kg (de entero)');
+    it('should convert loose kg with remainder: enteros=0, TI=0, TF=0, kgEntero=6, kgTajado=0', () => {
+      expect(formatDobleCremaDetalle(0, 0, 0, 6, 0)).toBe('2 E + 1 kg (de entero)');
     });
 
-    it('should convert loose tajado kg: enteros=0, tajados=0, kgEntero=0, kgTajado=5', () => {
-      expect(formatDobleCremaDetalle(0, 0, 0, 5)).toBe('2 tajados');
+    it('should convert loose tajado kg: enteros=0, TI=0, TF=0, kgEntero=0, kgTajado=5', () => {
+      expect(formatDobleCremaDetalle(0, 0, 0, 0, 5)).toBe('2 TI');
     });
 
-    it('should convert loose tajado kg with remainder: enteros=0, tajados=0, kgEntero=0, kgTajado=3', () => {
-      expect(formatDobleCremaDetalle(0, 0, 0, 3)).toBe('1 tajados + 0.5 kg (de tajado)');
+    it('should convert loose tajado kg with remainder: enteros=0, TI=0, TF=0, kgEntero=0, kgTajado=3', () => {
+      expect(formatDobleCremaDetalle(0, 0, 0, 0, 3)).toBe('1 TI + 0.5 kg (de tajado)');
     });
 
-    it('should combine whole blocks and granel conversions: enteros=10, tajados=2, kgEntero=6, kgTajado=3', () => {
+    it('should combine whole blocks and granel conversions: enteros=10, TI=2, TF=0, kgEntero=6, kgTajado=3', () => {
       // 10 + floor(6/2.5)=2 = 12 enteros, remainder 1 kg (de entero)
-      // 2 + floor(3/2.5)=1 = 3 tajados, remainder 0.5 kg (de tajado)
-      expect(formatDobleCremaDetalle(10, 2, 6, 3)).toBe(
-        '12 enteros + 3 tajados + 1 kg (de entero) + 0.5 kg (de tajado)',
+      // 2 + floor(3/2.5)=1 = 3 TI, remainder 0.5 kg (de tajado)
+      expect(formatDobleCremaDetalle(10, 2, 0, 6, 3)).toBe(
+        '12 E + 3 TI + 1 kg (de entero) + 0.5 kg (de tajado)',
       );
+    });
+
+    it('should show TF blocks separately', () => {
+      // 0 enteros, 0 TI, 2 TF, no sueltos
+      expect(formatDobleCremaDetalle(0, 0, 2, 0, 0)).toBe('2 TF');
+    });
+
+    it('should show E + TI + TF together', () => {
+      expect(formatDobleCremaDetalle(10, 3, 2, 0, 0)).toBe('10 E + 3 TI + 2 TF');
     });
 
     it('should return "0" when all values are 0', () => {
-      expect(formatDobleCremaDetalle(0, 0, 0, 0)).toBe('0');
+      expect(formatDobleCremaDetalle(0, 0, 0, 0, 0)).toBe('0');
     });
 
-    it('should skip zero segments: enteros=5, tajados=0, kgEntero=0, kgTajado=0', () => {
-      expect(formatDobleCremaDetalle(5, 0, 0, 0)).toBe('5 enteros');
+    it('should skip zero segments: enteros=5, TI=0, TF=0, kgEntero=0, kgTajado=0', () => {
+      expect(formatDobleCremaDetalle(5, 0, 0, 0, 0)).toBe('5 E');
     });
 
-    it('should handle only enteros remainder: enteros=0, tajados=0, kgEntero=1, kgTajado=0', () => {
-      expect(formatDobleCremaDetalle(0, 0, 1, 0)).toBe('1 kg (de entero)');
+    it('should handle only enteros remainder: enteros=0, TI=0, TF=0, kgEntero=1, kgTajado=0', () => {
+      expect(formatDobleCremaDetalle(0, 0, 0, 1, 0)).toBe('1 kg (de entero)');
     });
 
-    it('should handle only tajado remainder: enteros=0, tajados=0, kgEntero=0, kgTajado=1', () => {
-      expect(formatDobleCremaDetalle(0, 0, 0, 1)).toBe('1 kg (de tajado)');
+    it('should handle only tajado remainder: enteros=0, TI=0, TF=0, kgEntero=0, kgTajado=1', () => {
+      expect(formatDobleCremaDetalle(0, 0, 0, 0, 1)).toBe('1 kg (de tajado)');
     });
 
-    it('should handle exact blocks from granel only: enteros=0, tajados=0, kgEntero=7.5, kgTajado=0', () => {
-      expect(formatDobleCremaDetalle(0, 0, 7.5, 0)).toBe('3 enteros');
+    it('should handle exact blocks from granel only: enteros=0, TI=0, TF=0, kgEntero=7.5, kgTajado=0', () => {
+      expect(formatDobleCremaDetalle(0, 0, 0, 7.5, 0)).toBe('3 E');
     });
 
-    it('should handle mixed exact and remainder: enteros=2, tajados=1, kgEntero=2.5, kgTajado=1', () => {
-      // 2 + 1 = 3 enteros, 1 + 0 = 1 tajados, 0 remainder entero, 1 kg (de tajado)
-      expect(formatDobleCremaDetalle(2, 1, 2.5, 1)).toBe(
-        '3 enteros + 1 tajados + 1 kg (de tajado)',
+    it('should handle mixed exact and remainder: enteros=2, TI=1, TF=0, kgEntero=2.5, kgTajado=1', () => {
+      // 2 + 1 = 3 enteros, 1 + 0 = 1 TI, 0 remainder entero, 1 kg (de tajado)
+      expect(formatDobleCremaDetalle(2, 1, 0, 2.5, 1)).toBe(
+        '3 E + 1 TI + 1 kg (de tajado)',
       );
+    });
+
+    it('should show recortes lot correctly: 0 E + 0 TI + 2 TF', () => {
+      expect(formatDobleCremaDetalle(0, 0, 2, 0, 0)).toBe('2 TF');
     });
   });
 });

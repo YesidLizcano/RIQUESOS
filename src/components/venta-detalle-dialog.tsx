@@ -39,7 +39,7 @@ import {
 } from '@/components/ui/table';
 import { Eye, Trash2, Loader2, Pencil, Printer, CreditCard, Receipt } from 'lucide-react';
 import { toast } from 'sonner';
-import { decimalSub } from '@/lib/utils';
+import { decimalSub, formatTajadosBreakdown } from '@/lib/utils';
 
 interface VentaDetalleDialogProps {
   venta: VentaResponse;
@@ -157,7 +157,8 @@ export function VentaDetalleDialog({
           </tr>`;
         }
         if (tajados > 0) {
-          const cantText = reempacados > 0 ? `${tajados} tajados (${reempacados} reempacados)` : `${tajados} tajados`;
+          const tajadosDeFabricaPrint = item.bloquesTajadosDeFabricaVendidos ?? 0;
+          const cantText = formatTajadosBreakdown(tajados, tajadosDeFabricaPrint, reempacados);
           rows += `<tr>
             <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;font-size:13px">${enteros > 0 ? '' : (loteLabel || '—')}</td>
             <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:13px">Tajados</td>
@@ -385,9 +386,8 @@ export function VentaDetalleDialog({
                       }
 
                       if (tajados > 0) {
-                        const cantidadText = reempacados > 0
-                          ? `${tajados} tajados (${reempacados} reempacados)`
-                          : `${tajados} tajados`;
+                        const tajadosDeFabrica = item.bloquesTajadosDeFabricaVendidos ?? 0;
+                        const cantidadText = formatTajadosBreakdown(tajados, tajadosDeFabrica, reempacados);
                         rows.push(
                           <TableRow key={`${i}-taj`}>
                             <TableCell className="py-1.5 text-xs">{enteros > 0 ? '' : loteCell}</TableCell>

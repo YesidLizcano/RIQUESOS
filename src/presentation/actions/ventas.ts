@@ -18,6 +18,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/infrastructure/db';
 import { OrigenCorte, OrigenTajadoGranel } from '@/domain/enums';
 import { ConcurrencyError } from '@/domain/errors/ConcurrencyError';
+import { registrarVentaSchema, editarVentaSchema, eliminarVentaSchema } from '@/presentation/validations/venta.schema';
 import type { VentaResponse, VentaItemResponse, VentaTipo, AbonoMetodoPagoBreakdown } from '../dtos';
 
 function ventaRecordToResponse(v: {
@@ -191,16 +192,38 @@ export async function registrarVenta(input: {
 }) {
   await requireSession();
 
+  const parsed = registrarVentaSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
   try {
     const useCase = await getRegistrarVentaUseCase();
     const result = await useCase.execute({
-      ...input,
-      sedeId: input.sedeId,
-      items: input.items.map((item) => ({
-        ...item,
+      clienteId: parsed.data.clienteId,
+      sedeId: parsed.data.sedeId,
+      items: parsed.data.items.map((item) => ({
+        loteId: item.loteId,
+        ventaTipo: item.ventaTipo,
+        cantidadKg: String(item.cantidadKg),
+        precioVentaKg: String(item.precioVentaKg),
+        bloquesEnterosVendidos: item.bloquesEnterosVendidos,
+        bloquesTajadosVendidos: item.bloquesTajadosVendidos,
+        bloquesTajadosDeFabricaVendidos: item.bloquesTajadosDeFabricaVendidos,
+        bloquesTajadosInternosVendidos: item.bloquesTajadosInternosVendidos,
+        bloquesReempacados: item.bloquesReempacados,
+        precioEnteroBloque: item.precioEnteroBloque !== undefined ? String(item.precioEnteroBloque) : undefined,
+        precioTajadoBloque: item.precioTajadoBloque !== undefined ? String(item.precioTajadoBloque) : undefined,
         origenCorte: item.origenCorte as OrigenCorte | undefined,
         origenTajadoGranel: item.origenTajadoGranel as OrigenTajadoGranel | undefined,
       })),
+      valorDomicilio: String(parsed.data.valorDomicilio),
+      costoDomiciliario: String(parsed.data.costoDomiciliario),
+      domiciliario: parsed.data.domiciliario,
+      metodoPago: parsed.data.metodoPago,
+      metodoPagoAbono: parsed.data.metodoPagoAbono,
+      abono: parsed.data.abono,
+      observaciones: parsed.data.observaciones,
     });
 
     const ventaResponse: VentaResponse = {
@@ -388,18 +411,23 @@ export async function getVentasByExactDateRange(inicio: string, fin: string) {
 export async function eliminarVenta(input: { ventaId: string }) {
   await requireSession();
 
+  const parsed = eliminarVentaSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
   try {
     const ventaRepo = new PrismaVentaRepo();
     const loteRepo = new PrismaLoteRepo();
     const empaqueRepo = new PrismaEmpaqueRepo();
     const useCase = new EliminarVenta(ventaRepo, loteRepo, empaqueRepo);
-    await useCase.execute(input);
+    await useCase.execute(parsed.data);
 
     revalidatePath('/ventas');
     revalidatePath('/lotes');
     revalidatePath('/');
     revalidatePath('/insumos');
-    logger.info({ ventaId: input.ventaId }, 'Venta deleted successfully');
+    logger.info({ ventaId: parsed.data.ventaId }, 'Venta deleted successfully');
     return { success: true };
   } catch (error) {
     if (error instanceof ConcurrencyError) {
@@ -446,6 +474,11 @@ export async function editarVenta(input: {
 }) {
   await requireSession();
 
+  const parsed = editarVentaSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
   try {
     const ventaRepo = new PrismaVentaRepo();
     const loteRepo = new PrismaLoteRepo();
@@ -455,21 +488,31 @@ export async function editarVenta(input: {
     const precioClienteProveedorRepo = new PrismaPrecioClienteProveedorRepo();
     const useCase = new EditarVenta(ventaRepo, loteRepo, clienteRepo, empaqueRepo, compraInsumoRepo, precioClienteProveedorRepo);
     const result = await useCase.execute({
-      ventaId: input.ventaId,
-      clienteId: input.clienteId,
-      sedeId: input.sedeId,
-      items: input.items.map((item) => ({
-        ...item,
+      ventaId: parsed.data.ventaId,
+      clienteId: parsed.data.clienteId,
+      sedeId: parsed.data.sedeId,
+      items: parsed.data.items.map((item) => ({
+        loteId: item.loteId,
+        ventaTipo: item.ventaTipo,
+        cantidadKg: String(item.cantidadKg),
+        precioVentaKg: String(item.precioVentaKg),
+        bloquesEnterosVendidos: item.bloquesEnterosVendidos,
+        bloquesTajadosVendidos: item.bloquesTajadosVendidos,
+        bloquesTajadosDeFabricaVendidos: item.bloquesTajadosDeFabricaVendidos,
+        bloquesTajadosInternosVendidos: item.bloquesTajadosInternosVendidos,
+        bloquesReempacados: item.bloquesReempacados,
+        precioEnteroBloque: item.precioEnteroBloque !== undefined ? String(item.precioEnteroBloque) : undefined,
+        precioTajadoBloque: item.precioTajadoBloque !== undefined ? String(item.precioTajadoBloque) : undefined,
         origenCorte: item.origenCorte as OrigenCorte | undefined,
         origenTajadoGranel: item.origenTajadoGranel as OrigenTajadoGranel | undefined,
       })),
-      valorDomicilio: input.valorDomicilio,
-      costoDomiciliario: input.costoDomiciliario,
-      domiciliario: input.domiciliario,
-      metodoPago: input.metodoPago,
-      metodoPagoAbono: input.metodoPagoAbono,
-      abono: input.abono,
-      observaciones: input.observaciones,
+      valorDomicilio: parsed.data.valorDomicilio?.toString(),
+      costoDomiciliario: parsed.data.costoDomiciliario?.toString(),
+      domiciliario: parsed.data.domiciliario,
+      metodoPago: parsed.data.metodoPago,
+      metodoPagoAbono: parsed.data.metodoPagoAbono,
+      abono: parsed.data.abono,
+      observaciones: parsed.data.observaciones,
     });
 
     const ventaResponse: VentaResponse = {

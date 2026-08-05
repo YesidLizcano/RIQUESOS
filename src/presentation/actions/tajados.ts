@@ -13,6 +13,7 @@ import { MarcarTajadoPagado } from '@/application/use-cases/MarcarTajadoPagado';
 import { crearTajadoSchema } from '@/presentation/validations/tajado.schema';
 import { ConcurrencyError } from '@/domain/errors/ConcurrencyError';
 import { handlePrismaError } from './utils';
+import { z } from 'zod';
 
 import { logger } from '@/infrastructure/pino-logger';
 
@@ -74,7 +75,8 @@ export async function registrarTajado(formData: FormData) {
     if (error instanceof ConcurrencyError) {
       return {
         success: false,
-        error: 'El lote fue modificado por otro usuario. Recargue la página e intente de nuevo.',
+        concurrencyError: true,
+        error: 'Los datos del lote fueron modificados recientemente. Por favor, recargue la página e intente nuevamente.',
       };
     }
     logger.error({ err: error }, 'Error registering tajado');
@@ -180,10 +182,15 @@ export async function getTajados(inicio?: string, fin?: string) {
 export async function marcarTajadoPagado(id: string) {
   await requireSession();
 
+  const idResult = z.string().uuid().safeParse(id);
+  if (!idResult.success) {
+    return { success: false, error: 'ID inválido' };
+  }
+
   try {
     const tajadoRepo = new PrismaTajadoRepo();
     const useCase = new MarcarTajadoPagado(tajadoRepo);
-    const tajado = await useCase.execute(id);
+    const tajado = await useCase.execute(idResult.data);
 
     revalidatePath('/tajados');
     revalidatePath('/lotes');

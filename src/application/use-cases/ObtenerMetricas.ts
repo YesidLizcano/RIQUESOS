@@ -21,8 +21,10 @@ export interface MetricasPeriodo {
   margenBrutoPct: string;
   /** DC enteros sold: whole blocks (BLOQUES) */
   volumenDobleCremaEnteros: number;
-  /** DC tajados sold: whole blocks (BLOQUES) */
-  volumenDobleCremaTajados: number;
+  /** DC tajados internos sold: whole blocks (BLOQUES) */
+  volumenDobleCremaTajadosInternos: number;
+  /** DC tajados de fábrica sold: whole blocks (BLOQUES) */
+  volumenDobleCremaTajadosFabrica: number;
   /** DC kg granel from ENTERO variety */
   volumenDobleCremaKgGranelEntero: string;
   /** DC kg granel from TAJADO variety */
@@ -82,13 +84,14 @@ export interface DesglosePorProducto {
   kgVendidos: string;
   ventasCount: number;
   dcEnteros: number;
-  dcTajados: number;
+  dcTajadosInternos: number;
+  dcTajadosFabrica: number;
   dcKgGranelEntero: string;
   dcKgGranelTajado: string;
 }
 
 export interface DesglosePorProveedor {
-  proveedorId: string;
+  proveedorId: string | null;
   proveedorNombre: string;
   ingreso: string;
   costoAplicado: string;
@@ -96,7 +99,8 @@ export interface DesglosePorProveedor {
   kgVendidos: string;
   ventasCount: number;
   dcEnteros: number;
-  dcTajados: number;
+  dcTajadosInternos: number;
+  dcTajadosFabrica: number;
   dcKgGranelEntero: string;
   dcKgGranelTajado: string;
 }
@@ -165,11 +169,12 @@ export class ObtenerMetricas {
     // Count what was INVOICED (sold), not what was consumed from inventory
     // DC granel is split by variedad (ENTERO/TAJADO) for block normalization
     let dcEnterosVendidos = 0; // whole enteros blocks sold (BLOQUES)
-    let dcTajadosVendidos = 0; // whole tajados blocks sold (BLOQUES)
-    let dcKgGranelEntero = 0;  // kg sold as granel from ENTERO variety
-    let dcKgGranelTajado = 0;  // kg sold as granel from TAJADO variety
-    let ssKg = 0;
-    let recortesKg = 0;
+    let dcTajadosInternosVendidos = 0; // whole tajados internos blocks sold (BLOQUES)
+    let dcTajadosFabricaVendidos = 0; // whole tajados de fábrica blocks sold (BLOQUES)
+    let dcKgGranelEntero = Dinero.zero();  // kg sold as granel from ENTERO variety
+    let dcKgGranelTajado = Dinero.zero();  // kg sold as granel from TAJADO variety
+    let ssKg = Dinero.zero();
+    let recortesKg = Dinero.zero();
 
     // 4. Inventory levels by product type (only ACTIVO lotes)
     const lotesActivos = await this.loteRepo.findActive();
@@ -230,8 +235,8 @@ export class ObtenerMetricas {
     for (const lote of lotesActivos) {
       if (!lote.proveedorId) continue;
       if (lote.cantidadCompradaKg.isZero()) continue;
-      const proporcionRestante = Number(lote.stockDisponibleKg.value) / Number(lote.cantidadCompradaKg.value);
-      const valorLote = lote.costoTotalLote.multiply(String(proporcionRestante.toFixed(6)));
+      const proporcionRestante = new Dinero(lote.stockDisponibleKg.value).divide(lote.cantidadCompradaKg.value);
+      const valorLote = lote.costoTotalLote.multiply(proporcionRestante.value);
       inventarioValor = inventarioValor.add(valorLote);
     }
 
@@ -368,7 +373,7 @@ export class ObtenerMetricas {
       if (loteInfo.producto === 'DOBLE_CREMA') {
         if (!loteInfo.proveedorId) {
           // Recortes lot — track separately, not in DC/SS volume
-          recortesKg += Number(item.cantidadKg.value);
+          recortesKg = recortesKg.add(new Dinero(item.cantidadKg.value));
         } else {
           // bloquesTajadosVendidos already includes bloquesTajadosDeFabricaVendidos + bloquesTajadosInternosVendidos
           // bloquesReempacados is a subset of bloquesTajadosInternosVendidos (re-packaged), so do NOT add it again
@@ -388,33 +393,34 @@ export class ObtenerMetricas {
       if (loteInfo.producto === 'DOBLE_CREMA') {
         if (!loteInfo.proveedorId) {
           // Recortes lot — tracked separately as volumenRecortesKg
-          recortesKg += Number(item.cantidadKg.value);
+          recortesKg = recortesKg.add(new Dinero(item.cantidadKg.value));
         } else if (item.ventaTipo === 'BLOQUES') {
           // Whole blocks sold — count as enteros/tajados vendidos
           dcEnterosVendidos += item.bloquesEnterosVendidos;
-          dcTajadosVendidos += item.bloquesTajadosVendidos;
+          dcTajadosInternosVendidos += item.bloquesTajadosInternosVendidos ?? 0;
+          dcTajadosFabricaVendidos += item.bloquesTajadosDeFabricaVendidos ?? 0;
         } else {
           // GRANEL — split by variedad for block normalization
-          const kg = Number(item.cantidadKg.value);
+          const itemKg = new Dinero(item.cantidadKg.value);
           if (item.origenCorte === 'ENTERO') {
-            dcKgGranelEntero += kg;
+            dcKgGranelEntero = dcKgGranelEntero.add(itemKg);
           } else {
-            dcKgGranelTajado += kg;
+            dcKgGranelTajado = dcKgGranelTajado.add(itemKg);
           }
         }
       } else if (loteInfo.producto === 'SEMISALADO') {
-        ssKg += Number(item.cantidadKg.value);
+        ssKg = ssKg.add(new Dinero(item.cantidadKg.value));
       }
       // Recortes lot (DOBLE_CREMA with internal proveedor): tracked as volumenRecortesKg below
     }
 
     // Group by product
-    const porProductoMap = new Map<string, { ingreso: Dinero; costoAplicado: Dinero; kg: number; count: number; dcEnteros: number; dcTajados: number; dcKgGranelEntero: number; dcKgGranelTajado: number }>();
+    const porProductoMap = new Map<string, { ingreso: Dinero; costoAplicado: Dinero; kg: number; count: number; dcEnteros: number; dcTajadosInternos: number; dcTajadosFabrica: number; dcKgGranelEntero: number; dcKgGranelTajado: number }>();
     for (const item of allItems) {
       const loteInfo = loteMap.get(item.loteId);
       if (!loteInfo) continue;
       const key = loteInfo.producto;
-      const existing = porProductoMap.get(key) ?? { ingreso: Dinero.zero(), costoAplicado: Dinero.zero(), kg: 0, count: 0, dcEnteros: 0, dcTajados: 0, dcKgGranelEntero: 0, dcKgGranelTajado: 0 };
+      const existing = porProductoMap.get(key) ?? { ingreso: Dinero.zero(), costoAplicado: Dinero.zero(), kg: 0, count: 0, dcEnteros: 0, dcTajadosInternos: 0, dcTajadosFabrica: 0, dcKgGranelEntero: 0, dcKgGranelTajado: 0 };
       existing.ingreso = existing.ingreso.add(item.ingreso);
       existing.costoAplicado = existing.costoAplicado.add(item.costoAplicado).add(item.costoEmpaques);
       existing.kg += Number(item.cantidadKg.value);
@@ -422,7 +428,8 @@ export class ObtenerMetricas {
       if (loteInfo.producto === 'DOBLE_CREMA') {
         if (item.ventaTipo === 'BLOQUES') {
           existing.dcEnteros += item.bloquesEnterosVendidos;
-          existing.dcTajados += item.bloquesTajadosVendidos;
+          existing.dcTajadosInternos += item.bloquesTajadosInternosVendidos ?? 0;
+          existing.dcTajadosFabrica += item.bloquesTajadosDeFabricaVendidos ?? 0;
         } else {
           const kg = Number(item.cantidadKg.value);
           if (item.origenCorte === 'ENTERO') {
@@ -443,20 +450,20 @@ export class ObtenerMetricas {
       kgVendidos: String(data.kg),
       ventasCount: data.count,
       dcEnteros: data.dcEnteros,
-      dcTajados: data.dcTajados,
+      dcTajadosInternos: data.dcTajadosInternos,
+      dcTajadosFabrica: data.dcTajadosFabrica,
       dcKgGranelEntero: String(data.dcKgGranelEntero),
       dcKgGranelTajado: String(data.dcKgGranelTajado),
     }));
 
-    // Group by proveedor (exclude internal lots — they have null proveedorId)
-    const porProveedorMap = new Map<string, { ingreso: Dinero; costoAplicado: Dinero; kg: number; count: number; dcEnteros: number; dcTajados: number; dcKgGranelEntero: number; dcKgGranelTajado: number }>();
+    // Group by proveedor (internal lots grouped under "Operación Interna")
+    const INTERNO_KEY = '__interno__';
+    const porProveedorMap = new Map<string, { ingreso: Dinero; costoAplicado: Dinero; kg: number; count: number; dcEnteros: number; dcTajadosInternos: number; dcTajadosFabrica: number; dcKgGranelEntero: number; dcKgGranelTajado: number }>();
     for (const item of allItems) {
       const loteInfo = loteMap.get(item.loteId);
       if (!loteInfo) continue;
-      // Skip internal lots (recortes) — no proveedor to attribute to
-      if (!loteInfo.proveedorId) continue;
-      const key = loteInfo.proveedorId;
-      const existing = porProveedorMap.get(key) ?? { ingreso: Dinero.zero(), costoAplicado: Dinero.zero(), kg: 0, count: 0, dcEnteros: 0, dcTajados: 0, dcKgGranelEntero: 0, dcKgGranelTajado: 0 };
+      const key = loteInfo.proveedorId ?? INTERNO_KEY;
+      const existing = porProveedorMap.get(key) ?? { ingreso: Dinero.zero(), costoAplicado: Dinero.zero(), kg: 0, count: 0, dcEnteros: 0, dcTajadosInternos: 0, dcTajadosFabrica: 0, dcKgGranelEntero: 0, dcKgGranelTajado: 0 };
       existing.ingreso = existing.ingreso.add(item.ingreso);
       existing.costoAplicado = existing.costoAplicado.add(item.costoAplicado).add(item.costoEmpaques);
       existing.kg += Number(item.cantidadKg.value);
@@ -464,7 +471,8 @@ export class ObtenerMetricas {
       if (loteInfo.producto === 'DOBLE_CREMA') {
         if (item.ventaTipo === 'BLOQUES') {
           existing.dcEnteros += item.bloquesEnterosVendidos;
-          existing.dcTajados += item.bloquesTajadosVendidos;
+          existing.dcTajadosInternos += item.bloquesTajadosInternosVendidos ?? 0;
+          existing.dcTajadosFabrica += item.bloquesTajadosDeFabricaVendidos ?? 0;
         } else {
           const kg = Number(item.cantidadKg.value);
           if (item.origenCorte === 'ENTERO') {
@@ -477,23 +485,24 @@ export class ObtenerMetricas {
       porProveedorMap.set(key, existing);
     }
 
-    // Resolve proveedor names
-    const proveedorIds = Array.from(porProveedorMap.keys());
+    // Resolve proveedor names (exclude internal key from DB lookup)
+    const proveedorIds = Array.from(porProveedorMap.keys()).filter((id) => id !== INTERNO_KEY);
     const proveedores = proveedorIds.length > 0
       ? await this.proveedorRepo.findByIds(proveedorIds)
       : [];
     const proveedorNombreMap = new Map(proveedores.map((p) => [p.id, p.nombre]));
 
-    const desglosePorProveedor: DesglosePorProveedor[] = Array.from(porProveedorMap.entries()).map(([proveedorId, data]) => ({
-      proveedorId,
-      proveedorNombre: proveedorNombreMap.get(proveedorId) ?? 'Desconocido',
+    const desglosePorProveedor: DesglosePorProveedor[] = Array.from(porProveedorMap.entries()).map(([key, data]) => ({
+      proveedorId: key === INTERNO_KEY ? null : key,
+      proveedorNombre: key === INTERNO_KEY ? 'Operación Interna' : (proveedorNombreMap.get(key) ?? 'Desconocido'),
       ingreso: data.ingreso.value,
       costoAplicado: data.costoAplicado.value,
       gananciaBruta: data.ingreso.subtract(data.costoAplicado).value,
       kgVendidos: String(data.kg),
       ventasCount: data.count,
       dcEnteros: data.dcEnteros,
-      dcTajados: data.dcTajados,
+      dcTajadosInternos: data.dcTajadosInternos,
+      dcTajadosFabrica: data.dcTajadosFabrica,
       dcKgGranelEntero: String(data.dcKgGranelEntero),
       dcKgGranelTajado: String(data.dcKgGranelTajado),
     }));
@@ -512,11 +521,12 @@ export class ObtenerMetricas {
       kgVendidos: kgVendidos.value,
       margenBrutoPct,
       volumenDobleCremaEnteros: dcEnterosVendidos,
-      volumenDobleCremaTajados: dcTajadosVendidos,
-      volumenDobleCremaKgGranelEntero: String(Math.round(dcKgGranelEntero * 10) / 10),
-      volumenDobleCremaKgGranelTajado: String(Math.round(dcKgGranelTajado * 10) / 10),
-      volumenSemisaladoKg: String(Math.round(ssKg * 10) / 10),
-      volumenRecortesKg: String(Math.round(recortesKg * 10) / 10),
+      volumenDobleCremaTajadosInternos: dcTajadosInternosVendidos,
+      volumenDobleCremaTajadosFabrica: dcTajadosFabricaVendidos,
+      volumenDobleCremaKgGranelEntero: String(Math.round(Number(dcKgGranelEntero.value) * 10) / 10),
+      volumenDobleCremaKgGranelTajado: String(Math.round(Number(dcKgGranelTajado.value) * 10) / 10),
+      volumenSemisaladoKg: String(Math.round(Number(ssKg.value) * 10) / 10),
+      volumenRecortesKg: String(Math.round(Number(recortesKg.value) * 10) / 10),
     };
 
     // 10. Flujo de Dinero — revenue grouped by payment method
