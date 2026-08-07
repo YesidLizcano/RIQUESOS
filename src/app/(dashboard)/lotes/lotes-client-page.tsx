@@ -8,6 +8,7 @@ import { DataTableToolbar, FilterConfig } from '@/components/data-table-toolbar'
 import { createLoteColumns } from '@/components/columns/lote-columns';
 import { CrearLoteDialog } from '@/components/forms/crear-lote-dialog';
 import { PagarLoteDialog } from '@/components/forms/pagar-lote-dialog';
+import { PagarFleteDialog } from '@/components/forms/pagar-flete-dialog';
 import { CerrarLoteDialog } from '@/components/forms/cerrar-lote-dialog';
 import { getLotes, getLotesIncludeDeleted } from '@/presentation/actions/lotes';
 import { useExportExcel } from '@/hooks/use-export-excel';
@@ -99,6 +100,7 @@ export function LotesClientPage({ lotes, proveedores, initialEstadoPago }: Lotes
   const [isLoading, setIsLoading] = useState(false);
   const [data, setData] = useState<LoteResponse[]>(lotes);
   const [loteToPagar, setLoteToPagar] = useState<{ id: string; producto: string; proveedorNombre?: string; estadoPago: string } | null>(null);
+  const [loteToPagarFlete, setLoteToPagarFlete] = useState<{ id: string; producto: string; proveedorNombre?: string; estadoPagoFlete: string } | null>(null);
   const [loteToCerrar, setLoteToCerrar] = useState<LoteResponse | null>(null);
 
   const proveedorMap = useMemo(
@@ -124,6 +126,8 @@ export function LotesClientPage({ lotes, proveedores, initialEstadoPago }: Lotes
   const columns = useMemo(
     () => createLoteColumns(proveedorMap, showDeleted, (lote) => {
       setLoteToPagar({ id: lote.id, producto: lote.producto, proveedorNombre: lote.proveedorId ? proveedorMap.get(lote.proveedorId) : undefined, estadoPago: lote.estadoPago });
+    }, (lote) => {
+      setLoteToPagarFlete({ id: lote.id, producto: lote.producto, proveedorNombre: lote.proveedorId ? proveedorMap.get(lote.proveedorId) : undefined, estadoPagoFlete: lote.estadoPagoFlete });
     }, (lote) => {
       setLoteToCerrar(lote);
     }),
@@ -269,6 +273,18 @@ export function LotesClientPage({ lotes, proveedores, initialEstadoPago }: Lotes
           estadoPago={loteToPagar.estadoPago}
           open={!!loteToPagar}
           onOpenChange={(open) => { if (!open) setLoteToPagar(null); }}
+          onSuccess={() => refreshData()}
+        />
+      )}
+
+      {loteToPagarFlete && (
+        <PagarFleteDialog
+          loteId={loteToPagarFlete.id}
+          producto={loteToPagarFlete.producto}
+          proveedorNombre={loteToPagarFlete.proveedorNombre}
+          estadoPagoFlete={loteToPagarFlete.estadoPagoFlete}
+          open={!!loteToPagarFlete}
+          onOpenChange={(open) => { if (!open) setLoteToPagarFlete(null); }}
           onSuccess={() => refreshData()}
         />
       )}

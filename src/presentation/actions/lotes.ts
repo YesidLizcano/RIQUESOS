@@ -10,6 +10,7 @@ import { RECORTES_DC_PERMANENT_LOT_ID } from '@/domain/constants';
 import { CrearLote } from '@/application/use-cases/CrearLote';
 import { ModificarLote } from '@/application/use-cases/ModificarLote';
 import { MarcarLotePagado } from '@/application/use-cases/MarcarLotePagado';
+import { MarcarFletePagado } from '@/application/use-cases/MarcarFletePagado';
 import { crearLoteSchema, actualizarLoteSchema, crearLotesBatchSchema } from '@/presentation/validations/lote.schema';
 import { eliminarProveedorSchema } from '@/presentation/validations/proveedor.schema';
 import type { CrearLoteRequest, ActualizarLoteRequest, LoteResponse } from '../dtos';
@@ -61,6 +62,8 @@ function loteToResponse(lote: import('@/domain/entities/Lote').Lote): LoteRespon
     estado: lote.estado,
     estadoPago: lote.estadoPago,
     metodoPagoLote: lote.metodoPagoLote,
+    estadoPagoFlete: lote.estadoPagoFlete,
+    metodoPagoFlete: lote.metodoPagoFlete,
     version: lote.version,
     deletedAt: lote.deletedAt?.toISOString() ?? null,
   };
@@ -84,6 +87,8 @@ export async function crearLote(formData: FormData) {
     costoEmpaques: parsed.data.costoEmpaques ? String(parsed.data.costoEmpaques) : undefined,
     estadoPago: parsed.data.estadoPago,
     metodoPagoLote: parsed.data.metodoPagoLote as MetodoPago,
+    estadoPagoFlete: parsed.data.estadoPagoFlete,
+    metodoPagoFlete: parsed.data.metodoPagoFlete as MetodoPago,
     // For Doble Crema: bloques are provided, cantidadCompradaKg is calculated
     // For Semisalado: cantidadCompradaKg is provided directly
     ...(parsed.data.producto === 'DOBLE_CREMA'
@@ -368,6 +373,8 @@ export async function crearLotes(payload: {
   costoFlete: string;
   estadoPago: string;
   metodoPagoLote: string;
+  estadoPagoFlete: string;
+  metodoPagoFlete: string;
   items: Array<{
     producto: string;
     cantidadCompradaKg?: string;
@@ -386,7 +393,7 @@ export async function crearLotes(payload: {
     return { success: false, error: parsed.error.issues[0].message };
   }
 
-  const { proveedorId, costoFlete: costoFleteGlobal, estadoPago, metodoPagoLote, items } = parsed.data;
+  const { proveedorId, costoFlete: costoFleteGlobal, estadoPago, metodoPagoLote, estadoPagoFlete, metodoPagoFlete, items } = parsed.data;
 
   // Calculate total weight for flete prorration
   const totalWeight = items.reduce((sum, item) => sum + itemWeightKg(item), 0);
@@ -417,6 +424,8 @@ export async function crearLotes(payload: {
         costoFlete: item.costoFlete,
         estadoPago: estadoPago as EstadoPagoLoteEnum,
         metodoPagoLote: metodoPagoLote as MetodoPago,
+        estadoPagoFlete: estadoPagoFlete as EstadoPagoLoteEnum,
+        metodoPagoFlete: metodoPagoFlete as MetodoPago,
         ...(item.producto === 'DOBLE_CREMA'
           ? {
               bloquesEnteros: item.bloquesEnteros ?? 0,
@@ -440,5 +449,35 @@ export async function crearLotes(payload: {
       success: false,
       error: error instanceof Error ? error.message : 'Error al crear lotes',
     };
+  }
+}
+
+export async function pagarFlete(formData: FormData) {
+  await requireSession();
+  const loteId = formData.get('id') as string;
+  const metodoPago = formData.get('metodoPago') as string;
+
+  const parsed = z.object({
+    id: z.string().uuid(),
+    metodoPago: z.enum(['EFECTIVO', 'NEQUI', 'BRE_B']),
+  }).safeParse({ id: loteId, metodoPago });
+
+  if (!parsed.success) {
+    return { success: false, error: 'Datos inválidos' };
+  }
+
+  try {
+    const loteRepo = new PrismaLoteRepo();
+    const useCase = new MarcarFletePagado(loteRepo);
+    const result = await useCase.execute({ loteId: parsed.data.id, metodoPago: parsed.data.metodoPago as MetodoPago });
+
+    revalidatePath('/lotes');
+    revalidatePath('/');
+    logger.info({ loteId, metodoPago }, 'Flete pagado exitosamente');
+
+    return { success: true, lote: loteToResponse(result.lote) };
+  } catch (error) {
+    logger.error({ err: error }, 'Error marking flete as paid');
+    return { success: false, error: error instanceof Error ? error.message : 'Error al pagar flete' };
   }
 }

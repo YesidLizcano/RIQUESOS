@@ -47,6 +47,7 @@ export function RegistrarTajadoDialog({ lotes, proveedores }: RegistrarTajadoDia
   const [separadoresKg, setSeparadoresKg] = useState<string>('0');
   const [separadorStock, setSeparadorStock] = useState<number>(0);
   const [recortesKg, setRecortesKg] = useState<string>('');
+  const [reempacados, setReempacados] = useState<string>('0');
   const submittingRef = useRef(false);
 
   // Fetch separador stock on mount
@@ -120,6 +121,7 @@ export function RegistrarTajadoDialog({ lotes, proveedores }: RegistrarTajadoDia
     formData.set('tajador', tajador);
     formData.set('separadoresKg', separadoresKg);
     formData.set('recortesKg', recortesKg || '0');
+    formData.set('reempacados', reempacados);
     const result = await registrarTajado(formData);
     setLoading(false);
 
@@ -150,6 +152,7 @@ export function RegistrarTajadoDialog({ lotes, proveedores }: RegistrarTajadoDia
     setTajador('');
     setSeparadoresKg('0');
     setRecortesKg('');
+    setReempacados('0');
     submittingRef.current = false;
   }
 
@@ -280,6 +283,23 @@ export function RegistrarTajadoDialog({ lotes, proveedores }: RegistrarTajadoDia
             </p>
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="reempacados">Bloques reempacados</Label>
+            <Input
+              id="reempacados"
+              name="reempacados"
+              type="number"
+              step="1"
+              min="0"
+              placeholder="0"
+              value={reempacados}
+              onChange={(e) => setReempacados(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Cantidad de bloques que fueron reempacados durante el tajado.
+            </p>
+          </div>
+
           {cantidad > 0 && precio > 0 && (
             <div className="rounded-lg bg-muted p-3">
               <p className="text-sm text-muted-foreground">Resumen:</p>
@@ -339,6 +359,11 @@ export function RegistrarTajadoDialog({ lotes, proveedores }: RegistrarTajadoDia
             {recortes > 0 && (
               <p className="text-sm">
                 Recortes: <strong>{recortes.toLocaleString('es-AR', { minimumFractionDigits: 3 })} kg</strong>
+              </p>
+            )}
+            {parseInt(reempacados) > 0 && (
+              <p className="text-sm">
+                Bloques reempacados: <strong>{parseInt(reempacados)}</strong>
               </p>
             )}
             <p className="text-sm">

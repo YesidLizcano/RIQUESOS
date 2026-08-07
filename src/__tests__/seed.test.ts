@@ -96,14 +96,13 @@ describe('Seed script — idempotency verification', () => {
     expect(scriptContent).toContain('update: {}');
   });
 
-  it('should use upsert for proveedores (no duplicates on re-run)', () => {
+  it('should create permanent recortes lot (idempotent on re-run)', () => {
     const seedScriptPath = path.resolve(process.cwd(), 'prisma', 'seed.ts');
     const scriptContent = fs.readFileSync(seedScriptPath, 'utf-8');
     
-    // Verify upsert is used for proveedores
-    expect(scriptContent).toContain('proveedor.upsert');
-    expect(scriptContent).toContain("where: { id: 'proveedor-default-1' }");
-    expect(scriptContent).toContain("where: { id: 'proveedor-default-2' }");
+    // Verify the recortes lot is created with the correct permanent ID
+    expect(scriptContent).toContain('lote-recortes-dc-permanente');
+    expect(scriptContent).toContain('DOBLE_CREMA');
   });
 
   it('should hash the password with bcrypt', () => {

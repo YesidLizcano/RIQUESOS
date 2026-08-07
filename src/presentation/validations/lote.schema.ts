@@ -75,6 +75,8 @@ export const crearLoteSchema = z.object({
   bloquesTajadosDeFabrica: z.coerce.number().int().nonnegative('Los bloques tajados de fábrica no pueden ser negativos').optional().default(0),
   estadoPago: z.nativeEnum(EstadoPagoLote).optional().default(EstadoPagoLote.PENDIENTE),
   metodoPagoLote: z.enum(LOTE_METODOS_PAGO).optional().default('EFECTIVO'),
+  estadoPagoFlete: z.nativeEnum(EstadoPagoLote).optional().default(EstadoPagoLote.PENDIENTE),
+  metodoPagoFlete: z.enum(LOTE_METODOS_PAGO).optional().default('EFECTIVO'),
 }).refine(
   (data) => {
     if (data.producto === TipoProducto.DOBLE_CREMA) {
@@ -126,6 +128,8 @@ export const crearLotesBatchSchema = z.object({
   costoFlete: z.coerce.number().nonnegative('El flete no puede ser negativo').optional().default(0),
   estadoPago: z.nativeEnum(EstadoPagoLote).optional().default(EstadoPagoLote.PENDIENTE),
   metodoPagoLote: z.enum(LOTE_METODOS_PAGO).optional().default('EFECTIVO'),
+  estadoPagoFlete: z.nativeEnum(EstadoPagoLote).optional().default(EstadoPagoLote.PENDIENTE),
+  metodoPagoFlete: z.enum(LOTE_METODOS_PAGO).optional().default('EFECTIVO'),
   items: z.array(crearLoteItemSchema).min(1, 'Debe agregar al menos un producto'),
 });
 

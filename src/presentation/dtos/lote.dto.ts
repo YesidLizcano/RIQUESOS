@@ -15,6 +15,8 @@ export interface CrearLoteRequest {
   bloquesTajadosDeFabrica?: number;
   estadoPago?: EstadoPagoLote;
   metodoPagoLote?: MetodoPago;
+  estadoPagoFlete?: EstadoPagoLote;
+  metodoPagoFlete?: MetodoPago;
 }
 
 export interface ActualizarLoteRequest {
@@ -62,6 +64,8 @@ export interface LoteResponse {
   estado: string;
   estadoPago: string;
   metodoPagoLote: string;
+  estadoPagoFlete: string;
+  metodoPagoFlete: string;
   version: number;
   deletedAt: string | null;
 }

@@ -16,6 +16,7 @@ export class PrismaTajadoRepo implements TajadoRepository {
       separadoresKg: new Prisma.Decimal(tajado.separadoresKg.value),
       costoSeparadores: new Prisma.Decimal(tajado.costoSeparadores.value),
       recortesKg: new Prisma.Decimal(tajado.recortesKg.value),
+      reempacados: tajado.reempacados,
       estadoPago: tajado.estadoPago,
       fecha: tajado.fecha,
     };
@@ -80,6 +81,7 @@ export class PrismaTajadoRepo implements TajadoRepository {
       separadoresKg: record.separadoresKg.toString(),
       costoSeparadores: record.costoSeparadores.toString(),
       recortesKg: record.recortesKg.toString(),
+      reempacados: record.reempacados,
       estadoPago: record.estadoPago as typeof ESTADO_PAGO_TAJADO.PENDIENTE | typeof ESTADO_PAGO_TAJADO.PAGADO,
       fecha: record.fecha,
     });

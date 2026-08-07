@@ -79,6 +79,8 @@ export function loteToResponse(lote: import('@/domain/entities/Lote').Lote): Lot
     estado: lote.estado,
     estadoPago: lote.estadoPago,
     metodoPagoLote: lote.metodoPagoLote,
+    estadoPagoFlete: lote.estadoPagoFlete,
+    metodoPagoFlete: lote.metodoPagoFlete,
     version: lote.version,
     deletedAt: lote.deletedAt?.toISOString() ?? null,
   };

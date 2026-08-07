@@ -16,6 +16,7 @@ export function createLoteColumns(
   proveedorMap?: Map<string, string>,
   showDeleted?: boolean,
   onPagar?: (lote: LoteResponse) => void,
+  onPagarFlete?: (lote: LoteResponse) => void,
   onCerrar?: (lote: LoteResponse) => void,
 ): ColumnDef<LoteResponse, unknown>[] {
   return [
@@ -288,6 +289,39 @@ export function createLoteColumns(
             {onPagar && !row.original.deletedAt && (
               <button
                 onClick={() => onPagar(row.original)}
+                className="text-xs text-blue-600 hover:underline font-medium"
+              >
+                Pagar
+              </button>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: 'estadoPagoFlete',
+      header: 'Pago Flete',
+      size: 85,
+      enableGlobalFilter: false,
+      cell: ({ row }) => {
+        const estadoPagoFlete = row.original.estadoPagoFlete;
+        const metodoPagoFlete = row.original.metodoPagoFlete;
+        if (estadoPagoFlete === EstadoPagoLote.PAGADO) {
+          const label = metodoPagoLabel[metodoPagoFlete] ?? metodoPagoFlete;
+          return (
+            <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 whitespace-nowrap">
+              Pagado ({label})
+            </span>
+          );
+        }
+        return (
+          <div className="flex items-center gap-1.5">
+            <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 whitespace-nowrap">
+              Pend.
+            </span>
+            {onPagarFlete && !row.original.deletedAt && (
+              <button
+                onClick={() => onPagarFlete(row.original)}
                 className="text-xs text-blue-600 hover:underline font-medium"
               >
                 Pagar

@@ -100,6 +100,8 @@ model Lote {
   estado                 EstadoLote   @default(ACTIVO)
   estadoPago             EstadoPagoLote @default(PENDIENTE)
   metodoPagoLote         String       @default("EFECTIVO")
+  estadoPagoFlete        EstadoPagoLote @default(PENDIENTE)
+  metodoPagoFlete        String       @default("EFECTIVO")
   version                Int          @default(1)
   deletedAt              DateTime?
   createdAt              DateTime     @default(now())
@@ -122,8 +124,9 @@ model Tajado {
   costoTotal        Decimal  @default("0")
   separadoresKg     Decimal  @default("0")
   costoSeparadores  Decimal  @default("0")
-  recortesKg        Decimal  @default("0")
-  estadoPago        String   @default("PENDIENTE")
+  recortesKg             Decimal      @default("0")
+  reempacados            Int          @default(0)
+  estadoPago             String       @default("PENDIENTE")
   fecha             DateTime @default(now())
   createdAt         DateTime @default(now())
 

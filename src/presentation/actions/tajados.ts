@@ -42,6 +42,7 @@ export async function registrarTajado(formData: FormData) {
       tajador: parsed.data.tajador,
       separadoresKg: String(parsed.data.separadoresKg),
       recortesKg: String(parsed.data.recortesKg ?? 0),
+      reempacados: parsed.data.reempacados,
     });
 
 
@@ -60,6 +61,7 @@ export async function registrarTajado(formData: FormData) {
         separadoresKg: tajado.separadoresKg.value,
         costoSeparadores: tajado.costoSeparadores.value,
         recortesKg: tajado.recortesKg.value,
+        reempacados: tajado.reempacados,
         estadoPago: tajado.estadoPago,
         fecha: tajado.fecha.toISOString(),
       },
@@ -109,6 +111,7 @@ export async function getTajadosByLoteId(loteId: string) {
         separadoresKg: t.separadoresKg.value,
         costoSeparadores: t.costoSeparadores.value,
         recortesKg: t.recortesKg.value,
+        reempacados: t.reempacados,
         estadoPago: t.estadoPago,
         fecha: t.fecha.toISOString(),
       })),
@@ -168,6 +171,7 @@ export async function getTajados(inicio?: string, fin?: string) {
           separadoresKg: t.separadoresKg.value,
           costoSeparadores: t.costoSeparadores.value,
           recortesKg: t.recortesKg.value,
+          reempacados: t.reempacados,
           estadoPago: t.estadoPago,
           fecha: t.fecha.toISOString(),
         };
@@ -206,6 +210,7 @@ export async function marcarTajadoPagado(id: string) {
         separadoresKg: tajado.separadoresKg.value,
         costoSeparadores: tajado.costoSeparadores.value,
         recortesKg: tajado.recortesKg.value,
+        reempacados: tajado.reempacados,
         estadoPago: tajado.estadoPago,
         fecha: tajado.fecha.toISOString(),
       },

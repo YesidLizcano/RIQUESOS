@@ -13,6 +13,7 @@ export interface TajadoProps {
   separadoresKg?: string;
   costoSeparadores?: string;
   recortesKg?: string;
+  reempacados?: number;
   estadoPago?: EstadoPagoTajado;
   fecha?: Date;
 }
@@ -27,6 +28,7 @@ export class Tajado {
   readonly separadoresKg: Dinero;
   readonly costoSeparadores: Dinero;
   readonly recortesKg: Dinero;
+  readonly reempacados: number;
   readonly estadoPago: EstadoPagoTajado;
   readonly fecha: Date;
 
@@ -41,6 +43,7 @@ export class Tajado {
     this.separadoresKg = new Dinero(props.separadoresKg ?? '0');
     this.costoSeparadores = new Dinero(props.costoSeparadores ?? '0');
     this.recortesKg = new Dinero(props.recortesKg ?? '0');
+    this.reempacados = props.reempacados ?? 0;
     this.estadoPago = props.estadoPago ?? ESTADO_PAGO_TAJADO.PENDIENTE;
 
     // Validate
@@ -78,6 +81,7 @@ export class Tajado {
       separadoresKg: this.separadoresKg.value,
       costoSeparadores: this.costoSeparadores.value,
       recortesKg: this.recortesKg.value,
+      reempacados: this.reempacados,
       estadoPago: ESTADO_PAGO_TAJADO.PAGADO,
       fecha: this.fecha,
     });

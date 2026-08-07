@@ -20,6 +20,8 @@ export interface CrearLoteInput {
   bloquesTajadosDeFabrica?: number;
   estadoPago?: EstadoPagoLote;
   metodoPagoLote?: MetodoPago;
+  estadoPagoFlete?: EstadoPagoLote;
+  metodoPagoFlete?: MetodoPago;
 }
 
 export interface CrearLoteOutput {
@@ -80,6 +82,8 @@ export class CrearLote {
         bloquesTajadosFabricaOriginal: bloquesTajadosDeFabrica,
         estadoPago: input.estadoPago,
         metodoPagoLote: input.metodoPagoLote,
+        estadoPagoFlete: input.estadoPagoFlete,
+        metodoPagoFlete: input.metodoPagoFlete,
       };
     } else {
       // Semisalado: quantity input in Kg, no precioPorBloque
@@ -103,6 +107,8 @@ export class CrearLote {
         bloquesTajadosFabricaOriginal: 0,
         estadoPago: input.estadoPago,
         metodoPagoLote: input.metodoPagoLote,
+        estadoPagoFlete: input.estadoPagoFlete,
+        metodoPagoFlete: input.metodoPagoFlete,
       };
     }
 

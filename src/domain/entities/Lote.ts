@@ -30,6 +30,8 @@ export interface LoteProps {
   estado?: EstadoLote;
   estadoPago?: EstadoPagoLote;
   metodoPagoLote?: MetodoPago;
+  estadoPagoFlete?: EstadoPagoLote;
+  metodoPagoFlete?: MetodoPago;
   version?: number;
   deletedAt?: Date | null;
 }
@@ -59,6 +61,8 @@ export class Lote {
   readonly estado: EstadoLote;
   readonly estadoPago: EstadoPagoLote;
   readonly metodoPagoLote: MetodoPago;
+  readonly estadoPagoFlete: EstadoPagoLote;
+  readonly metodoPagoFlete: MetodoPago;
   readonly version: number;
   readonly deletedAt: Date | null;
 
@@ -107,6 +111,8 @@ export class Lote {
     this.estado = props.estado ?? EstadoLote.ACTIVO;
     this.estadoPago = props.estadoPago ?? EstadoPagoLote.PENDIENTE;
     this.metodoPagoLote = props.metodoPagoLote ?? MetodoPago.EFECTIVO;
+    this.estadoPagoFlete = props.estadoPagoFlete ?? EstadoPagoLote.PENDIENTE;
+    this.metodoPagoFlete = props.metodoPagoFlete ?? MetodoPago.EFECTIVO;
     this.version = props.version ?? 0;
   }
 
@@ -596,6 +602,8 @@ export class Lote {
       estado: this.estado,
       estadoPago: this.estadoPago,
       metodoPagoLote: this.metodoPagoLote,
+      estadoPagoFlete: this.estadoPagoFlete,
+      metodoPagoFlete: this.metodoPagoFlete,
       version: this.version,
       deletedAt: this.deletedAt,
     };
@@ -629,6 +637,21 @@ export class Lote {
       ...this.toProps(),
       estadoPago: EstadoPagoLote.PAGADO,
       metodoPagoLote: metodoPago,
+    });
+  }
+
+  /**
+   * Mark the flete as paid with the given payment method.
+   * Throws if the flete is already PAGADO.
+   */
+  marcarFletePagado(metodoPago: MetodoPago): Lote {
+    if (this.estadoPagoFlete === EstadoPagoLote.PAGADO) {
+      throw new Error('El flete ya está marcado como pagado');
+    }
+    return new Lote({
+      ...this.toProps(),
+      estadoPagoFlete: EstadoPagoLote.PAGADO,
+      metodoPagoFlete: metodoPago,
     });
   }
 }

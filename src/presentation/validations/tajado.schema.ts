@@ -8,4 +8,5 @@ export const crearTajadoSchema = z.object({
   tajador: z.string().trim().min(1, 'Ingrese el nombre del tajador').max(100, 'El nombre del tajador no puede superar 100 caracteres'),
   separadoresKg: z.coerce.number().nonnegative('Los kg de separadores no pueden ser negativos').default(0),
   recortesKg: z.coerce.number().nonnegative('Los kg de recortes no pueden ser negativos').default(0),
+  reempacados: z.coerce.number().int().nonnegative('Los bloques reempacados no pueden ser negativos').default(0),
 });

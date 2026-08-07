@@ -6,6 +6,7 @@ export interface CrearTajadoRequest {
   precioPorBloque: string;
   tajador: string;
   recortesKg?: string;
+  reempacados?: number;
 }
 
 export interface TajadoResponse {
@@ -19,6 +20,7 @@ export interface TajadoResponse {
   separadoresKg: string;
   costoSeparadores: string;
   recortesKg: string;
+  reempacados: number;
   estadoPago: string;
   fecha: string;
 }

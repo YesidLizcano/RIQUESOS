@@ -17,6 +17,7 @@ export interface RegistrarTajadoInput {
   tajador: string;
   separadoresKg?: string;
   recortesKg?: string;
+  reempacados?: number;
 }
 
 export interface RegistrarTajadoOutput {
@@ -86,6 +87,7 @@ export class RegistrarTajado {
       separadoresKg,
       costoSeparadores,
       recortesKg: input.recortesKg,
+      reempacados: input.reempacados,
     });
 
     const savedTajado = await this.tajadoRepo.save(tajado);

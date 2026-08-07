@@ -129,6 +129,8 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
   const [costoFlete, setCostoFlete] = useState<string>('');
   const [estadoPago, setEstadoPago] = useState<string>(EstadoPagoLote.PENDIENTE);
   const [metodoPagoLote, setMetodoPagoLote] = useState<string>(MetodoPago.EFECTIVO);
+  const [estadoPagoFlete, setEstadoPagoFlete] = useState<string>(EstadoPagoLote.PENDIENTE);
+  const [metodoPagoFlete, setMetodoPagoFlete] = useState<string>(MetodoPago.EFECTIVO);
   const [items, setItems] = useState<LoteItem[]>([createEmptyItem()]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -174,6 +176,8 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
     setCostoFlete('');
     setEstadoPago(EstadoPagoLote.PENDIENTE);
     setMetodoPagoLote(MetodoPago.EFECTIVO);
+    setEstadoPagoFlete(EstadoPagoLote.PENDIENTE);
+    setMetodoPagoFlete(MetodoPago.EFECTIVO);
     setItems([createEmptyItem()]);
   }
 
@@ -225,6 +229,8 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
         costoFlete,
         estadoPago,
         metodoPagoLote,
+        estadoPagoFlete,
+        metodoPagoFlete,
         items: items.map((item) => ({
           producto: item.producto,
           ...(isDobleCrema(item.producto)
@@ -321,6 +327,34 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
                 <Select value={metodoPagoLote} onValueChange={(v) => v && setMetodoPagoLote(v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar método">{metodoPagoLabel[metodoPagoLote] ?? metodoPagoLote}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={MetodoPago.EFECTIVO}>Efectivo</SelectItem>
+                    <SelectItem value={MetodoPago.NEQUI}>Nequi</SelectItem>
+                    <SelectItem value={MetodoPago.BRE_B}>Bre-B</SelectItem>
+                  </SelectContent>
+                </Select>
+              </>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="estadoPagoFlete">Estado de pago del flete</Label>
+            <Select value={estadoPagoFlete} onValueChange={(v) => { if (v) { setEstadoPagoFlete(v); if (v !== 'PAGADO') setMetodoPagoFlete(MetodoPago.EFECTIVO); } }}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Seleccione estado de pago del flete">{estadoPagoFlete === EstadoPagoLote.PAGADO ? 'Pagado' : 'Pendiente'}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={EstadoPagoLote.PENDIENTE}>Pendiente</SelectItem>
+                <SelectItem value={EstadoPagoLote.PAGADO}>Pagado</SelectItem>
+              </SelectContent>
+            </Select>
+            {estadoPagoFlete === 'PAGADO' && (
+              <>
+                <Label htmlFor="metodoPagoFlete" className="mt-2">Método de pago del flete</Label>
+                <Select value={metodoPagoFlete} onValueChange={(v) => v && setMetodoPagoFlete(v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar método">{metodoPagoLabel[metodoPagoFlete] ?? metodoPagoFlete}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={MetodoPago.EFECTIVO}>Efectivo</SelectItem>

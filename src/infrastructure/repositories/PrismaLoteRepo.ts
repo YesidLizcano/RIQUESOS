@@ -69,11 +69,13 @@ export class PrismaLoteRepo implements LoteRepository {
         sueltosEntero: new Prisma.Decimal(lote.sueltosEntero.value),
         sueltosTajado: new Prisma.Decimal(lote.sueltosTajado.value),
         estado: lote.estado as EstadoLote,
-       estadoPago: lote.estadoPago as EstadoPagoLote,
-       metodoPagoLote: lote.metodoPagoLote as MetodoPago,
-     };
+        estadoPago: lote.estadoPago as EstadoPagoLote,
+        metodoPagoLote: lote.metodoPagoLote as MetodoPago,
+        estadoPagoFlete: lote.estadoPagoFlete as EstadoPagoLote,
+        metodoPagoFlete: lote.metodoPagoFlete as MetodoPago,
+      };
 
-    if (lote.id) {
+     if (lote.id) {
       const updated = await prisma.lote.update({
         where: { id: lote.id },
         data,
@@ -174,9 +176,11 @@ export class PrismaLoteRepo implements LoteRepository {
          costoEmpaques: new Prisma.Decimal(lote.costoEmpaques.value),
          costoSeparadores: new Prisma.Decimal(lote.costoSeparadores.value),
           costoRealCalculadoKg: new Prisma.Decimal(lote.costoRealCalculadoKg.value),
-          estadoPago: lote.estadoPago as EstadoPagoLote,
-          metodoPagoLote: lote.metodoPagoLote as MetodoPago,
-          version: { increment: 1 },
+           estadoPago: lote.estadoPago as EstadoPagoLote,
+           metodoPagoLote: lote.metodoPagoLote as MetodoPago,
+           estadoPagoFlete: lote.estadoPagoFlete as EstadoPagoLote,
+           metodoPagoFlete: lote.metodoPagoFlete as MetodoPago,
+           version: { increment: 1 },
       },
     });
 
@@ -310,10 +314,12 @@ export class PrismaLoteRepo implements LoteRepository {
       sueltosEntero: record.sueltosEntero.toString(),
       sueltosTajado: record.sueltosTajado.toString(),
       estado: asEstadoLote(record.estado),
-      estadoPago: asEstadoPagoLote(record.estadoPago),
-      metodoPagoLote: record.metodoPagoLote as MetodoPago,
-      version: record.version,
-      deletedAt: record.deletedAt,
+       estadoPago: asEstadoPagoLote(record.estadoPago),
+       metodoPagoLote: record.metodoPagoLote as MetodoPago,
+       estadoPagoFlete: asEstadoPagoLote(record.estadoPagoFlete),
+       metodoPagoFlete: record.metodoPagoFlete as MetodoPago,
+       version: record.version,
+       deletedAt: record.deletedAt,
     });
   }
 }
