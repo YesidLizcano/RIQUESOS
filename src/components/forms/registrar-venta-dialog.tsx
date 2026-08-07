@@ -2284,9 +2284,10 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
                                type="number"
                                step="0.01"
                                min="0"
-                               placeholder="0.00"
-                               value={item.precioEnteroBloque}
+                               placeholder={(parseInt(item.bloquesEnteros) || 0) === 0 ? 'Sin enteros' : '0.00'}
+                               value={(parseInt(item.bloquesEnteros) || 0) === 0 ? '' : item.precioEnteroBloque}
                                onChange={(e) => updateItem(index, { precioEnteroBloque: e.target.value })}
+                               disabled={(parseInt(item.bloquesEnteros) || 0) === 0}
                              />
                            </div>
                          )}
@@ -2298,9 +2299,10 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
                                type="number"
                                step="0.01"
                                min="0"
-                               placeholder="Igual al entero si vacío"
-                               value={item.precioTajadoBloque}
+                               placeholder={(parseInt(item.bloquesTajados) || 0) === 0 ? 'Sin tajados' : 'Igual al entero si vacío'}
+                               value={(parseInt(item.bloquesTajados) || 0) === 0 ? '' : item.precioTajadoBloque}
                                onChange={(e) => updateItem(index, { precioTajadoBloque: e.target.value })}
+                               disabled={(parseInt(item.bloquesTajados) || 0) === 0}
                              />
                            </div>
                          )}
