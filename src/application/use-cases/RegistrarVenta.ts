@@ -34,7 +34,7 @@ export interface VentaItemInput {
 }
 
 export interface RegistrarVentaInput {
-  clienteId: string;
+  clienteId: string | null;
   sedeId?: string | null;
   items: VentaItemInput[];
   valorDomicilio?: string;
@@ -70,9 +70,11 @@ export class RegistrarVenta {
       throw new Error('At least one item is required');
     }
 
-    // 2. Validate Cliente exists
-    const cliente = await this.clienteRepo.findById(input.clienteId);
-    if (!cliente) {
+    // 2. Validate Cliente exists (if provided)
+    const cliente = input.clienteId
+      ? await this.clienteRepo.findById(input.clienteId)
+      : null;
+    if (input.clienteId && !cliente) {
       throw new Error(`Cliente not found: ${input.clienteId}`);
     }
 
@@ -228,11 +230,35 @@ export class RegistrarVenta {
       // For DC BLOQUES: prefer explicit per-block prices from input (PrecioClienteProveedor),
       //   fall back to cliente.resolvePrecio() for global prices.
       // For GRANEL and SEMISALADO: resolvePrecio returns per-kg prices, used directly.
+      // When clienteId is null (walk-in/ocasional), use standard prices directly (no client markup).
       const standardPrice = new Dinero(itemInput.precioVentaKg);
       let precioVentaKg: Dinero;
       let ingresoExacto: Dinero | null = null; // Exact income for DC BLOQUES to avoid rounding
 
-      if (ventaTipo === 'GRANEL') {
+      if (!cliente) {
+        // Walk-in (minorista ocacional): use standard prices, no client-specific pricing
+        precioVentaKg = standardPrice;
+        if (ventaTipo === 'BLOQUES' && lote.producto === TipoProducto.DOBLE_CREMA) {
+          const bloquesEnteros = bloquesEnterosVendidos;
+          const bloquesTajados = bloquesTajadosVendidos;
+          if (bloquesEnteros > 0 && bloquesTajados === 0) {
+            const ingreso = standardPrice.multiply(String(bloquesEnteros * DOBLE_CREMA_BLOCK_KG));
+            ingresoExacto = ingreso;
+            const totalKg = bloquesEnteros * DOBLE_CREMA_BLOCK_KG;
+            precioVentaKg = ingreso.divide(String(totalKg));
+          } else if (bloquesTajados > 0 && bloquesEnteros === 0) {
+            const ingreso = standardPrice.multiply(String(bloquesTajados * DOBLE_CREMA_BLOCK_KG));
+            ingresoExacto = ingreso;
+            const totalKg = bloquesTajados * DOBLE_CREMA_BLOCK_KG;
+            precioVentaKg = ingreso.divide(String(totalKg));
+          } else if (bloquesEnteros > 0 && bloquesTajados > 0) {
+            const ingreso = standardPrice.multiply(String((bloquesEnteros + bloquesTajados) * DOBLE_CREMA_BLOCK_KG));
+            ingresoExacto = ingreso;
+            const totalKg = (bloquesEnteros + bloquesTajados) * DOBLE_CREMA_BLOCK_KG;
+            precioVentaKg = ingreso.divide(String(totalKg));
+          }
+        }
+      } else if (ventaTipo === 'GRANEL') {
         precioVentaKg = cliente.resolvePrecio(lote.producto, standardPrice);
       } else if (bloquesEnterosVendidos > 0 && bloquesTajadosVendidos === 0) {
         // Enteros only
@@ -478,7 +504,8 @@ export class RegistrarVenta {
         // Only save prices that were actually used in the sale (non-zero),
         // preserving existing values for prices not used in this sale.
         // Also save domicilio memory per proveedor when applicable.
-        if (this.precioClienteProveedorRepo && cliente.tipo === TipoCliente.MAYORISTA) {
+        // Skip for walk-in (ocasional) sales — no client to save prices for.
+        if (this.precioClienteProveedorRepo && cliente && cliente.tipo === TipoCliente.MAYORISTA) {
           for (const itemInput of input.items) {
             const lote = loteMap.get(itemInput.loteId)!;
             const ventaTipo: VentaTipo = itemInput.ventaTipo ?? 'GRANEL';
@@ -487,14 +514,14 @@ export class RegistrarVenta {
               const precioTajado = itemInput.precioTajadoBloque;
               if (precioEntero || precioTajado) {
                 // Fetch existing record to preserve values not used in this sale
-                const existing = await this.precioClienteProveedorRepo.findByClienteAndProveedor(input.clienteId, lote.proveedorId);
+                const existing = await this.precioClienteProveedorRepo.findByClienteAndProveedor(input.clienteId!, lote.proveedorId);
                 const finalPrecioEntero = precioEntero ?? (existing?.precioEntero.value ?? '0');
                 const finalPrecioTajado = precioTajado ?? (existing?.precioTajado.value ?? '0');
                 const finalValorDomicilio = input.valorDomicilio ?? (existing?.valorDomicilio.value ?? '0');
                 const finalCostoDomiciliario = input.costoDomiciliario ?? (existing?.costoDomiciliario.value ?? '0');
                 await this.precioClienteProveedorRepo.upsert(
                   new PrecioClienteProveedor({
-                    clienteId: input.clienteId,
+                    clienteId: input.clienteId!,
                     proveedorId: lote.proveedorId,
                     precioEntero: finalPrecioEntero,
                     precioTajado: finalPrecioTajado,
@@ -508,18 +535,19 @@ export class RegistrarVenta {
         }
 
         // Save domicilio memory per proveedor for any venta with domicilio values
-        if (this.precioClienteProveedorRepo && (input.valorDomicilio || input.costoDomiciliario)) {
+        // Skip for walk-in (ocasional) sales — no client to save domicilio for
+        if (this.precioClienteProveedorRepo && cliente && (input.valorDomicilio || input.costoDomiciliario)) {
           // Use the first item's proveedor as the domicilio reference (skip if internal lot)
           const firstLote = loteMap.get(input.items[0].loteId);
           if (firstLote && firstLote.proveedorId) {
-            const existing = await this.precioClienteProveedorRepo.findByClienteAndProveedor(input.clienteId, firstLote.proveedorId);
+            const existing = await this.precioClienteProveedorRepo.findByClienteAndProveedor(input.clienteId!, firstLote.proveedorId);
             const finalPrecioEntero = existing?.precioEntero.value ?? '0';
             const finalPrecioTajado = existing?.precioTajado.value ?? '0';
             const finalValorDomicilio = input.valorDomicilio ?? (existing?.valorDomicilio.value ?? '0');
             const finalCostoDomiciliario = input.costoDomiciliario ?? (existing?.costoDomiciliario.value ?? '0');
             await this.precioClienteProveedorRepo.upsert(
               new PrecioClienteProveedor({
-                clienteId: input.clienteId,
+                clienteId: input.clienteId!,
                 proveedorId: firstLote.proveedorId,
                 precioEntero: finalPrecioEntero,
                 precioTajado: finalPrecioTajado,
@@ -531,7 +559,8 @@ export class RegistrarVenta {
         }
 
         // Save domicilio memory to cliente as fallback default
-        if (input.valorDomicilio) {
+        // Skip for walk-in (ocasional) sales — no client to save domicilio for
+        if (cliente && input.valorDomicilio) {
           const updatedCliente = new Cliente({
             id: cliente.id,
             nombre: cliente.nombre,

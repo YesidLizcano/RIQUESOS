@@ -24,7 +24,7 @@ import type { VentaResponse, VentaItemResponse, VentaTipo, AbonoMetodoPagoBreakd
 function ventaRecordToResponse(v: {
   id: string;
   fecha: Date;
-  clienteId: string;
+  clienteId: string | null;
   cantidadTotalKg: { toString(): string };
   ingresoTotal: { toString(): string };
   costoAplicado: { toString(): string };
@@ -46,7 +46,7 @@ function ventaRecordToResponse(v: {
     id: v.id,
     fecha: v.fecha.toISOString(),
     clienteId: v.clienteId,
-    clienteNombre: v.cliente?.nombre ?? undefined,
+    clienteNombre: v.cliente?.nombre ?? 'Ocasional',
     sedeId: v.sedeId ?? null,
     sedeNombre: v.sede?.nombre ?? null,
     cantidadTotalKg: v.cantidadTotalKg.toString(),
@@ -165,7 +165,7 @@ function computeAbonoMetodoPagoBreakdown(
 }
 
 export async function registrarVenta(input: {
-  clienteId: string;
+  clienteId: string | null;
   sedeId?: string | null;
   items: Array<{
     loteId: string;
@@ -200,7 +200,7 @@ export async function registrarVenta(input: {
   try {
     const useCase = await getRegistrarVentaUseCase();
     const result = await useCase.execute({
-      clienteId: parsed.data.clienteId,
+      clienteId: parsed.data.clienteId ?? null,
       sedeId: parsed.data.sedeId,
       items: parsed.data.items.map((item) => ({
         loteId: item.loteId,
@@ -276,7 +276,7 @@ export async function getVentas() {
     const ventaRecords = await prisma.venta.findMany({
       where: { fecha: { gte: inicio, lte: now } },
       orderBy: { fecha: 'desc' },
-      include: { items: true, sede: true },
+      include: { items: true, cliente: true, sede: true },
     });
     const response: VentaResponse[] = ventaRecords.map(ventaRecordToResponse);
     return { success: true, ventas: response };
@@ -447,7 +447,7 @@ export async function eliminarVenta(input: { ventaId: string }) {
 
 export async function editarVenta(input: {
   ventaId: string;
-  clienteId: string;
+  clienteId: string | null;
   sedeId?: string | null;
   items: Array<{
     loteId: string;
@@ -489,7 +489,7 @@ export async function editarVenta(input: {
     const useCase = new EditarVenta(ventaRepo, loteRepo, clienteRepo, empaqueRepo, compraInsumoRepo, precioClienteProveedorRepo);
     const result = await useCase.execute({
       ventaId: parsed.data.ventaId,
-      clienteId: parsed.data.clienteId,
+      clienteId: parsed.data.clienteId ?? null,
       sedeId: parsed.data.sedeId,
       items: parsed.data.items.map((item) => ({
         loteId: item.loteId,

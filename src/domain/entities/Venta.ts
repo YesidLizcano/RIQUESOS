@@ -12,7 +12,7 @@ export type VentaTipo = 'BLOQUES' | 'GRANEL';
 export interface VentaProps {
   id?: string;
   fecha?: Date;
-  clienteId: string;
+  clienteId: string | null;
   sedeId?: string;
   valorDomicilio?: string;
   costoDomiciliario?: string;
@@ -31,7 +31,7 @@ export interface VentaProps {
 export class Venta {
   readonly id: string;
   readonly fecha: Date;
-  readonly clienteId: string;
+  readonly clienteId: string | null;
   readonly sedeId: string | null;
   readonly cantidadTotalKg: Kilogramo;
   readonly ingresoTotal: Dinero;
@@ -117,9 +117,7 @@ export class Venta {
   }
 
   private validate(): void {
-    if (!this.clienteId) {
-      throw new Error('Venta clienteId is required');
-    }
+    // clienteId can be null for walk-in (minorista) sales
   }
 
   /**

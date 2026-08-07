@@ -249,6 +249,7 @@ export class ObtenerMetricas {
     const clienteIngresos = new Map<string, string>();
 
     for (const venta of ventas) {
+      if (!venta.clienteId) continue; // Skip walk-in (ocasional) sales for top clients
       const existing = clienteIngresos.get(venta.clienteId);
       if (existing) {
         const sum = new Dinero(existing).add(venta.ingresoTotal);
@@ -322,7 +323,7 @@ export class ObtenerMetricas {
     }
 
     // 8. Revenue by client type — join ventas with client tipo
-    const allClientIds = Array.from(new Set(ventas.map((v) => v.clienteId)));
+    const allClientIds = Array.from(new Set(ventas.map((v) => v.clienteId).filter((id): id is string => id !== null)));
     const allClients = allClientIds.length > 0
       ? await this.clienteRepo.findByIds(allClientIds)
       : [];
@@ -330,7 +331,7 @@ export class ObtenerMetricas {
 
     const ingresosPorTipoMap = new Map<string, string>();
     for (const venta of ventas) {
-      const cliente = allClienteMap.get(venta.clienteId);
+      const cliente = venta.clienteId ? allClienteMap.get(venta.clienteId) : undefined;
       const tipo = cliente?.tipo ?? 'UNKNOWN';
       const existing = ingresosPorTipoMap.get(tipo);
       if (existing) {

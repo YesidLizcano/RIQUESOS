@@ -112,7 +112,7 @@ export async function generateVentasPeriodoPdf(
 
       tableBody.push([
         { text: pdfDate(extractDate(v.fecha)), style: 'tableCell' },
-        { text: v.clienteNombre ?? v.clienteId, style: 'tableCell' },
+        { text: v.clienteNombre ?? (v.clienteId ? v.clienteId : 'Ocasional'), style: 'tableCell' },
         { text: v.sedeNombre ?? '—', style: 'tableCell' },
         { text: metodoPagoLabel(v.metodoPago), style: 'tableCell' },
         { text: detalle, style: 'tableCell', fontSize: 8 },

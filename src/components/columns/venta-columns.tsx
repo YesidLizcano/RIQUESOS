@@ -47,8 +47,10 @@ export function createVentaColumns(
       id: 'clienteNombre',
       header: 'Cliente',
       accessorFn: (row) => {
+        const venta = row as VentaResponse;
+        if (!venta.clienteId) return 'Ocasional';
         if (clienteMap) {
-          return clienteMap.get((row as VentaResponse).clienteId) ?? '—';
+          return clienteMap.get(venta.clienteId) ?? '—';
         }
         return '—';
       },

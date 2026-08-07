@@ -307,10 +307,16 @@ describe('Venta', () => {
   });
 
   describe('constructor — validation', () => {
-    it('should reject missing clienteId', () => {
-      expect(() => new Venta({ clienteId: '' })).toThrow(
-        'Venta clienteId is required'
-      );
+    it('should allow null clienteId for walk-in (minorista ocacional) sales', () => {
+      const item = new VentaItem(validItemProps);
+      const venta = new Venta({ clienteId: null }, [item]);
+      expect(venta.clienteId).toBeNull();
+    });
+
+    it('should accept valid clienteId', () => {
+      const item = new VentaItem(validItemProps);
+      const venta = new Venta({ clienteId: 'cliente-1' }, [item]);
+      expect(venta.clienteId).toBe('cliente-1');
     });
   });
 

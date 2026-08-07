@@ -39,7 +39,7 @@ export const ventaItemSchema = z.object({
 );
 
 export const registrarVentaSchema = z.object({
-  clienteId: z.string().uuid('Seleccione un cliente válido'),
+  clienteId: z.string().uuid('Seleccione un cliente válido').nullable().optional().transform(v => v === '' ? null : v),
   sedeId: z.string().uuid('Sede inválida').optional().nullable(),
   items: z.array(ventaItemSchema).min(1, 'Al menos un item es requerido'),
   valorDomicilio: z.coerce.number().nonnegative('El valor del domicilio no puede ser negativo').optional().default(0),
@@ -53,7 +53,7 @@ export const registrarVentaSchema = z.object({
 
 export const editarVentaSchema = z.object({
   ventaId: z.string().uuid('ID inválido'),
-  clienteId: z.string().uuid('Seleccione un cliente válido'),
+  clienteId: z.string().uuid('Seleccione un cliente válido').nullable().optional().transform(v => v === '' ? null : v),
   sedeId: z.string().uuid('Sede inválida').optional().nullable(),
   items: z.array(ventaItemSchema).min(1, 'Al menos un item es requerido'),
   valorDomicilio: z.coerce.number().nonnegative('El valor del domicilio no puede ser negativo').optional().default(0),

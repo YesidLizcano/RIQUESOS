@@ -23,7 +23,7 @@ export interface VentaItemRequest {
 }
 
 export interface RegistrarVentaRequest {
-  clienteId: string;
+  clienteId: string | null;
   items: VentaItemRequest[];
   valorDomicilio?: string;
   costoDomiciliario?: string;
@@ -69,7 +69,7 @@ export interface AbonoMetodoPagoBreakdown {
 export interface VentaResponse {
   id: string;
   fecha: string;
-  clienteId: string;
+  clienteId: string | null;
   clienteNombre?: string;
   sedeId?: string | null;
   sedeNombre?: string | null;

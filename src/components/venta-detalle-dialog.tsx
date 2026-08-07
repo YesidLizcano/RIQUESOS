@@ -126,7 +126,7 @@ export function VentaDetalleDialog({
 
   function handlePrint() {
     const d = displayData;
-    const cNombre = d.clienteNombre ?? clienteMap.get(d.clienteId) ?? '—';
+    const cNombre = d.clienteNombre ?? (d.clienteId ? clienteMap.get(d.clienteId) ?? '—' : 'Ocasional');
     const f = new Date(d.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
     const itemRows = d.items.map((item) => {
@@ -140,7 +140,7 @@ export function VentaDetalleDialog({
                       const enteros = item.bloquesEnterosVendidos ?? 0;
                       const tajados = item.bloquesTajadosVendidos ?? 0;
                       const reempacados = item.bloquesReempacados ?? 0;
-                      const cliente = clienteObjMap?.get(d.clienteId);
+                      const cliente = d.clienteId ? clienteObjMap?.get(d.clienteId) : undefined;
                       const precioEntero = item.precioEnteroBloque ? Number(item.precioEnteroBloque) : (cliente ? Number(cliente.precioDobleCremaEntero ?? '0') : 0);
                       const precioTajado = item.precioTajadoBloque ? Number(item.precioTajadoBloque) : (cliente ? Number(cliente.precioDobleCremaTajado ?? cliente.precioDobleCremaEntero ?? '0') : 0);
         const ingresoEnteros = enteros * precioEntero;
@@ -267,7 +267,7 @@ export function VentaDetalleDialog({
   }
 
   const displayData = detalle ?? venta;
-  const clienteNombre = displayData.clienteNombre ?? clienteMap.get(displayData.clienteId) ?? '—';
+  const clienteNombre = displayData.clienteNombre ?? (displayData.clienteId ? clienteMap.get(displayData.clienteId) ?? '—' : 'Ocasional');
   const fecha = new Date(displayData.fecha).toLocaleDateString('es-AR', {
     day: '2-digit',
     month: '2-digit',
@@ -358,7 +358,7 @@ export function VentaDetalleDialog({
                       const enteros = item.bloquesEnterosVendidos ?? 0;
                       const tajados = item.bloquesTajadosVendidos ?? 0;
                       const reempacados = item.bloquesReempacados ?? 0;
-                      const cliente = clienteObjMap?.get(displayData.clienteId);
+                      const cliente = displayData.clienteId ? clienteObjMap?.get(displayData.clienteId) : undefined;
                       const precioEntero = item.precioEnteroBloque ? Number(item.precioEnteroBloque) : (cliente ? Number(cliente.precioDobleCremaEntero ?? '0') : 0);
                       const precioTajado = item.precioTajadoBloque ? Number(item.precioTajadoBloque) : (cliente ? Number(cliente.precioDobleCremaTajado ?? cliente.precioDobleCremaEntero ?? '0') : 0);
                       const ingresoEnteros = enteros * precioEntero;

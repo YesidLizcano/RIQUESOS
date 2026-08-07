@@ -205,10 +205,10 @@ model CompraInsumo {
 }
 
 model Venta {
-  id               String    @id @default(uuid())
-  fecha            DateTime  @default(now())
-  clienteId        String
-  cliente          Cliente   @relation(fields: [clienteId], references: [id])
+  id               String     @id @default(uuid())
+  fecha            DateTime   @default(now())
+  clienteId        String?
+  cliente          Cliente?   @relation(fields: [clienteId], references: [id])
   sedeId           String?
   sede             Sede?     @relation(fields: [sedeId], references: [id])
   cantidadTotalKg  Decimal   @default("0")

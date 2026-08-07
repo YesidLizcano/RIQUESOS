@@ -1054,7 +1054,7 @@ export class PrismaVentaRepo implements VentaRepository {
         if (saldo.lte(0)) return null;
         return {
           ventaId: v.id,
-          clienteNombre: v.cliente.nombre,
+          clienteNombre: v.cliente?.nombre ?? 'Ocasional',
           sedeNombre: v.sede?.nombre ?? null,
           fecha: v.fecha,
           ingresoTotal: ingresoTotal.toString(),
@@ -1067,7 +1067,7 @@ export class PrismaVentaRepo implements VentaRepository {
   }
 
   private toEntity(
-    record: Prisma.VentaGetPayload<{}> | { id: string; clienteId: string; sedeId?: string | null; fecha: Date; cantidadTotalKg: Prisma.Decimal | number; ingresoTotal: Prisma.Decimal | number; costoAplicado: Prisma.Decimal | number; gananciaBruta: Prisma.Decimal | number; valorDomicilio: Prisma.Decimal | number; costoDomiciliario: Prisma.Decimal | number; domiciliario: string; metodoPago: string; metodoPagoAbono: string | null; abono: Prisma.Decimal | number; observaciones: string | null; createdAt: Date },
+    record: Prisma.VentaGetPayload<{}> | { id: string; clienteId: string | null; sedeId?: string | null; fecha: Date; cantidadTotalKg: Prisma.Decimal | number; ingresoTotal: Prisma.Decimal | number; costoAplicado: Prisma.Decimal | number; gananciaBruta: Prisma.Decimal | number; valorDomicilio: Prisma.Decimal | number; costoDomiciliario: Prisma.Decimal | number; domiciliario: string; metodoPago: string; metodoPagoAbono: string | null; abono: Prisma.Decimal | number; observaciones: string | null; createdAt: Date },
     _items?: unknown[]
   ): Venta {
     return new Venta({

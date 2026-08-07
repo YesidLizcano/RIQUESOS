@@ -511,7 +511,7 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<'form' | 'summary'>('form');
   const [submitting, setSubmitting] = useState(false);
-  const [clienteId, setClienteId] = useState<string>('');
+  const [clienteId, setClienteId] = useState<string | null>(null);
   const [sedeId, setSedeId] = useState<string>('');
   const [sedes, setSedes] = useState<SedeResponse[]>([]);
   const [crearClienteOpen, setCrearClienteOpen] = useState(false);
@@ -615,7 +615,7 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
     return map;
   }, [activeClientes]);
 
-  const selectedCliente = activeClientes.find((c) => c.id === clienteId);
+  const selectedCliente = clienteId ? activeClientes.find((c) => c.id === clienteId) : null;
   const isMayorista = selectedCliente?.tipo === TipoCliente.MAYORISTA;
 
   async function handleCrearCliente(e: React.FormEvent) {
@@ -703,7 +703,7 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
         }
       }
     }
-    // Fallback: no lote selected yet or no proveedor memory — use cliente default
+    // Fallback: no lote selected yet or no proveedor memory — use cliente default or clear for walk-in
     if (selectedCliente?.valorDomicilio && Number(selectedCliente.valorDomicilio) > 0) {
       setValorDomicilio(selectedCliente.valorDomicilio);
     } else {
@@ -923,10 +923,7 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
   }, [items, valorDomicilio, lotesConStock, selectedCliente, preciosMemoria]);
 
   async function handleSubmit() {
-    if (!clienteId) {
-      toast.error('Seleccione un cliente');
-      return;
-    }
+    // clienteId can be null for walk-in (ocasional) sales — no validation needed
 
     const validItems = items.filter((item) => item.loteId && Number(getCantidadKg(item)) > 0);
     if (validItems.length === 0) {
@@ -1617,10 +1614,7 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
   }
 
   function handleGoToSummary() {
-    if (!clienteId) {
-      toast.error('Seleccione un cliente');
-      return;
-    }
+    // clienteId can be null for walk-in (ocasional) sales — no validation needed
 
     if (realtimeSummary.totalGeneral <= 0) {
       toast.error('El ingreso total debe ser mayor a $0 para continuar');
@@ -1845,17 +1839,24 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
           <div className="space-y-2">
             <Label htmlFor="clienteId">Cliente</Label>
             <div className="flex gap-2">
-              <Select name="clienteId" value={clienteId} onValueChange={(v) => {
+              <Select name="clienteId" value={clienteId ?? '__ocasional__'} onValueChange={(v) => {
+                if (v === '__ocasional__') {
+                  setClienteId(null);
+                  return;
+                }
                 if (v === '__crear__') {
                   setCrearClienteOpen(true);
                   return;
                 }
-                setClienteId(v ?? '');
+                setClienteId(v);
               }}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Seleccione cliente">{clienteId ? (clienteLabels.get(clienteId) ?? 'Seleccione cliente') : 'Seleccione cliente'}</SelectValue>
+                  <SelectValue placeholder="Seleccione cliente">{clienteId ? (clienteLabels.get(clienteId) ?? 'Seleccione cliente') : 'Ocasional (Minorista)'}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__ocasional__" className="text-primary font-medium">
+                    Cliente ocasional (Minorista)
+                  </SelectItem>
                   {activeClientes.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.nombre} ({tipoClienteLabel[c.tipo as TipoCliente] ?? c.tipo})
@@ -2724,7 +2725,7 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
           // === SUMMARY STEP ===
           <SummaryStep
              summary={computeSummary()}
-             clienteLabel={clienteLabels.get(clienteId) ?? '—'}
+             clienteLabel={clienteId ? (clienteLabels.get(clienteId) ?? '—') : 'Ocasional (Minorista)'}
               domiciliario={domiciliario}
               valorDomicilio={valorDomicilio}
               costoDomiciliario={costoDomiciliario}
