@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRefresh } from '@/components/refresh-context';
 import { eliminarVenta, getVentaDetalle } from '@/presentation/actions/ventas';
-import { isDobleCrema, DOBLE_CREMA_BLOCK_KG, formatDobleCremaGranel } from '@/domain/constants';
-import { TipoProducto } from '@/domain/enums';
-import { tipoProductoLabel, metodoPagoLabel } from '@/domain/labels';
+import { isDobleCrema, formatDobleCremaGranel } from '@/domain/constants';
+import { metodoPagoLabel } from '@/domain/labels';
 import { ProductoBadge } from '@/components/producto-badge';
+import { usePdfDownload } from '@/hooks/use-pdf-download';
 import type { VentaResponse, ClienteResponse, LoteResponse } from '@/presentation/dtos';
 import {
   Dialog,
@@ -37,7 +37,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Eye, Trash2, Loader2, Pencil, Printer, CreditCard, Receipt } from 'lucide-react';
+import { Eye, Trash2, Loader2, Pencil, Printer, CreditCard, Receipt, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { decimalSub, formatTajadosBreakdown } from '@/lib/utils';
 
@@ -71,6 +71,7 @@ export function VentaDetalleDialog({
   onAbonar,
 }: VentaDetalleDialogProps) {
   const refreshData = useRefresh();
+  const { fetchPdf, isGenerating: isGeneratingPdf } = usePdfDownload();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -124,149 +125,7 @@ export function VentaDetalleDialog({
     }
   }
 
-  function handlePrint() {
-    const d = displayData;
-    const cNombre = d.clienteNombre ?? (d.clienteId ? clienteMap.get(d.clienteId) ?? '—' : 'Ocasional');
-    const f = new Date(d.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-
-    const itemRows = d.items.map((item) => {
-      const prod = item.loteProducto ?? loteProductoMap.get(item.loteId) ?? '';
-      const prov = item.loteProveedorNombre ?? loteProveedorNombreMap.get(item.loteId) ?? '';
-      const loteLabel = [prod, prov].filter(Boolean).join(' — ');
-      const lote = loteMap?.get(item.loteId);
-      const isDcBloques = item.ventaTipo === 'BLOQUES' && isDobleCrema(prod);
-
-                    if (isDcBloques) {
-                      const enteros = item.bloquesEnterosVendidos ?? 0;
-                      const tajados = item.bloquesTajadosVendidos ?? 0;
-                      const reempacados = item.bloquesReempacados ?? 0;
-                      const cliente = d.clienteId ? clienteObjMap?.get(d.clienteId) : undefined;
-                      const precioEntero = item.precioEnteroBloque ? Number(item.precioEnteroBloque) : (cliente ? Number(cliente.precioDobleCremaEntero ?? '0') : 0);
-                      const precioTajado = item.precioTajadoBloque ? Number(item.precioTajadoBloque) : (cliente ? Number(cliente.precioDobleCremaTajado ?? cliente.precioDobleCremaEntero ?? '0') : 0);
-        const ingresoEnteros = enteros * precioEntero;
-        const ingresoTajados = tajados * precioTajado;
-        let rows = '';
-
-        if (enteros > 0) {
-          rows += `<tr>
-            <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;font-size:13px">${loteLabel || '—'}</td>
-            <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:13px">Enteros</td>
-            <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;font-size:13px">${enteros} enteros</td>
-            <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:13px">${precioEntero > 0 ? formatCurrency(precioEntero) + '/entero' : '—'}</td>
-            <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:13px;font-weight:500">${formatCurrency(ingresoEnteros)}</td>
-          </tr>`;
-        }
-        if (tajados > 0) {
-          const tajadosDeFabricaPrint = item.bloquesTajadosDeFabricaVendidos ?? 0;
-          const cantText = formatTajadosBreakdown(tajados, tajadosDeFabricaPrint, reempacados);
-          rows += `<tr>
-            <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;font-size:13px">${enteros > 0 ? '' : (loteLabel || '—')}</td>
-            <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:13px">Tajados</td>
-            <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;font-size:13px">${cantText}</td>
-            <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:13px">${precioTajado > 0 ? formatCurrency(precioTajado) + '/tajado' : '—'}</td>
-            <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:13px;font-weight:500">${formatCurrency(ingresoTajados)}</td>
-          </tr>`;
-        }
-        return rows;
-      }
-
-      const origenCorte = item.origenCorte ?? 'ENTERO';
-      const granelLabel = isDobleCrema(prod) && origenCorte === 'ENTERO'
-        ? 'Granel (de entero)'
-        : isDobleCrema(prod) && origenCorte === 'TAJADO'
-        ? 'Granel (de tajado)'
-        : 'Granel';
-      const variedad = origenCorte === 'TAJADO' ? 'tajado' as const : 'entero' as const;
-      const origen = variedad === 'tajado' ? (item.origenTajadoGranel as 'INTERNO' | 'FABRICA' | undefined) : undefined;
-      const cantidadLabel = isDobleCrema(prod)
-        ? formatDobleCremaGranel(Number(item.cantidadKg), variedad, origen)
-        : `${Number(item.cantidadKg).toLocaleString('es-AR')} kg`;
-
-      return `<tr>
-        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;font-size:13px">${loteLabel || '—'}</td>
-        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:13px">${granelLabel}</td>
-        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;font-size:13px">${cantidadLabel}</td>
-        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:13px">${formatCurrency(item.precioVentaKg)}/kg</td>
-        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:13px;font-weight:500">${formatCurrency(item.ingreso)}</td>
-      </tr>`;
-    }).join('');
-
-    const html = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Remito - Venta ${d.id.slice(0, 8)}</title>
-  <style>
-    @media print { @page { margin: 1cm; } }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #111; margin: 0; padding: 20px; }
-    h1 { font-size: 20px; margin: 0 0 4px; }
-    .subtitle { color: #6b7280; font-size: 13px; margin-bottom: 16px; }
-    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
-    .info-label { font-size: 11px; color: #6b7280; }
-    .info-value { font-size: 14px; font-weight: 500; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-    th { background: #f9fafb; padding: 8px 10px; text-align: left; font-size: 12px; font-weight: 600; border-bottom: 2px solid #e5e7eb; }
-    th.right { text-align: right; }
-    th.center { text-align: center; }
-    .totals { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-top: 16px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; }
-    .total-label { font-size: 11px; color: #6b7280; }
-    .total-value { font-size: 16px; font-weight: 600; }
-    .negative { color: #dc2626; }
-    .positive { color: #16a34a; }
-    .footer { margin-top: 40px; display: flex; justify-content: space-between; font-size: 12px; color: #9ca3af; }
-  </style>
-</head>
-<body>
-  <h1>Remito de Venta</h1>
-  <p class="subtitle">Distribuidora de Quesos Riquesos</p>
-
-  <div class="info-grid">
-    <div><div class="info-label">Cliente</div><div class="info-value">${cNombre}</div></div>
-    ${d.sedeNombre ? `<div><div class="info-label">Sede</div><div class="info-value">${d.sedeNombre}</div></div>` : ''}
-    <div><div class="info-label">Fecha</div><div class="info-value">${f}</div></div>
-    ${d.domiciliario ? `<div><div class="info-label">Domiciliario</div><div class="info-value">${d.domiciliario}</div></div>` : ''}
-    ${Number(d.valorDomicilio) > 0 ? `<div><div class="info-label">Domicilio</div><div class="info-value">${formatCurrency(d.valorDomicilio)}</div></div>` : ''}
-    <div><div class="info-label">Método de Pago</div><div class="info-value">${metodoPagoLabel[d.metodoPago] ?? d.metodoPago}${d.metodoPago === 'CREDITO' ? ' (Fiado)' : ''}</div></div>
-    ${Number(d.saldo) > 0 ? `<div><div class="info-label">Saldo Pendiente</div><div class="info-value" style="color:#dc2626">${formatCurrency(d.saldo)}</div></div>` : ''}
-    ${d.observaciones ? `<div style="grid-column:1/-1"><div class="info-label">Observaciones</div><div class="info-value">${d.observaciones}</div></div>` : ''}
-  </div>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Lote</th>
-        <th class="center">Tipo</th>
-        <th>Cantidad</th>
-        <th class="right">Precio</th>
-        <th class="right">Ingreso</th>
-      </tr>
-    </thead>
-    <tbody>${itemRows}</tbody>
-  </table>
-
-  <div class="totals">
-    <div><div class="total-label">Total Kg</div><div class="total-value">${Number(d.cantidadTotalKg).toLocaleString('es-AR')} kg</div></div>
-    <div><div class="total-label">Ingreso Total</div><div class="total-value">${formatCurrency(d.ingresoTotal)}</div></div>
-    <div><div class="total-label">Costo Total</div><div class="total-value">${formatCurrency(d.costoAplicado)}</div></div>
-    <div><div class="total-label">Ganancia Bruta</div><div class="total-value ${Number(d.gananciaBruta) < 0 ? 'negative' : 'positive'}">${formatCurrency(d.gananciaBruta)}</div></div>
-  </div>
-
-  <div class="footer">
-    <span>Documento no válido como factura</span>
-    <span>Generado el ${new Date().toLocaleDateString('es-AR')}</span>
-  </div>
-</body>
-</html>`;
-
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(html);
-      printWindow.document.close();
-      printWindow.onload = () => { printWindow.print(); };
-    }
-  }
-
-  const displayData = detalle ?? venta;
+const displayData = detalle ?? venta;
   const clienteNombre = displayData.clienteNombre ?? (displayData.clienteId ? clienteMap.get(displayData.clienteId) ?? '—' : 'Ocasional');
   const fecha = new Date(displayData.fecha).toLocaleDateString('es-AR', {
     day: '2-digit',
@@ -546,10 +405,20 @@ export function VentaDetalleDialog({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handlePrint}
+                onClick={() => fetchPdf(`/api/reports/recibo-interno?ventaId=${displayData.id}`)}
+                disabled={isGeneratingPdf}
               >
                 <Printer className="size-4 mr-2" />
-                Imprimir Remito
+                Recibo Interno
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fetchPdf(`/api/reports/recibo-cliente?ventaId=${displayData.id}`)}
+                disabled={isGeneratingPdf}
+              >
+                <FileText className="size-4 mr-2" />
+                Recibo Cliente
               </Button>
               {onEdit && (
                 <Button
