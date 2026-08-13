@@ -12,10 +12,13 @@ import {
 } from './enums';
 
 function asEnum<T extends Record<string, string>>(
-  value: string,
+  value: string | null | undefined,
   enumObj: T,
   fieldName: string,
 ): T[keyof T] {
+  if (value == null) {
+    throw new Error(`Invalid ${fieldName}: value is null/undefined. Expected one of: ${Object.values(enumObj).join(', ')}`);
+  }
   const values = Object.values(enumObj) as string[];
   if (!values.includes(value)) {
     throw new Error(`Invalid ${fieldName}: "${value}". Expected one of: ${values.join(', ')}`);
