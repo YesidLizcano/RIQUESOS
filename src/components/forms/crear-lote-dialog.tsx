@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRefresh } from '@/components/refresh-context';
 import { crearLotes } from '@/presentation/actions/lotes';
+import { getEmpaques } from '@/presentation/actions/empaques';
 import { toast } from 'sonner';
 import { TipoProducto, EstadoPagoLote, MetodoPago } from '@/domain/enums';
 import { tipoProductoLabel, metodoPagoLabel } from '@/domain/labels';
@@ -41,6 +42,8 @@ interface LoteItem {
   // DC fields
   bloquesEnteros: string;
   bloquesTajadosDeFabrica: string;
+  bloquesEnterosReempacados: string;
+  bloquesTajadosFabricaReempacados: string;
   precioPorBloqueEntero: string;
   precioPorBloqueTajado: string;
 }
@@ -53,6 +56,8 @@ function createEmptyItem(): LoteItem {
     precioCompraBaseKg: '',
     bloquesEnteros: '',
     bloquesTajadosDeFabrica: '',
+    bloquesEnterosReempacados: '',
+    bloquesTajadosFabricaReempacados: '',
     precioPorBloqueEntero: '',
     precioPorBloqueTajado: '',
   };
@@ -133,6 +138,18 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
   const [metodoPagoFlete, setMetodoPagoFlete] = useState<string>(MetodoPago.EFECTIVO);
   const [items, setItems] = useState<LoteItem[]>([createEmptyItem()]);
   const [submitting, setSubmitting] = useState(false);
+  const [bolsaStock, setBolsaStock] = useState<number>(0);
+
+  useEffect(() => {
+    async function fetchBolsaStock() {
+      const result = await getEmpaques();
+      if (result.success && result.empaques) {
+        const bolsa = result.empaques.find((e) => e.categoria === 'BOLSA');
+        setBolsaStock(bolsa ? parseFloat(bolsa.stock) : 0);
+      }
+    }
+    fetchBolsaStock();
+  }, []);
 
   // Only show active proveedores in the dropdown
   const activeProveedores = useMemo(() => proveedores.filter((p) => !p.deletedAt), [proveedores]);
@@ -237,6 +254,8 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
             ? {
                 bloquesEnteros: parseInt(item.bloquesEnteros) || 0,
                 bloquesTajadosDeFabrica: parseInt(item.bloquesTajadosDeFabrica) || 0,
+                bloquesEnterosReempacados: parseInt(item.bloquesEnterosReempacados) || 0,
+                bloquesTajadosFabricaReempacados: parseInt(item.bloquesTajadosFabricaReempacados) || 0,
                 precioPorBloqueEntero: item.precioPorBloqueEntero,
                 precioPorBloqueTajado: item.precioPorBloqueTajado || undefined,
                 precioCompraBaseKg: '0', // Derived from bloque price in use case
@@ -405,6 +424,8 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
                           producto: v,
                           bloquesEnteros: '',
                           bloquesTajadosDeFabrica: '',
+                          bloquesEnterosReempacados: '',
+                          bloquesTajadosFabricaReempacados: '',
                           cantidadCompradaKg: '',
                           precioPorBloqueEntero: '',
                           precioPorBloqueTajado: '',
@@ -471,6 +492,54 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
                         )}
                       </div>
                     </div>
+                    {enteros > 0 && (
+                      <div className="space-y-2">
+                        <Label>Enteros Reempacados</Label>
+                        <Input
+                          type="number"
+                          step="1"
+                          min="0"
+                          max={Math.min(enteros, bolsaStock - parseInt(item.bloquesTajadosFabricaReempacados) || 0)}
+                          placeholder="Ej: 0"
+                          value={item.bloquesEnterosReempacados}
+                          onChange={(e) => updateItem(item.id, { bloquesEnterosReempacados: e.target.value })}
+                          disabled={bolsaStock === 0}
+                        />
+                        {bolsaStock === 0 ? (
+                          <p className="text-xs text-destructive">
+                            Sin stock de bolsas. Registre bolsas en Insumos.
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">
+                            Enteros que ya vienen en nuestras bolsas. Stock: {bolsaStock}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    {tajados > 0 && (
+                      <div className="space-y-2">
+                        <Label>Tajados de Fábrica Reempacados</Label>
+                        <Input
+                          type="number"
+                          step="1"
+                          min="0"
+                          max={Math.min(tajados, bolsaStock - parseInt(item.bloquesEnterosReempacados) || 0)}
+                          placeholder="Ej: 0"
+                          value={item.bloquesTajadosFabricaReempacados}
+                          onChange={(e) => updateItem(item.id, { bloquesTajadosFabricaReempacados: e.target.value })}
+                          disabled={bolsaStock === 0}
+                        />
+                        {bolsaStock === 0 ? (
+                          <p className="text-xs text-destructive">
+                            Sin stock de bolsas. Registre bolsas en Insumos.
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">
+                            Tajados de fábrica que ya vienen en nuestras bolsas. Stock: {bolsaStock}
+                          </p>
+                        )}
+                      </div>
+                    )}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Precio Bloque Entero ($)</Label>

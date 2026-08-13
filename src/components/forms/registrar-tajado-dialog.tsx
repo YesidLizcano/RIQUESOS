@@ -46,13 +46,14 @@ export function RegistrarTajadoDialog({ lotes, proveedores }: RegistrarTajadoDia
   const [tajador, setTajador] = useState<string>('');
   const [separadoresKg, setSeparadoresKg] = useState<string>('0');
   const [separadorStock, setSeparadorStock] = useState<number>(0);
+  const [bolsaStock, setBolsaStock] = useState<number>(0);
   const [recortesKg, setRecortesKg] = useState<string>('');
   const [reempacados, setReempacados] = useState<string>('0');
   const submittingRef = useRef(false);
 
-  // Fetch separador stock on mount
+  // Fetch separador and bolsa stock on mount
   useEffect(() => {
-    async function loadSeparadorStock() {
+    async function loadInsumoStock() {
       try {
         const result = await getEmpaques();
         if (result.success && result.empaques) {
@@ -60,12 +61,16 @@ export function RegistrarTajadoDialog({ lotes, proveedores }: RegistrarTajadoDia
             (e) => e.categoria === 'SEPARADOR' && Number(e.stock) > 0
           );
           setSeparadorStock(separadorEmpaque ? Number(separadorEmpaque.stock) : 0);
+          const bolsaEmpaque = result.empaques.find(
+            (e) => e.categoria === 'BOLSA' && Number(e.stock) > 0
+          );
+          setBolsaStock(bolsaEmpaque ? Number(bolsaEmpaque.stock) : 0);
         }
       } catch {
-        // Silently ignore — separadores field is optional
+        // Silently ignore — separadores and bolsas fields are optional
       }
     }
-    loadSeparadorStock();
+    loadInsumoStock();
   }, [open]);
 
   // Filter DC lotes with bloquesEnteros > 0, ACTIVO, and not deleted
@@ -97,9 +102,12 @@ export function RegistrarTajadoDialog({ lotes, proveedores }: RegistrarTajadoDia
   const separadores = parseFloat(separadoresKg) || 0;
   const recortes = parseFloat(recortesKg) || 0;
   const showSeparadores = separadorStock > 0;
+  const showBolsas = bolsaStock > 0;
+  const reempacadosNum = parseInt(reempacados) || 0;
 
   const isValid = loteId && cantidad > 0 && cantidad <= maxBloques && precio > 0 && tajador.trim() !== ''
-    && (!showSeparadores || separadores >= 0) && separadores <= separadorStock;
+    && (!showSeparadores || separadores >= 0) && separadores <= separadorStock
+    && (reempacadosNum === 0 || showBolsas);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -242,29 +250,34 @@ export function RegistrarTajadoDialog({ lotes, proveedores }: RegistrarTajadoDia
             />
           </div>
 
-          {showSeparadores && (
-            <div className="space-y-2">
-              <Label htmlFor="separadoresKg">Separadores gastados (kg)</Label>
-              <Input
-                id="separadoresKg"
-                name="separadoresKg"
-                type="number"
-                step="0.001"
-                min="0"
-                max={separadorStock || undefined}
-                placeholder="Ej: 0.150"
-                value={separadoresKg}
-                onChange={(e) => setSeparadoresKg(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Stock disponible: {separadorStock.toLocaleString('es-AR', { minimumFractionDigits: 3 })} kg — podés cargar gramos (Ej: 0.150)
+          <div className="space-y-2">
+            <Label htmlFor="separadoresKg">Separadores gastados (kg)</Label>
+            {showSeparadores ? (
+              <>
+                <Input
+                  id="separadoresKg"
+                  name="separadoresKg"
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  max={separadorStock || undefined}
+                  placeholder="Ej: 0.150"
+                  value={separadoresKg}
+                  onChange={(e) => setSeparadoresKg(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Stock disponible: {separadorStock.toLocaleString('es-AR', { minimumFractionDigits: 3 })} kg — podés cargar gramos (Ej: 0.150)
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">
+                Sin stock de separadores. Registre separadores en Insumos para habilitar este campo.
               </p>
-            </div>
-          )}
-
-          {(!showSeparadores) && (
-            <input type="hidden" name="separadoresKg" value="0" />
-          )}
+            )}
+            {!showSeparadores && (
+              <input type="hidden" name="separadoresKg" value="0" />
+            )}
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="recortesKg">Recortes generados (kg)</Label>
@@ -291,13 +304,20 @@ export function RegistrarTajadoDialog({ lotes, proveedores }: RegistrarTajadoDia
               type="number"
               step="1"
               min="0"
+              max={reempacadosNum > 0 && bolsaStock > 0 ? String(Math.min(bolsaStock, reempacadosNum)) : undefined}
               placeholder="0"
               value={reempacados}
               onChange={(e) => setReempacados(e.target.value)}
             />
-            <p className="text-xs text-muted-foreground">
-              Cantidad de bloques que fueron reempacados durante el tajado.
-            </p>
+            {showBolsas ? (
+              <p className="text-xs text-muted-foreground">
+                Stock de bolsas: {bolsaStock.toLocaleString('es-AR')} — Cada bloque reempacado descuenta 1 bolsa del inventario
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Sin stock de bolsas. Registre bolsas en Insumos para habilitar el descuento automático.
+              </p>
+            )}
           </div>
 
           {cantidad > 0 && precio > 0 && (

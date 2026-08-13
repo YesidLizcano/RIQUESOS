@@ -516,6 +516,7 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
   const [sedes, setSedes] = useState<SedeResponse[]>([]);
   const [crearClienteOpen, setCrearClienteOpen] = useState(false);
   const [crearClienteNombre, setCrearClienteNombre] = useState('');
+  const [crearClienteTipo, setCrearClienteTipo] = useState<string>(TipoCliente.MINORISTA);
   const [crearClienteLoading, setCrearClienteLoading] = useState(false);
   const [localClientes, setLocalClientes] = useState<ClienteResponse[]>(clientes);
 
@@ -627,13 +628,14 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
     setCrearClienteLoading(true);
     const formData = new FormData();
     formData.set('nombre', crearClienteNombre.trim());
-    formData.set('tipo', 'MINORISTA');
+    formData.set('tipo', crearClienteTipo);
     const result = await crearCliente(formData);
     if (result.success && result.cliente) {
       toast.success('Cliente creado exitosamente');
       setLocalClientes((prev) => [...prev, result.cliente!]);
       setClienteId(result.cliente.id);
       setCrearClienteNombre('');
+      setCrearClienteTipo(TipoCliente.MINORISTA);
       setCrearClienteOpen(false);
     } else {
       toast.error(result.error || 'Error al crear cliente');
@@ -2759,7 +2761,7 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
             <DialogHeader>
               <DialogTitle>Crear Nuevo Cliente</DialogTitle>
               <DialogDescription>
-                Se creará como Minorista. Podés editar los datos completos después.
+                Completá los datos del cliente.
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCrearCliente} className="space-y-4">
@@ -2773,6 +2775,18 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
                   onChange={(e) => setCrearClienteNombre(e.target.value)}
                   autoFocus
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>Tipo de Cliente</Label>
+                <Select value={crearClienteTipo} onValueChange={(v) => setCrearClienteTipo(v ?? TipoCliente.MINORISTA)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={TipoCliente.MAYORISTA}>{tipoClienteLabel[TipoCliente.MAYORISTA]}</SelectItem>
+                    <SelectItem value={TipoCliente.MINORISTA}>{tipoClienteLabel[TipoCliente.MINORISTA]}</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setCrearClienteOpen(false)} disabled={crearClienteLoading}>
