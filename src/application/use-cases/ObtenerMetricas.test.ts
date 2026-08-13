@@ -41,11 +41,13 @@ describe('ObtenerMetricas', () => {
     findByProveedor: vi.fn(),
     save: vi.fn(),
     deductStock: vi.fn(),
+    acumularRecortes: vi.fn(),
     updateCosts: vi.fn(),
     softDelete: vi.fn(),
     restore: vi.fn(),
     findAllIncludeDeleted: vi.fn(),
     updateBlocks: vi.fn(),
+    cerrarLote: vi.fn(),
     sumCostoPendientePago: vi.fn(),
   };
 

@@ -20,15 +20,8 @@ import {
 import { pagarLote } from '@/presentation/actions/lotes';
 import { toast } from 'sonner';
 import { Loader2, AlertTriangle } from 'lucide-react';
-import { tipoProductoLabel } from '@/domain/labels';
-import { TipoProducto } from '@/domain/enums';
-
-const METODO_PAGO_OPTIONS = [
-  { value: 'EFECTIVO', label: 'Efectivo' },
-  { value: 'NEQUI', label: 'Nequi' },
-  { value: 'BRE_B', label: 'Bre-B' },
-  { value: 'CREDITO', label: 'Crédito' },
-];
+import { tipoProductoLabel, metodoPagoLabel } from '@/domain/labels';
+import { TipoProducto, MetodoPago } from '@/domain/enums';
 
 type Step = 'form' | 'confirm';
 
@@ -49,7 +42,7 @@ export function PagarLoteDialog({ loteId, producto, proveedorNombre, estadoPago,
 
   const yaPagado = estadoPago === 'PAGADO';
 
-  const metodoLabel = METODO_PAGO_OPTIONS.find(o => o.value === metodoPago)?.label ?? metodoPago;
+  const metodoLabel = metodoPagoLabel[metodoPago] ?? metodoPago;
 
   async function handlePagar() {
     setLoading(true);
@@ -99,9 +92,9 @@ export function PagarLoteDialog({ loteId, producto, proveedorNombre, estadoPago,
                   <SelectValue placeholder="Seleccionar método">{metodoLabel}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {METODO_PAGO_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                  {Object.values(MetodoPago).map((opt) => (
+                    <SelectItem key={opt} value={opt}>
+                      {metodoPagoLabel[opt]}
                     </SelectItem>
                   ))}
                 </SelectContent>

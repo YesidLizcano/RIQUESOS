@@ -202,6 +202,8 @@ describe('Monthly Operations Integration Test', () => {
       const result = await crearLote.execute({
         producto: TipoProducto.DOBLE_CREMA,
         proveedorId: proveedor1Id,
+        cantidadCompradaKg: '0',
+        precioCompraBaseKg: '0',
         precioPorBloqueEntero: '44000',
         bloquesEnteros: 40,
         bloquesTajadosDeFabrica: 0,
@@ -254,6 +256,8 @@ describe('Monthly Operations Integration Test', () => {
       const result = await crearLote.execute({
         producto: TipoProducto.DOBLE_CREMA,
         proveedorId: proveedor2Id,
+        cantidadCompradaKg: '0',
+        precioCompraBaseKg: '0',
         precioPorBloqueEntero: '42000',
         precioPorBloqueTajado: '46000',
         bloquesEnteros: 20,

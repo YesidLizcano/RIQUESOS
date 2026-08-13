@@ -18,22 +18,33 @@ describe('EliminarVenta', () => {
     findByCliente: vi.fn(),
     sumIngresosByPeriod: vi.fn(),
     sumCostosByPeriod: vi.fn(),
+    updateAbono: vi.fn(),
+    sumIngresoByMetodoPago: vi.fn(),
+    sumCreditoAbonoByMetodoPagoAbono: vi.fn(),
+    sumAbonoPagoByMetodoPago: vi.fn(),
+    sumSaldoPendienteByFecha: vi.fn(),
+    findCuentasPorCobrar: vi.fn(),
     registrarVentaAtomico: vi.fn(),
     eliminarVentaAtomico: vi.fn(),
+    editarVentaAtomico: vi.fn(),
   };
 
   const mockLoteRepo: LoteRepository = {
     findById: vi.fn(),
+    findByIds: vi.fn(),
     findActive: vi.fn(),
     findAll: vi.fn(),
     findByProveedor: vi.fn(),
     save: vi.fn(),
     deductStock: vi.fn(),
+    acumularRecortes: vi.fn(),
     updateCosts: vi.fn(),
     updateBlocks: vi.fn(),
+    cerrarLote: vi.fn(),
     softDelete: vi.fn(),
     restore: vi.fn(),
     findAllIncludeDeleted: vi.fn(),
+    sumCostoPendientePago: vi.fn(),
   };
 
   const mockEmpaqueRepo: EmpaqueRepository = {

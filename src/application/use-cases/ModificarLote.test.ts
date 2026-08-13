@@ -8,16 +8,20 @@ import type { LoteRepository } from '../../domain/ports/LoteRepository';
 describe('ModificarLote', () => {
   const mockLoteRepo: LoteRepository = {
     findById: vi.fn(),
+    findByIds: vi.fn(),
     findActive: vi.fn(),
     findAll: vi.fn(),
     findByProveedor: vi.fn(),
     save: vi.fn(),
     deductStock: vi.fn(),
+    acumularRecortes: vi.fn(),
     updateCosts: vi.fn(),
     updateBlocks: vi.fn(),
+    cerrarLote: vi.fn(),
     softDelete: vi.fn(),
     restore: vi.fn(),
     findAllIncludeDeleted: vi.fn(),
+    sumCostoPendientePago: vi.fn(),
   };
 
   const useCase = new ModificarLote(mockLoteRepo);

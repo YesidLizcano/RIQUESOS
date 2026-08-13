@@ -70,16 +70,18 @@ describe('PrismaVentaRepo — Integration', () => {
       const result = await repo.registrarVentaAtomico({
         venta,
         items: [ventaItem],
-        loteDeductions: [{
-          loteId: lote.id,
-          cantidadKg: '10',
-          expectedVersion: 1,
-          ventaTipo: 'GRANEL',
-          bloquesEnterosVendidos: 0,
-          bloquesTajadosVendidos: 0,
-        }],
-        empaqueDeductions: [],
-      });
+          loteDeductions: [{
+            loteId: lote.id,
+            cantidadKg: '10',
+            expectedVersion: 1,
+            ventaTipo: 'GRANEL',
+            bloquesEnterosVendidos: 0,
+            bloquesTajadosVendidos: 0,
+            bloquesTajadosDeFabricaVendidos: 0,
+            bloquesTajadosInternosVendidos: 0,
+          }],
+          empaqueDeductions: [],
+        });
 
       expect(result.venta.clienteId).toBe(cliente.id);
       expect(result.venta.cantidadTotalKg.value).toBe('10');
@@ -144,6 +146,8 @@ describe('PrismaVentaRepo — Integration', () => {
             ventaTipo: 'GRANEL',
             bloquesEnterosVendidos: 0,
             bloquesTajadosVendidos: 0,
+            bloquesTajadosDeFabricaVendidos: 0,
+            bloquesTajadosInternosVendidos: 0,
           }],
           empaqueDeductions: [],
         })
@@ -194,14 +198,16 @@ describe('PrismaVentaRepo — Integration', () => {
       const result = await repo.registrarVentaAtomico({
         venta,
         items: [ventaItem],
-        loteDeductions: [{
-          loteId: lote.id,
-          cantidadKg: '10',
-          expectedVersion: 0, // stale version — retry will re-fetch and succeed
-          ventaTipo: 'GRANEL',
-          bloquesEnterosVendidos: 0,
-          bloquesTajadosVendidos: 0,
-        }],
+          loteDeductions: [{
+            loteId: lote.id,
+            cantidadKg: '10',
+            expectedVersion: 0, // stale version — retry will re-fetch and succeed
+            ventaTipo: 'GRANEL',
+            bloquesEnterosVendidos: 0,
+            bloquesTajadosVendidos: 0,
+            bloquesTajadosDeFabricaVendidos: 0,
+            bloquesTajadosInternosVendidos: 0,
+          }],
         empaqueDeductions: [],
       });
 
@@ -254,14 +260,16 @@ describe('PrismaVentaRepo — Integration', () => {
       await repo.registrarVentaAtomico({
         venta,
         items: [ventaItem],
-        loteDeductions: [{
-          loteId: lote.id,
-          cantidadKg: '10',
-          expectedVersion: 1,
-          ventaTipo: 'GRANEL',
-          bloquesEnterosVendidos: 0,
-          bloquesTajadosVendidos: 0,
-        }],
+          loteDeductions: [{
+            loteId: lote.id,
+            cantidadKg: '10',
+            expectedVersion: 1,
+            ventaTipo: 'GRANEL',
+            bloquesEnterosVendidos: 0,
+            bloquesTajadosVendidos: 0,
+            bloquesTajadosDeFabricaVendidos: 0,
+            bloquesTajadosInternosVendidos: 0,
+          }],
         empaqueDeductions: [],
       });
 
