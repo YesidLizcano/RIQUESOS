@@ -8,6 +8,8 @@ import { PrismaProveedorRepo } from '@/infrastructure/repositories/PrismaProveed
 import { PrismaLoteRepo } from '@/infrastructure/repositories/PrismaLoteRepo';
 import { RECORTES_DC_PERMANENT_LOT_ID } from '@/domain/constants';
 import { CrearLote } from '@/application/use-cases/CrearLote';
+import { PrismaEmpaqueRepo } from '@/infrastructure/repositories/PrismaEmpaqueRepo';
+import { PrismaCompraInsumoRepo } from '@/infrastructure/repositories/PrismaCompraInsumoRepo';
 import { ModificarLote } from '@/application/use-cases/ModificarLote';
 import { MarcarLotePagado } from '@/application/use-cases/MarcarLotePagado';
 import { MarcarFletePagado } from '@/application/use-cases/MarcarFletePagado';
@@ -24,7 +26,9 @@ import { logger } from '@/infrastructure/pino-logger';
 async function getCrearLoteUseCase() {
   const loteRepo = new PrismaLoteRepo();
   const proveedorRepo = new PrismaProveedorRepo();
-  return new CrearLote(loteRepo, proveedorRepo);
+  const empaqueRepo = new PrismaEmpaqueRepo();
+  const compraInsumoRepo = new PrismaCompraInsumoRepo();
+  return new CrearLote(loteRepo, proveedorRepo, empaqueRepo, compraInsumoRepo);
 }
 
 async function getModificarLoteUseCase() {
@@ -54,6 +58,8 @@ function loteToResponse(lote: import('@/domain/entities/Lote').Lote): LoteRespon
     bloquesEnteros: lote.bloquesEnteros,
     bloquesTajados: lote.bloquesTajados,
     bloquesTajadosDeFabrica: lote.bloquesTajadosDeFabrica,
+    bloquesEnterosReempacados: lote.bloquesEnterosReempacados,
+    bloquesTajadosFabricaReempacados: lote.bloquesTajadosFabricaReempacados,
     bloquesEnterosOriginal: lote.bloquesEnterosOriginal,
     bloquesTajadosFabricaOriginal: lote.bloquesTajadosFabricaOriginal,
     sueltosEntero: lote.sueltosEntero.value,
@@ -381,6 +387,8 @@ export async function crearLotes(payload: {
     precioCompraBaseKg?: string;
     bloquesEnteros?: number;
     bloquesTajadosDeFabrica?: number;
+    bloquesEnterosReempacados?: number;
+    bloquesTajadosFabricaReempacados?: number;
     precioPorBloqueEntero?: string;
     precioPorBloqueTajado?: string;
     costoFlete: string;
@@ -430,6 +438,8 @@ export async function crearLotes(payload: {
           ? {
               bloquesEnteros: item.bloquesEnteros ?? 0,
               bloquesTajadosDeFabrica: item.bloquesTajadosDeFabrica ?? 0,
+              bloquesEnterosReempacados: item.bloquesEnterosReempacados ?? 0,
+              bloquesTajadosFabricaReempacados: item.bloquesTajadosFabricaReempacados ?? 0,
               cantidadCompradaKg: '0', // Will be calculated by the use case
             }
           : {

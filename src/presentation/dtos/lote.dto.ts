@@ -13,6 +13,8 @@ export interface CrearLoteRequest {
   costoEmpaques?: string;
   bloquesEnteros?: number;
   bloquesTajadosDeFabrica?: number;
+  bloquesEnterosReempacados?: number;
+  bloquesTajadosFabricaReempacados?: number;
   estadoPago?: EstadoPagoLote;
   metodoPagoLote?: MetodoPago;
   estadoPagoFlete?: EstadoPagoLote;
@@ -55,6 +57,8 @@ export interface LoteResponse {
   bloquesEnteros: number;
   bloquesTajados: number;
   bloquesTajadosDeFabrica: number;
+  bloquesEnterosReempacados: number;
+  bloquesTajadosFabricaReempacados: number;
   bloquesEnterosOriginal: number;
   bloquesTajadosFabricaOriginal: number;
   sueltosEntero: string;

@@ -15,6 +15,8 @@ const crearLoteItemSchema = z.object({
   precioPorBloqueTajado: z.coerce.number().nonnegative('El precio por bloque tajado no puede ser negativo').optional().default(0),
   bloquesEnteros: z.coerce.number().int().nonnegative('Los bloques enteros no pueden ser negativos').optional().default(0),
   bloquesTajadosDeFabrica: z.coerce.number().int().nonnegative('Los bloques tajados de fábrica no pueden ser negativos').optional().default(0),
+  bloquesEnterosReempacados: z.coerce.number().int().nonnegative('Los bloques enteros reempacados no pueden ser negativos').optional().default(0),
+  bloquesTajadosFabricaReempacados: z.coerce.number().int().nonnegative('Los bloques tajados de fábrica reempacados no pueden ser negativos').optional().default(0),
   costoFlete: z.coerce.number().nonnegative('El flete no puede ser negativo').optional().default(0),
 }).refine(
   (data) => {
@@ -48,6 +50,28 @@ const crearLoteItemSchema = z.object({
   {
     message: 'Si hay bloques tajados de fábrica, el precio por bloque tajado es obligatorio',
     path: ['precioPorBloqueTajado'],
+  }
+).refine(
+  (data) => {
+    if (data.producto === TipoProducto.DOBLE_CREMA && data.bloquesEnterosReempacados > 0) {
+      return data.bloquesEnterosReempacados <= data.bloquesEnteros;
+    }
+    return true;
+  },
+  {
+    message: 'Los bloques enteros reempacados no pueden superar los bloques enteros',
+    path: ['bloquesEnterosReempacados'],
+  }
+).refine(
+  (data) => {
+    if (data.producto === TipoProducto.DOBLE_CREMA && data.bloquesTajadosFabricaReempacados > 0) {
+      return data.bloquesTajadosFabricaReempacados <= data.bloquesTajadosDeFabrica;
+    }
+    return true;
+  },
+  {
+    message: 'Los bloques tajados de fábrica reempacados no pueden superar los bloques tajados de fábrica',
+    path: ['bloquesTajadosFabricaReempacados'],
   }
 ).refine(
   (data) => {

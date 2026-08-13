@@ -77,6 +77,37 @@ export class RegistrarTajado {
       costoSeparadores = fifoResult.totalCost;
     }
 
+    // Resolve bolsa cost if reempacados > 0
+    let costoEmpaques = '0';
+
+    if ((input.reempacados ?? 0) > 0) {
+      if (!this.empaqueRepo || !this.compraInsumoRepo) {
+        throw new Error('EmpaqueRepository and CompraInsumoRepository are required when reempacados > 0');
+      }
+
+      const empaques = await this.empaqueRepo.findByCategoria(CategoriaInsumo.BOLSA);
+      if (empaques.length === 0) {
+        throw new Error('No hay empaques (bolsas) disponibles en inventario');
+      }
+
+      const bolsa = empaques[0];
+      const cantidadReempacados = input.reempacados!;
+
+      if (new Dinero(String(cantidadReempacados)).greaterThan(bolsa.stock)) {
+        throw new Error(
+          `Stock insuficiente de bolsas: disponible ${bolsa.stock.value}, solicitado ${cantidadReempacados}`
+        );
+      }
+
+      const deductFIFO = new DeductInsumoFIFO(this.compraInsumoRepo, this.empaqueRepo);
+      const fifoResult = await deductFIFO.execute({
+        empaqueId: bolsa.id,
+        cantidad: String(cantidadReempacados),
+      });
+
+      costoEmpaques = fifoResult.totalCost;
+    }
+
     const updatedLote = lote.registrarTajado(input.cantidadBloques, input.precioPorBloque, costoSeparadores);
 
     const tajado = new Tajado({
@@ -86,6 +117,7 @@ export class RegistrarTajado {
       tajador: input.tajador,
       separadoresKg,
       costoSeparadores,
+      costoEmpaques,
       recortesKg: input.recortesKg,
       reempacados: input.reempacados,
     });

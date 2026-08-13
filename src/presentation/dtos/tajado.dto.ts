@@ -19,6 +19,7 @@ export interface TajadoResponse {
   costoTotal: string;
   separadoresKg: string;
   costoSeparadores: string;
+  costoEmpaques: string;
   recortesKg: string;
   reempacados: number;
   estadoPago: string;

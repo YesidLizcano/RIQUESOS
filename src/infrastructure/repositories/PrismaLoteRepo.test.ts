@@ -48,9 +48,9 @@ describe('PrismaLoteRepo — Integration', () => {
 
       expect(saved.id).toBeTruthy();
       expect(saved.producto).toBe(TipoProducto.DOBLE_CREMA);
-      // Costo_Entero_Por_Kg = (3000 × 100 + 5000) / 100 = 3050
-      // tajado (2000) is NOT included in costoRealCalculadoKg
-      expect(saved.costoRealCalculadoKg.value).toBe('3050');
+      // Costo_Entero_Por_Kg = (3000 × 100 + 5000 + 1000) / 100 = 3060
+      // tajado (2000) is NOT included in costoRealCalculadoKg, but costoEmpaques IS
+      expect(saved.costoRealCalculadoKg.value).toBe('3060');
       expect(saved.stockDisponibleKg.value).toBe('100');
       expect(saved.estado).toBe(EstadoLote.ACTIVO);
 

@@ -12,6 +12,7 @@ export interface TajadoProps {
   tajador: string;
   separadoresKg?: string;
   costoSeparadores?: string;
+  costoEmpaques?: string;
   recortesKg?: string;
   reempacados?: number;
   estadoPago?: EstadoPagoTajado;
@@ -27,6 +28,7 @@ export class Tajado {
   readonly costoTotal: Dinero;
   readonly separadoresKg: Dinero;
   readonly costoSeparadores: Dinero;
+  readonly costoEmpaques: Dinero;
   readonly recortesKg: Dinero;
   readonly reempacados: number;
   readonly estadoPago: EstadoPagoTajado;
@@ -42,6 +44,7 @@ export class Tajado {
     this.tajador = props.tajador;
     this.separadoresKg = new Dinero(props.separadoresKg ?? '0');
     this.costoSeparadores = new Dinero(props.costoSeparadores ?? '0');
+    this.costoEmpaques = new Dinero(props.costoEmpaques ?? '0');
     this.recortesKg = new Dinero(props.recortesKg ?? '0');
     this.reempacados = props.reempacados ?? 0;
     this.estadoPago = props.estadoPago ?? ESTADO_PAGO_TAJADO.PENDIENTE;
@@ -65,8 +68,17 @@ export class Tajado {
     if (this.costoSeparadores.isNegative()) {
       throw new Error('El costo de separadores no puede ser negativo');
     }
+    if (this.costoEmpaques.isNegative()) {
+      throw new Error('El costo de empaques no puede ser negativo');
+    }
     if (this.recortesKg.isNegative()) {
       throw new Error('Los kg de recortes no pueden ser negativos');
+    }
+    if (this.reempacados < 0) {
+      throw new Error('Los bloques reempacados no pueden ser negativos');
+    }
+    if (this.reempacados > this.cantidadBloques) {
+      throw new Error(`Los bloques reempacados (${this.reempacados}) no pueden superar los bloques cortados (${this.cantidadBloques})`);
     }
   }
 
@@ -80,6 +92,7 @@ export class Tajado {
       tajador: this.tajador,
       separadoresKg: this.separadoresKg.value,
       costoSeparadores: this.costoSeparadores.value,
+      costoEmpaques: this.costoEmpaques.value,
       recortesKg: this.recortesKg.value,
       reempacados: this.reempacados,
       estadoPago: ESTADO_PAGO_TAJADO.PAGADO,

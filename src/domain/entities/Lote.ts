@@ -23,6 +23,8 @@ export interface LoteProps {
   bloquesEnteros?: number;
   bloquesTajados?: number;
   bloquesTajadosDeFabrica?: number;
+  bloquesEnterosReempacados?: number;
+  bloquesTajadosFabricaReempacados?: number;
   bloquesEnterosOriginal?: number;
   bloquesTajadosFabricaOriginal?: number;
   sueltosEntero?: string;
@@ -54,6 +56,8 @@ export class Lote {
   readonly bloquesEnteros: number;
   readonly bloquesTajados: number;
   readonly bloquesTajadosDeFabrica: number;
+  readonly bloquesEnterosReempacados: number;
+  readonly bloquesTajadosFabricaReempacados: number;
   readonly bloquesEnterosOriginal: number;
   readonly bloquesTajadosFabricaOriginal: number;
   readonly sueltosEntero: Kilogramo;
@@ -77,6 +81,8 @@ export class Lote {
     this.bloquesEnteros = props.bloquesEnteros ?? 0;
     this.bloquesTajados = props.bloquesTajados ?? 0;
     this.bloquesTajadosDeFabrica = props.bloquesTajadosDeFabrica ?? 0;
+    this.bloquesEnterosReempacados = props.bloquesEnterosReempacados ?? 0;
+    this.bloquesTajadosFabricaReempacados = props.bloquesTajadosFabricaReempacados ?? 0;
     this.bloquesEnterosOriginal = props.bloquesEnterosOriginal ?? 0;
     this.bloquesTajadosFabricaOriginal = props.bloquesTajadosFabricaOriginal ?? 0;
     this.sueltosEntero = props.sueltosEntero ? new Kilogramo(props.sueltosEntero) : Kilogramo.zero();
@@ -116,104 +122,128 @@ export class Lote {
     this.version = props.version ?? 0;
   }
 
-  /**
-   * Cost per kg for entero (whole) blocks.
-   * For DC: distributes flete equally per block (not by value).
-   * fletePorBloque = costoFlete / (bloquesEnteros + bloquesTajadosFabrica)
-   * costoRealEnteroKg = (precioPorBloqueEntero + fletePorBloque) / pesoPorBloque
-   * Falls back to simple (base × kg + flete) / kg for non-DC.
-   */
-  private calculateCostoReal(): Dinero {
-    const hasOriginalBlocks = this.bloquesEnterosOriginal > 0 || this.bloquesTajadosFabricaOriginal > 0;
-    if (this.producto === TipoProducto.DOBLE_CREMA && hasOriginalBlocks) {
-      // Use ORIGINAL block counts for flete distribution — tajados don't change the original investment structure
-      const totalBloques = this.bloquesEnterosOriginal + this.bloquesTajadosFabricaOriginal;
+   /**
+    * Cost per kg for entero (whole) blocks.
+    * For DC: distributes flete equally per block (not by value),
+    * and distributes empaque cost proportionally per reempacado type.
+    *
+    * fletePorBloque = costoFlete / (bloquesEnteros + bloquesTajadosFabrica)
+    * empaquePorBloqueEntero = costoEmpaques × (enterosReempacados / totalReempacados) / enterosOriginales
+    * costoRealEnteroKg = (precioPorBloqueEntero + fletePorBloque + empaquePorBloqueEntero) / pesoPorBloque
+    *
+    * Falls back to simple (base × kg + flete) / kg for non-DC.
+    */
+   private calculateCostoReal(): Dinero {
+     const hasOriginalBlocks = this.bloquesEnterosOriginal > 0 || this.bloquesTajadosFabricaOriginal > 0;
+     if (this.producto === TipoProducto.DOBLE_CREMA && hasOriginalBlocks) {
+       // Use ORIGINAL block counts for flete distribution — tajados don't change the original investment structure
+       const totalBloques = this.bloquesEnterosOriginal + this.bloquesTajadosFabricaOriginal;
 
-      if (totalBloques === 0) {
-        // Fallback: no blocks at all, use simple average
-        const costoBaseTotal = this.precioCompraBaseKg.multiply(this.cantidadCompradaKg.value);
-        const costoTotal = costoBaseTotal.add(this.costoFlete);
-        return costoTotal.divide(this.cantidadCompradaKg.value);
-      }
+       if (totalBloques === 0) {
+         // Fallback: no blocks at all, use simple average
+         const costoBaseTotal = this.precioCompraBaseKg.multiply(this.cantidadCompradaKg.value);
+         const costoTotal = costoBaseTotal.add(this.costoFlete).add(this.costoEmpaques);
+         return costoTotal.divide(this.cantidadCompradaKg.value);
+       }
 
-      const valorEnteros = this.precioPorBloqueEntero.multiply(String(this.bloquesEnterosOriginal));
-      const valorTajadosFabrica = this.precioPorBloqueTajado.multiply(String(this.bloquesTajadosFabricaOriginal));
+       const valorEnteros = this.precioPorBloqueEntero.multiply(String(this.bloquesEnterosOriginal));
+       const valorTajadosFabrica = this.precioPorBloqueTajado.multiply(String(this.bloquesTajadosFabricaOriginal));
 
-      if (valorEnteros.add(valorTajadosFabrica).isZero()) {
-        // Fallback: no block prices available, use simple average
-        const costoBaseTotal = this.precioCompraBaseKg.multiply(this.cantidadCompradaKg.value);
-        const costoTotal = costoBaseTotal.add(this.costoFlete);
-        return costoTotal.divide(this.cantidadCompradaKg.value);
-      }
+       if (valorEnteros.add(valorTajadosFabrica).isZero()) {
+         // Fallback: no block prices available, use simple average
+         const costoBaseTotal = this.precioCompraBaseKg.multiply(this.cantidadCompradaKg.value);
+         const costoTotal = costoBaseTotal.add(this.costoFlete).add(this.costoEmpaques);
+         return costoTotal.divide(this.cantidadCompradaKg.value);
+       }
 
-      // Distribute flete equally per ORIGINAL block count (investment is fixed at purchase time)
-      const fletePorBloque = this.costoFlete.divide(String(totalBloques));
+       // Distribute flete equally per ORIGINAL block count (investment is fixed at purchase time)
+       const fletePorBloque = this.costoFlete.divide(String(totalBloques));
 
-      // costoRealEnteroKg = (precioPorBloqueEntero + fletePorBloque) / pesoPorBloque
-      const costoEnteroPorBloque = this.precioPorBloqueEntero.add(fletePorBloque);
-      return costoEnteroPorBloque.divide(String(DOBLE_CREMA_BLOCK_KG));
-    }
+       // Distribute empaque cost proportionally per reempacado type
+       const totalReempacados = this.bloquesEnterosReempacados + this.bloquesTajadosFabricaReempacados;
+       let empaquePorBloqueEntero = Dinero.zero();
+       if (totalReempacados > 0 && this.bloquesEnterosReempacados > 0) {
+         const costoEmpaquesEnteros = this.costoEmpaques.multiply(String(this.bloquesEnterosReempacados)).divide(String(totalReempacados));
+         empaquePorBloqueEntero = costoEmpaquesEnteros.divide(String(this.bloquesEnterosOriginal));
+       }
 
-    // Non-DC or edge case: simple average
-    // Internal lots (recortes) start with zero quantity — cost is $0/kg (byproduct)
-    if (this.cantidadCompradaKg.isZero()) {
-      return Dinero.zero();
-    }
-    const costoBaseTotal = this.precioCompraBaseKg.multiply(this.cantidadCompradaKg.value);
-    const costoTotal = costoBaseTotal.add(this.costoFlete);
-    return costoTotal.divide(this.cantidadCompradaKg.value);
-  }
+       // costoRealEnteroKg = (precioPorBloqueEntero + fletePorBloque + empaquePorBloqueEntero) / pesoPorBloque
+       const costoEnteroPorBloque = this.precioPorBloqueEntero.add(fletePorBloque).add(empaquePorBloqueEntero);
+       return costoEnteroPorBloque.divide(String(DOBLE_CREMA_BLOCK_KG));
+     }
 
-  /**
-   * Cost per kg for tajado de fábrica blocks.
-   * Distributes flete equally per block (not by value).
-   * fletePorBloque = costoFlete / (bloquesEnteros + bloquesTajadosFabrica)
-   * costoRealTajadoFabricaKg = (precioPorBloqueTajado + fletePorBloque) / pesoPorBloque
-   * Falls back to costoRealCalculadoKg when no factory tajados exist or for non-DC.
-   */
-  get costoTajadoFabricaKg(): Dinero {
-    if (this.producto !== TipoProducto.DOBLE_CREMA || this.bloquesTajadosFabricaOriginal === 0) {
-      return this.costoRealCalculadoKg;
-    }
+     // Non-DC or edge case: simple average
+     // Internal lots (recortes) start with zero quantity — cost is $0/kg (byproduct)
+     if (this.cantidadCompradaKg.isZero()) {
+       return Dinero.zero();
+     }
+     const costoBaseTotal = this.precioCompraBaseKg.multiply(this.cantidadCompradaKg.value);
+     const costoTotal = costoBaseTotal.add(this.costoFlete).add(this.costoEmpaques);
+     return costoTotal.divide(this.cantidadCompradaKg.value);
+   }
 
-    // Use ORIGINAL block counts for flete distribution — tajados don't change the original investment
-    const totalBloques = this.bloquesEnterosOriginal + this.bloquesTajadosFabricaOriginal;
+   /**
+    * Cost per kg for tajado de fábrica blocks.
+    * Distributes flete equally per block (not by value),
+    * and distributes empaque cost proportionally per reempacado type.
+    *
+    * fletePorBloque = costoFlete / (bloquesEnteros + bloquesTajadosFabrica)
+    * empaquePorBloqueTajado = costoEmpaques × (tajadosFabricaReempacados / totalReempacados) / tajadosFabricaOriginales
+    * costoRealTajadoFabricaKg = (precioPorBloqueTajado + fletePorBloque + empaquePorBloqueTajado) / pesoPorBloque
+    *
+    * Falls back to costoRealCalculadoKg when no factory tajados exist or for non-DC.
+    */
+   get costoTajadoFabricaKg(): Dinero {
+     if (this.producto !== TipoProducto.DOBLE_CREMA || this.bloquesTajadosFabricaOriginal === 0) {
+       return this.costoRealCalculadoKg;
+     }
 
-    if (totalBloques === 0) {
-      return this.costoRealCalculadoKg;
-    }
+     // Use ORIGINAL block counts for flete distribution — tajados don't change the original investment
+     const totalBloques = this.bloquesEnterosOriginal + this.bloquesTajadosFabricaOriginal;
 
-    const valorEnteros = this.precioPorBloqueEntero.multiply(String(this.bloquesEnterosOriginal));
-    const valorTajadosFabrica = this.precioPorBloqueTajado.multiply(String(this.bloquesTajadosFabricaOriginal));
+     if (totalBloques === 0) {
+       return this.costoRealCalculadoKg;
+     }
 
-    if (valorEnteros.add(valorTajadosFabrica).isZero()) {
-      return this.costoRealCalculadoKg;
-    }
+     const valorEnteros = this.precioPorBloqueEntero.multiply(String(this.bloquesEnterosOriginal));
+     const valorTajadosFabrica = this.precioPorBloqueTajado.multiply(String(this.bloquesTajadosFabricaOriginal));
 
-    // Distribute flete equally per ORIGINAL block count
-    const fletePorBloque = this.costoFlete.divide(String(totalBloques));
+     if (valorEnteros.add(valorTajadosFabrica).isZero()) {
+       return this.costoRealCalculadoKg;
+     }
 
-    // costoRealTajadoFabricaKg = (precioPorBloqueTajado + fletePorBloque) / pesoPorBloque
-    const costoTajadoPorBloque = this.precioPorBloqueTajado.add(fletePorBloque);
-    return costoTajadoPorBloque.divide(String(DOBLE_CREMA_BLOCK_KG));
-  }
+     // Distribute flete equally per ORIGINAL block count
+     const fletePorBloque = this.costoFlete.divide(String(totalBloques));
 
-  /**
-   * Total cost of the lot (merchandise + flete).
-   * For DC: (bloquesEnterosOriginal × precioPorBloqueEntero) + (bloquesTajadosFabricaOriginal × precioPorBloqueTajado) + flete.
-   * Uses ORIGINAL block counts because the investment is fixed at purchase time — tajados don't change it.
-   * For non-DC: precioCompraBaseKg × cantidadCompradaKg + flete.
-   */
-  get costoTotalLote(): Dinero {
-    if (this.producto === TipoProducto.DOBLE_CREMA && (this.bloquesEnterosOriginal > 0 || this.bloquesTajadosFabricaOriginal > 0)) {
-      const valorEnteros = this.precioPorBloqueEntero.multiply(String(this.bloquesEnterosOriginal));
-      const valorTajadosFabrica = this.precioPorBloqueTajado.multiply(String(this.bloquesTajadosFabricaOriginal));
-      const costoMercancia = valorEnteros.add(valorTajadosFabrica);
-      return costoMercancia.add(this.costoFlete);
-    }
-    const costoBase = this.precioCompraBaseKg.multiply(this.cantidadCompradaKg.value);
-    return costoBase.add(this.costoFlete);
-  }
+     // Distribute empaque cost proportionally per reempacado type
+     const totalReempacados = this.bloquesEnterosReempacados + this.bloquesTajadosFabricaReempacados;
+     let empaquePorBloqueTajado = Dinero.zero();
+     if (totalReempacados > 0 && this.bloquesTajadosFabricaReempacados > 0) {
+       const costoEmpaquesTajados = this.costoEmpaques.multiply(String(this.bloquesTajadosFabricaReempacados)).divide(String(totalReempacados));
+       empaquePorBloqueTajado = costoEmpaquesTajados.divide(String(this.bloquesTajadosFabricaOriginal));
+     }
+
+     // costoRealTajadoFabricaKg = (precioPorBloqueTajado + fletePorBloque + empaquePorBloqueTajado) / pesoPorBloque
+     const costoTajadoPorBloque = this.precioPorBloqueTajado.add(fletePorBloque).add(empaquePorBloqueTajado);
+     return costoTajadoPorBloque.divide(String(DOBLE_CREMA_BLOCK_KG));
+   }
+
+   /**
+    * Total cost of the lot (merchandise + flete + empaques).
+    * For DC: (bloquesEnterosOriginal × precioPorBloqueEntero) + (bloquesTajadosFabricaOriginal × precioPorBloqueTajado) + flete + empaques.
+    * Uses ORIGINAL block counts because the investment is fixed at purchase time — tajados don't change it.
+    * For non-DC: precioCompraBaseKg × cantidadCompradaKg + flete + empaques.
+    */
+   get costoTotalLote(): Dinero {
+     if (this.producto === TipoProducto.DOBLE_CREMA && (this.bloquesEnterosOriginal > 0 || this.bloquesTajadosFabricaOriginal > 0)) {
+       const valorEnteros = this.precioPorBloqueEntero.multiply(String(this.bloquesEnterosOriginal));
+       const valorTajadosFabrica = this.precioPorBloqueTajado.multiply(String(this.bloquesTajadosFabricaOriginal));
+       const costoMercancia = valorEnteros.add(valorTajadosFabrica);
+       return costoMercancia.add(this.costoFlete).add(this.costoEmpaques);
+     }
+     const costoBase = this.precioCompraBaseKg.multiply(this.cantidadCompradaKg.value);
+     return costoBase.add(this.costoFlete).add(this.costoEmpaques);
+   }
 
   /**
    * Cost per kg for tajado (cut) blocks.
@@ -240,6 +270,18 @@ export class Lote {
     }
     if (this.precioCompraBaseKg.isNegative()) {
       throw new Error('Lote precioCompraBaseKg cannot be negative');
+    }
+    if (this.bloquesEnterosReempacados < 0) {
+      throw new Error('Lote bloquesEnterosReempacados cannot be negative');
+    }
+    if (this.bloquesTajadosFabricaReempacados < 0) {
+      throw new Error('Lote bloquesTajadosFabricaReempacados cannot be negative');
+    }
+    if (this.bloquesEnterosReempacados > this.bloquesEnteros) {
+      throw new Error(`Lote bloquesEnterosReempacados (${this.bloquesEnterosReempacados}) cannot exceed bloquesEnteros (${this.bloquesEnteros})`);
+    }
+    if (this.bloquesTajadosFabricaReempacados > this.bloquesTajadosDeFabrica) {
+      throw new Error(`Lote bloquesTajadosFabricaReempacados (${this.bloquesTajadosFabricaReempacados}) cannot exceed bloquesTajadosDeFabrica (${this.bloquesTajadosDeFabrica})`);
     }
   }
 
@@ -290,6 +332,8 @@ export class Lote {
       bloquesEnteros: this.bloquesEnteros - cantidadBloques,
       bloquesTajados: this.bloquesTajados + cantidadBloques,
       bloquesTajadosDeFabrica: this.bloquesTajadosDeFabrica,
+      bloquesEnterosReempacados: this.bloquesEnterosReempacados,
+      bloquesTajadosFabricaReempacados: this.bloquesTajadosFabricaReempacados,
       bloquesEnterosOriginal: this.bloquesEnterosOriginal,
       bloquesTajadosFabricaOriginal: this.bloquesTajadosFabricaOriginal,
       sueltosEntero: this.sueltosEntero.value,
@@ -344,6 +388,8 @@ export class Lote {
       bloquesEnteros: newBloquesEnteros,
       bloquesTajados: this.bloquesTajados,
       bloquesTajadosDeFabrica: this.bloquesTajadosDeFabrica,
+      bloquesEnterosReempacados: this.bloquesEnterosReempacados,
+      bloquesTajadosFabricaReempacados: this.bloquesTajadosFabricaReempacados,
       bloquesEnterosOriginal: this.bloquesEnterosOriginal,
       bloquesTajadosFabricaOriginal: this.bloquesTajadosFabricaOriginal,
       sueltosEntero: this.sueltosEntero.value,
@@ -409,6 +455,8 @@ export class Lote {
       bloquesEnteros: newBloquesEnteros,
       bloquesTajados: this.bloquesTajados,
       bloquesTajadosDeFabrica: this.bloquesTajadosDeFabrica,
+      bloquesEnterosReempacados: this.bloquesEnterosReempacados,
+      bloquesTajadosFabricaReempacados: this.bloquesTajadosFabricaReempacados,
       bloquesEnterosOriginal: this.bloquesEnterosOriginal,
       bloquesTajadosFabricaOriginal: this.bloquesTajadosFabricaOriginal,
       sueltosEntero: this.sueltosEntero.value,
@@ -433,6 +481,8 @@ export class Lote {
       bloquesEnteros: 0,
       bloquesTajados: 0,
       bloquesTajadosDeFabrica: 0,
+      bloquesEnterosReempacados: 0,
+      bloquesTajadosFabricaReempacados: 0,
       sueltosEntero: '0',
       sueltosTajado: '0',
       estado: EstadoLote.AGOTADO,
@@ -460,6 +510,8 @@ export class Lote {
       bloquesEnteros: this.bloquesEnteros,
       bloquesTajados: this.bloquesTajados,
       bloquesTajadosDeFabrica: this.bloquesTajadosDeFabrica,
+      bloquesEnterosReempacados: this.bloquesEnterosReempacados,
+      bloquesTajadosFabricaReempacados: this.bloquesTajadosFabricaReempacados,
       bloquesEnterosOriginal: this.bloquesEnterosOriginal,
       bloquesTajadosFabricaOriginal: this.bloquesTajadosFabricaOriginal,
       sueltosEntero: this.sueltosEntero.value,
@@ -504,6 +556,8 @@ export class Lote {
       bloquesEnteros: this.bloquesEnteros,
       bloquesTajados: this.bloquesTajados,
       bloquesTajadosDeFabrica: this.bloquesTajadosDeFabrica,
+      bloquesEnterosReempacados: this.bloquesEnterosReempacados,
+      bloquesTajadosFabricaReempacados: this.bloquesTajadosFabricaReempacados,
       bloquesEnterosOriginal: this.bloquesEnterosOriginal,
       bloquesTajadosFabricaOriginal: this.bloquesTajadosFabricaOriginal,
       sueltosEntero: this.sueltosEntero.value,
@@ -534,6 +588,8 @@ export class Lote {
       bloquesEnteros: this.bloquesEnteros,
       bloquesTajados: this.bloquesTajados,
       bloquesTajadosDeFabrica: this.bloquesTajadosDeFabrica,
+      bloquesEnterosReempacados: this.bloquesEnterosReempacados,
+      bloquesTajadosFabricaReempacados: this.bloquesTajadosFabricaReempacados,
       bloquesEnterosOriginal: this.bloquesEnterosOriginal,
       bloquesTajadosFabricaOriginal: this.bloquesTajadosFabricaOriginal,
       sueltosEntero: this.sueltosEntero.value,
@@ -564,6 +620,8 @@ export class Lote {
       bloquesEnteros: this.bloquesEnteros,
       bloquesTajados: this.bloquesTajados,
       bloquesTajadosDeFabrica: this.bloquesTajadosDeFabrica,
+      bloquesEnterosReempacados: this.bloquesEnterosReempacados,
+      bloquesTajadosFabricaReempacados: this.bloquesTajadosFabricaReempacados,
       bloquesEnterosOriginal: this.bloquesEnterosOriginal,
       bloquesTajadosFabricaOriginal: this.bloquesTajadosFabricaOriginal,
       sueltosEntero: this.sueltosEntero.value,
@@ -595,6 +653,8 @@ export class Lote {
       bloquesEnteros: this.bloquesEnteros,
       bloquesTajados: this.bloquesTajados,
       bloquesTajadosDeFabrica: this.bloquesTajadosDeFabrica,
+      bloquesEnterosReempacados: this.bloquesEnterosReempacados,
+      bloquesTajadosFabricaReempacados: this.bloquesTajadosFabricaReempacados,
       bloquesEnterosOriginal: this.bloquesEnterosOriginal,
       bloquesTajadosFabricaOriginal: this.bloquesTajadosFabricaOriginal,
       sueltosEntero: this.sueltosEntero.value,

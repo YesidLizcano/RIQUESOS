@@ -12,16 +12,17 @@ describe('Lote', () => {
   };
 
   describe('constructor — cost calculation', () => {
-    it('should calculate Costo_Entero_Por_Kg with base and flete only', () => {
+    it('should calculate Costo_Entero_Por_Kg with base, flete, and empaques', () => {
       const lote = new Lote({
         ...validProps,
         costoFlete: '50000',
         costoTajado: '20000',
         costoEmpaques: '10000',
       });
-      // Costo_Entero_Por_Kg = (3000 × 100 + 50000) / 100 = 3500
+      // Costo_Entero_Por_Kg = (3000 × 100 + 50000 + 10000) / 100 = 3600
       // tajado (20000) and separadores are NOT included in costoRealCalculadoKg
-      expect(lote.costoRealCalculadoKg.value).toBe('3500');
+      // but costoEmpaques IS included
+      expect(lote.costoRealCalculadoKg.value).toBe('3600');
     });
 
     it('should calculate Costo_Real_Por_Kg with zero optional costs', () => {
@@ -375,11 +376,11 @@ describe('Lote', () => {
         costoFlete: '10000',
         costoEmpaques: '5000',
       });
-      // costoRealCalculadoKg = (3000 × 100 + 10000) / 100 = 3100
-      // tajado is NOT in this formula anymore
+      // costoRealCalculadoKg = (3000 × 100 + 10000 + 5000) / 100 = 3150
+      // tajado is NOT in this formula, but costoEmpaques IS
       const result = lote.registrarTajado(10, '1500');
       expect(result.costoTajado.value).toBe('15000');
-      expect(result.costoRealCalculadoKg.value).toBe('3100');
+      expect(result.costoRealCalculadoKg.value).toBe('3150');
     });
 
     it('should calculate costoTajadoKg including tajado and separadores', () => {
@@ -737,10 +738,100 @@ describe('Lote', () => {
       // No factory tajados → fallback to costoRealCalculadoKg
       expect(lote.costoTajadoFabricaKg.value).toBe(lote.costoRealCalculadoKg.value);
     });
+
+    it('should distribute costoEmpaques proportionally per reempacado type in costoRealCalculadoKg', () => {
+      // 36 enteros @ $30,000/block + 16 tajados de fábrica @ $32,000/block + flete $50,000
+      // 6 enteros reempacados + 4 tajados reempacados = 10 total, costoEmpaques = $10,000
+      // empaqueEnteros = 10000 × 6/10 = 6000 → empaquePorBloqueEntero = 6000 / 36 = 166.67
+      // empaqueTajados = 10000 × 4/10 = 4000 → empaquePorBloqueTajado = 4000 / 16 = 250
+      // Total bloques = 52, fletePorBloque = 50000 / 52 = 961.54
+      // costoEnteroKg = (30000 + 961.54 + 166.67) / 2.5 = 12,451.28
+      // costoTajFabricaKg = (32000 + 961.54 + 250) / 2.5 = 13,284.62
+      const lote = new Lote({
+        proveedorId: 'prov-1',
+        producto: TipoProducto.DOBLE_CREMA,
+        cantidadCompradaKg: '130', // (36 + 16) × 2.5 = 130
+        precioCompraBaseKg: '12000',
+        precioPorBloqueEntero: '30000',
+        precioPorBloqueTajado: '32000',
+        bloquesEnteros: 36,
+        bloquesTajadosDeFabrica: 16,
+        bloquesEnterosOriginal: 36,
+        bloquesTajadosFabricaOriginal: 16,
+        bloquesEnterosReempacados: 6,
+        bloquesTajadosFabricaReempacados: 4,
+        costoFlete: '50000',
+        costoEmpaques: '10000',
+      });
+      const costoEntero = Number(lote.costoRealCalculadoKg.value);
+      const costoTajFabrica = Number(lote.costoTajadoFabricaKg.value);
+      // Entero: ~12,451 → range 12400-12500
+      expect(costoEntero).toBeGreaterThan(12400);
+      expect(costoEntero).toBeLessThan(12550);
+      // Tajado de fábrica: ~13,285 → range 13200-13350
+      expect(costoTajFabrica).toBeGreaterThan(13200);
+      expect(costoTajFabrica).toBeLessThan(13350);
+      // Tajado should be more expensive than entero
+      expect(costoTajFabrica).toBeGreaterThan(costoEntero);
+    });
+
+    it('should not add empaque cost when no blocks are reempacados', () => {
+      // Same scenario but no reempacados → empaque cost not distributed
+      const lote = new Lote({
+        proveedorId: 'prov-1',
+        producto: TipoProducto.DOBLE_CREMA,
+        cantidadCompradaKg: '130',
+        precioCompraBaseKg: '12000',
+        precioPorBloqueEntero: '30000',
+        precioPorBloqueTajado: '32000',
+        bloquesEnteros: 36,
+        bloquesTajadosDeFabrica: 16,
+        bloquesEnterosOriginal: 36,
+        bloquesTajadosFabricaOriginal: 16,
+        bloquesEnterosReempacados: 0,
+        bloquesTajadosFabricaReempacados: 0,
+        costoFlete: '50000',
+        costoEmpaques: '10000', // Has cost but no reempacados → not distributed per-block
+      });
+      const costoEntero = Number(lote.costoRealCalculadoKg.value);
+      // Should be ~12,376 (same as without empaques distribution)
+      expect(costoEntero).toBeGreaterThan(12300);
+      expect(costoEntero).toBeLessThan(12500);
+    });
+
+    it('should distribute costoEmpaques to entero-only reempacados', () => {
+      // 36 enteros, 16 tajados. Only enteros reempacados.
+      // costoEmpaques = $5000, 5 enterosReempacados, 0 tajadosReempacados
+      // totalReempacados = 5, all goes to enteros
+      // empaqueEnteros = 5000 × 5/5 = 5000 → empaquePorBloqueEntero = 5000 / 36 = 138.89
+      const lote = new Lote({
+        proveedorId: 'prov-1',
+        producto: TipoProducto.DOBLE_CREMA,
+        cantidadCompradaKg: '130',
+        precioCompraBaseKg: '12000',
+        precioPorBloqueEntero: '30000',
+        precioPorBloqueTajado: '32000',
+        bloquesEnteros: 36,
+        bloquesTajadosDeFabrica: 16,
+        bloquesEnterosOriginal: 36,
+        bloquesTajadosFabricaOriginal: 16,
+        bloquesEnterosReempacados: 5,
+        bloquesTajadosFabricaReempacados: 0,
+        costoFlete: '50000',
+        costoEmpaques: '5000',
+      });
+      const costoEntero = Number(lote.costoRealCalculadoKg.value);
+      const costoTajFabrica = Number(lote.costoTajadoFabricaKg.value);
+      // Entero gets empaque surcharge, tajado fabrica does not
+      // Entero: ~12,520, Tajado fabrica: ~13,184 (no empaque)
+      expect(costoEntero).toBeGreaterThan(12400);
+      expect(costoTajFabrica).toBeGreaterThan(13100);
+      expect(costoTajFabrica).toBeLessThan(13250);
+    });
   });
 
   describe('costoTotalLote', () => {
-    it('should calculate (enteros × precioEntero) + (tajados × precioTajado) + flete for DC lot', () => {
+    it('should calculate (enteros × precioEntero) + (tajados × precioTajado) + flete + empaques for DC lot', () => {
       // User scenario: 10 enteros @ $44000 + 10 tajados @ $46000 = $900000
       const lote = new Lote({
         proveedorId: 'prov-1',
@@ -752,8 +843,9 @@ describe('Lote', () => {
         bloquesEnteros: 10,
         bloquesTajadosDeFabrica: 10,
         costoFlete: '0',
+        costoEmpaques: '0',
       });
-      // (10 × 44000) + (10 × 46000) + 0 = 440000 + 460000 = 900000
+      // (10 × 44000) + (10 × 46000) + 0 + 0 = 440000 + 460000 = 900000
       expect(lote.costoTotalLote.value).toBe('900000');
     });
 
@@ -768,21 +860,40 @@ describe('Lote', () => {
         bloquesEnteros: 10,
         bloquesTajadosDeFabrica: 10,
         costoFlete: '50000',
+        costoEmpaques: '0',
       });
-      // (10 × 44000) + (10 × 46000) + 50000 = 950000
+      // (10 × 44000) + (10 × 46000) + 50000 + 0 = 950000
       expect(lote.costoTotalLote.value).toBe('950000');
     });
 
-    it('should use simple formula for non-DC lot (precioCompraBaseKg × kg + flete)', () => {
+    it('should include empaques in costoTotalLote for DC lot', () => {
+      const lote = new Lote({
+        proveedorId: 'prov-1',
+        producto: TipoProducto.DOBLE_CREMA,
+        cantidadCompradaKg: '50',
+        precioCompraBaseKg: '18000',
+        precioPorBloqueEntero: '44000',
+        precioPorBloqueTajado: '46000',
+        bloquesEnteros: 10,
+        bloquesTajadosDeFabrica: 10,
+        costoFlete: '50000',
+        costoEmpaques: '15000',
+      });
+      // (10 × 44000) + (10 × 46000) + 50000 + 15000 = 965000
+      expect(lote.costoTotalLote.value).toBe('965000');
+    });
+
+    it('should use simple formula for non-DC lot (precioCompraBaseKg × kg + flete + empaques)', () => {
       const lote = new Lote({
         proveedorId: 'prov-1',
         producto: TipoProducto.SEMISALADO,
         cantidadCompradaKg: '100',
         precioCompraBaseKg: '20000',
         costoFlete: '50000',
+        costoEmpaques: '10000',
       });
-      // 20000 × 100 + 50000 = 2050000
-      expect(lote.costoTotalLote.value).toBe('2050000');
+      // 20000 × 100 + 50000 + 10000 = 2060000
+      expect(lote.costoTotalLote.value).toBe('2060000');
     });
 
     it('should fall back to simple formula for DC lot with no blocks', () => {
@@ -792,9 +903,10 @@ describe('Lote', () => {
         cantidadCompradaKg: '100',
         precioCompraBaseKg: '3000',
         costoFlete: '50000',
+        costoEmpaques: '10000',
       });
-      // No blocks → simple formula: 3000 × 100 + 50000 = 350000
-      expect(lote.costoTotalLote.value).toBe('350000');
+      // No blocks → simple formula: 3000 × 100 + 50000 + 10000 = 360000
+      expect(lote.costoTotalLote.value).toBe('360000');
     });
   });
 

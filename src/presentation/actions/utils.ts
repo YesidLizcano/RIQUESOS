@@ -71,6 +71,8 @@ export function loteToResponse(lote: import('@/domain/entities/Lote').Lote): Lot
     bloquesEnteros: lote.bloquesEnteros,
     bloquesTajados: lote.bloquesTajados,
     bloquesTajadosDeFabrica: lote.bloquesTajadosDeFabrica,
+    bloquesEnterosReempacados: lote.bloquesEnterosReempacados,
+    bloquesTajadosFabricaReempacados: lote.bloquesTajadosFabricaReempacados,
     bloquesEnterosOriginal: lote.bloquesEnterosOriginal,
     bloquesTajadosFabricaOriginal: lote.bloquesTajadosFabricaOriginal,
     sueltosEntero: lote.sueltosEntero.value,

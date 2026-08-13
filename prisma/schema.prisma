@@ -91,6 +91,8 @@ model Lote {
   bloquesEnteros         Int          @default(0)
   bloquesTajados         Int          @default(0)
   bloquesTajadosDeFabrica Int         @default(0)
+  bloquesEnterosReempacados      Int          @default(0)
+  bloquesTajadosFabricaReempacados Int      @default(0)
   bloquesEnterosOriginal      Int          @default(0)
   bloquesTajadosFabricaOriginal Int     @default(0)
   sueltosEntero            Decimal      @default(0)
@@ -124,6 +126,7 @@ model Tajado {
   costoTotal        Decimal  @default("0")
   separadoresKg     Decimal  @default("0")
   costoSeparadores  Decimal  @default("0")
+  costoEmpaques     Decimal  @default("0")
   recortesKg             Decimal      @default("0")
   reempacados            Int          @default(0)
   estadoPago             String       @default("PENDIENTE")
@@ -249,7 +252,7 @@ model VentaItem {
   bloquesTajadosVendidos   Int       @default(0)
   bloquesTajadosDeFabricaVendidos Int @default(0)
   bloquesTajadosInternosVendidos  Int @default(0)
-  bloquesReempacados       Int       @default(0)
+  bloquesReempacados        Int       @default(0)
   costoEmpaques            Decimal   @default("0")
   precioEnteroBloque       Decimal?
   precioTajadoBloque       Decimal?

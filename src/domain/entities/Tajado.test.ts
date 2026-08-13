@@ -30,6 +30,22 @@ describe('Tajado', () => {
       expect(tajado.separadoresKg.value).toBe('0');
     });
 
+    it('should default costoEmpaques to "0"', () => {
+      const tajado = new Tajado(validProps);
+      expect(tajado.costoEmpaques.value).toBe('0');
+    });
+
+    it('should reject negative costoEmpaques', () => {
+      expect(() => new Tajado({ ...validProps, costoEmpaques: '-100' })).toThrow(
+        'El costo de empaques no puede ser negativo'
+      );
+    });
+
+    it('should accept zero costoEmpaques', () => {
+      const tajado = new Tajado({ ...validProps, costoEmpaques: '0' });
+      expect(tajado.costoEmpaques.value).toBe('0');
+    });
+
     it('should default costoSeparadores to "0"', () => {
       const tajado = new Tajado(validProps);
       expect(tajado.costoSeparadores.value).toBe('0');
@@ -126,6 +142,28 @@ describe('Tajado', () => {
         'El tajador es obligatorio'
       );
     });
+
+    it('should reject negative reempacados', () => {
+      expect(() => new Tajado({ ...validProps, reempacados: -1 })).toThrow(
+        'Los bloques reempacados no pueden ser negativos'
+      );
+    });
+
+    it('should reject reempacados greater than cantidadBloques', () => {
+      expect(() => new Tajado({ ...validProps, reempacados: 6 })).toThrow(
+        'Los bloques reempacados (6) no pueden superar los bloques cortados (5)'
+      );
+    });
+
+    it('should accept reempacados equal to cantidadBloques', () => {
+      const tajado = new Tajado({ ...validProps, reempacados: 5 });
+      expect(tajado.reempacados).toBe(5);
+    });
+
+    it('should accept reempacados less than cantidadBloques', () => {
+      const tajado = new Tajado({ ...validProps, reempacados: 2 });
+      expect(tajado.reempacados).toBe(2);
+    });
   });
 
   describe('markAsPagado', () => {
@@ -138,7 +176,7 @@ describe('Tajado', () => {
     });
 
     it('should preserve all other fields when marking as pagado', () => {
-      const tajado = new Tajado({ ...validProps, id: 't-1', separadoresKg: '3', costoSeparadores: '4500' });
+      const tajado = new Tajado({ ...validProps, id: 't-1', separadoresKg: '3', costoSeparadores: '4500', costoEmpaques: '2000' });
       const pagado = tajado.markAsPagado();
 
       expect(pagado.id).toBe('t-1');
@@ -149,6 +187,7 @@ describe('Tajado', () => {
       expect(pagado.costoTotal.value).toBe('7500');
       expect(pagado.separadoresKg.value).toBe('3');
       expect(pagado.costoSeparadores.value).toBe('4500');
+      expect(pagado.costoEmpaques.value).toBe('2000');
       expect(pagado.fecha).toEqual(tajado.fecha);
     });
 
@@ -177,6 +216,7 @@ describe('Tajado', () => {
       expect(tajado.costoTotal.value).toBe('7500');
       expect(tajado.separadoresKg.value).toBe('0');
       expect(tajado.costoSeparadores.value).toBe('0');
+      expect(tajado.costoEmpaques.value).toBe('0');
       expect(tajado.estadoPago).toBe(ESTADO_PAGO_TAJADO.PENDIENTE);
     });
 

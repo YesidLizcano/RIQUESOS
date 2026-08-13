@@ -43,6 +43,7 @@ export interface VentaRepository {
       bloquesTajadosDeFabricaVendidos: number;
       bloquesTajadosInternosVendidos: number;
       origenCorte?: string;
+      origenTajadoGranel?: string;
     }>;
     empaqueDeductions: Array<{
       empaqueId: string;
@@ -110,8 +111,7 @@ export interface VentaRepository {
       bloquesTajadosDeFabricaVendidos: number;
       bloquesTajadosInternosVendidos: number;
       origenCorte?: string;
-      sueltosEnteroDelta?: string;
-      sueltosTajadoDelta?: string;
+      origenTajadoGranel?: string;
     }>;
     empaqueDeductions: Array<{
       empaqueId: string;
