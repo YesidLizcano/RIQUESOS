@@ -421,7 +421,8 @@ describe('RegistrarVenta (multi-item)', () => {
       const createdItems = (mockVentaRepo.registrarVentaAtomico as ReturnType<typeof vi.fn>).mock.calls[0][0].items;
       // Should break 1 block (1.5kg from sueltos + 2.5kg from block - 1.0kg surplus back to sueltos)
       expect(createdItems[0].bloquesEnterosVendidos).toBe(1);
-      expect(createdItems[0].sueltosEnteroDelta).toBe('-0.5'); // -1.5 consumed + 1.0 surplus = -0.5
+      // sueltos deltas are now computed inside the transaction by PrismaVentaRepo, not by the use case
+      expect(createdItems[0].sueltosEnteroDelta).toBe('0');
     });
 
     it('should reject ENTERO granel sale when insufficient blocks even with sueltos', async () => {
@@ -498,7 +499,8 @@ describe('RegistrarVenta (multi-item)', () => {
       const createdItems = (mockVentaRepo.registrarVentaAtomico as ReturnType<typeof vi.fn>).mock.calls[0][0].items;
       // Should break 1 block (2.0kg from sueltos + 2.5kg from block - 1.5kg surplus back to sueltos)
       expect(createdItems[0].bloquesTajadosVendidos).toBe(1);
-      expect(createdItems[0].sueltosTajadoDelta).toBe('-0.5'); // -2.0 consumed + 1.5 surplus = -0.5
+      // sueltos deltas are now computed inside the transaction by PrismaVentaRepo, not by the use case
+      expect(createdItems[0].sueltosTajadoDelta).toBe('0');
     });
 
     it('should NOT multiply per-block price by kg for enteros-only DC sale (regression)', async () => {

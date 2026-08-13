@@ -48,8 +48,6 @@ export class PrismaVentaRepo implements VentaRepository {
       bloquesTajadosInternosVendidos: number;
       origenCorte?: string;
       origenTajadoGranel?: string;
-      sueltosEnteroDelta?: string;
-      sueltosTajadoDelta?: string;
     }>;
     empaqueDeductions: Array<{
       empaqueId: string;
@@ -74,6 +72,10 @@ export class PrismaVentaRepo implements VentaRepository {
       }
       try {
         const result = await prisma.$transaction(async (tx) => {
+          // Track computed sueltos deltas per item (to store on VentaItem)
+          const computedSueltosEnteroDeltas: string[] = [];
+          const computedSueltosTajadoDeltas: string[] = [];
+
           // 1. Process each lote deduction
           for (const deduction of params.loteDeductions) {
             const lote = await tx.lote.findUnique({ where: { id: deduction.loteId } });
@@ -103,6 +105,9 @@ export class PrismaVentaRepo implements VentaRepository {
               version: { increment: 1 },
             };
 
+            let itemSueltosEnteroDelta = '0';
+            let itemSueltosTajadoDelta = '0';
+
             if (deduction.ventaTipo === 'BLOQUES' && (lote.producto as string) === TipoProducto.DOBLE_CREMA) {
               const bloquesEnterosVendidos = deduction.bloquesEnterosVendidos;
               const bloquesTajadosVendidos = deduction.bloquesTajadosVendidos;
@@ -128,7 +133,7 @@ export class PrismaVentaRepo implements VentaRepository {
               loteUpdateData.bloquesTajadosDeFabrica = lote.bloquesTajadosDeFabrica - fromFabrica;
               loteUpdateData.bloquesTajados = lote.bloquesTajados - fromInternos;
             } else if ((lote.producto as string) === TipoProducto.DOBLE_CREMA) {
-              // GRANEL DC sale — check origenCorte to determine block deductions
+              // GRANEL DC sale — compute sueltos deltas from CURRENT lote state (not pre-computed)
               const origenCorte = deduction.origenCorte ?? 'ENTERO';
               const bloquesOriginales = lote.bloquesEnterosOriginal + lote.bloquesTajadosFabricaOriginal;
               const pesoPorBloque = bloquesOriginales > 0
@@ -136,7 +141,6 @@ export class PrismaVentaRepo implements VentaRepository {
                 : DOBLE_CREMA_BLOCK_KG;
 
               if (origenCorte === 'ENTERO') {
-                // Consume sueltosEntero first, then break enteros blocks
                 const kgVendidos = Number(cantidad);
                 const kgFromSueltos = Math.min(kgVendidos, Number(lote.sueltosEntero));
                 const kgFaltantes = Math.round((kgVendidos - kgFromSueltos) * 1000) / 1000;
@@ -151,14 +155,13 @@ export class PrismaVentaRepo implements VentaRepository {
                   sobrante = Math.round((bloquesARomper * pesoPorBloque - kgFaltantes) * 1000) / 1000;
                 }
 
-                // Net change to sueltosEntero: -kgFromSueltos + sobrante
                 const sueltosEnteroDelta = Math.round((-kgFromSueltos + sobrante) * 1000) / 1000;
                 const newSueltosEntero = new Prisma.Decimal(lote.sueltosEntero).plus(new Prisma.Decimal(sueltosEnteroDelta.toFixed(3)));
+                itemSueltosEnteroDelta = String(sueltosEnteroDelta);
 
                 loteUpdateData.bloquesEnteros = lote.bloquesEnteros - bloquesARomper;
                 loteUpdateData.sueltosEntero = newSueltosEntero;
               } else if (origenCorte === 'TAJADO') {
-                // Consume sueltosTajado first, then break tajados blocks
                 const origenTajado = (deduction as { origenTajadoGranel?: string }).origenTajadoGranel ?? 'INTERNO';
                 const kgVendidos = Number(cantidad);
                 const kgFromSueltos = Math.min(kgVendidos, Number(lote.sueltosTajado));
@@ -187,22 +190,24 @@ export class PrismaVentaRepo implements VentaRepository {
                 if (origenTajado === 'FABRICA') {
                   fromFabrica = bloquesARomper;
                 } else {
-                  // INTERNO: prefer factory first, then internal (legacy behavior)
                   let remaining = bloquesARomper;
                   fromFabrica = Math.min(remaining, lote.bloquesTajadosDeFabrica);
                   remaining -= fromFabrica;
                   fromInternos = remaining;
                 }
 
-                // Net change to sueltosTajado: -kgFromSueltos + sobrante
                 const sueltosTajadoDelta = Math.round((-kgFromSueltos + sobrante) * 1000) / 1000;
                 const newSueltosTajado = new Prisma.Decimal(lote.sueltosTajado).plus(new Prisma.Decimal(sueltosTajadoDelta.toFixed(3)));
+                itemSueltosTajadoDelta = String(sueltosTajadoDelta);
 
                 loteUpdateData.bloquesTajadosDeFabrica = lote.bloquesTajadosDeFabrica - fromFabrica;
                 loteUpdateData.bloquesTajados = lote.bloquesTajados - fromInternos;
                 loteUpdateData.sueltosTajado = newSueltosTajado;
               }
             }
+
+            computedSueltosEnteroDeltas.push(itemSueltosEnteroDelta);
+            computedSueltosTajadoDeltas.push(itemSueltosTajadoDelta);
 
             const updateResult = await tx.lote.updateMany({
               where: { id: deduction.loteId, version: deduction.expectedVersion },
@@ -257,7 +262,8 @@ export class PrismaVentaRepo implements VentaRepository {
             createdAt: Date;
           }> = [];
 
-          for (const item of params.items) {
+          for (let i = 0; i < params.items.length; i++) {
+            const item = params.items[i];
             const createdItem = await tx.ventaItem.create({
               data: {
                 ventaId: createdVenta.id,
@@ -278,8 +284,8 @@ export class PrismaVentaRepo implements VentaRepository {
                 precioTajadoBloque: item.precioTajadoBloque ? new Prisma.Decimal(item.precioTajadoBloque.value) : null,
                 origenCorte: item.origenCorte ?? 'ENTERO',
                 origenTajadoGranel: item.origenTajadoGranel ?? null,
-                sueltosEnteroDelta: new Prisma.Decimal(item.sueltosEnteroDelta),
-                sueltosTajadoDelta: new Prisma.Decimal(item.sueltosTajadoDelta),
+                sueltosEnteroDelta: new Prisma.Decimal(computedSueltosEnteroDeltas[i] ?? '0'),
+                sueltosTajadoDelta: new Prisma.Decimal(computedSueltosTajadoDeltas[i] ?? '0'),
               },
             });
             createdItems.push(createdItem);
@@ -462,8 +468,11 @@ export class PrismaVentaRepo implements VentaRepository {
                   const delta = new Prisma.Decimal(reversal.sueltosEnteroDelta ?? '0');
                   loteUpdateData.sueltosEntero = new Prisma.Decimal(lote.sueltosEntero).minus(delta);
                 } else if (origenCorte === 'TAJADO') {
-                  // Reverse: add all to internal tajados (simplification)
-                  loteUpdateData.bloquesTajados = lote.bloquesTajados + reversal.bloquesTajadosVendidos;
+                  // Restore tajados blocks to the correct pool (fábrica vs interno)
+                  const fromFabrica = reversal.bloquesTajadosDeFabricaVendidos ?? 0;
+                  const fromInternos = reversal.bloquesTajadosInternosVendidos ?? reversal.bloquesTajadosVendidos;
+                  loteUpdateData.bloquesTajadosDeFabrica = lote.bloquesTajadosDeFabrica + fromFabrica;
+                  loteUpdateData.bloquesTajados = lote.bloquesTajados + fromInternos;
                   // Reverse sueltosTajado: subtract the net delta
                   const delta = new Prisma.Decimal(reversal.sueltosTajadoDelta ?? '0');
                   loteUpdateData.sueltosTajado = new Prisma.Decimal(lote.sueltosTajado).minus(delta);
@@ -542,7 +551,6 @@ export class PrismaVentaRepo implements VentaRepository {
       bloquesTajadosDeFabricaVendidos: number;
       bloquesTajadosInternosVendidos: number;
       origenCorte?: string;
-      origenTajadoGranel?: string;
       sueltosEnteroDelta?: string;
       sueltosTajadoDelta?: string;
     }>;
@@ -563,8 +571,6 @@ export class PrismaVentaRepo implements VentaRepository {
       bloquesTajadosInternosVendidos: number;
       origenCorte?: string;
       origenTajadoGranel?: string;
-      sueltosEnteroDelta?: string;
-      sueltosTajadoDelta?: string;
     }>;
     empaqueDeductions: Array<{
       empaqueId: string;
@@ -645,7 +651,11 @@ export class PrismaVentaRepo implements VentaRepository {
                   const delta = new Prisma.Decimal(reversal.sueltosEnteroDelta ?? '0');
                   loteUpdateData.sueltosEntero = new Prisma.Decimal(lote.sueltosEntero).minus(delta);
                 } else if (origenCorte === 'TAJADO') {
-                  loteUpdateData.bloquesTajados = lote.bloquesTajados + reversal.bloquesTajadosVendidos;
+                  // Restore tajados blocks to the correct pool (fábrica vs interno)
+                  const fromFabrica = reversal.bloquesTajadosDeFabricaVendidos ?? 0;
+                  const fromInternos = reversal.bloquesTajadosInternosVendidos ?? reversal.bloquesTajadosVendidos;
+                  loteUpdateData.bloquesTajadosDeFabrica = lote.bloquesTajadosDeFabrica + fromFabrica;
+                  loteUpdateData.bloquesTajados = lote.bloquesTajados + fromInternos;
                   const delta = new Prisma.Decimal(reversal.sueltosTajadoDelta ?? '0');
                   loteUpdateData.sueltosTajado = new Prisma.Decimal(lote.sueltosTajado).minus(delta);
                 }
@@ -696,6 +706,10 @@ export class PrismaVentaRepo implements VentaRepository {
           // ============================================
 
           // 2a. Apply new lote deductions
+          // Track computed sueltos deltas per item (to store on VentaItem)
+          const editSueltosEnteroDeltas: string[] = [];
+          const editSueltosTajadoDeltas: string[] = [];
+
           for (const deduction of params.loteDeductions) {
             const lote = await tx.lote.findUnique({ where: { id: deduction.loteId } });
             if (!lote) {
@@ -724,6 +738,9 @@ export class PrismaVentaRepo implements VentaRepository {
               version: { increment: 1 },
             };
 
+            let itemSueltosEnteroDelta = '0';
+            let itemSueltosTajadoDelta = '0';
+
             if (deduction.ventaTipo === 'BLOQUES' && (lote.producto as string) === TipoProducto.DOBLE_CREMA) {
               const bloquesEnterosVendidos = deduction.bloquesEnterosVendidos;
               const bloquesTajadosVendidos = deduction.bloquesTajadosVendidos;
@@ -749,7 +766,7 @@ export class PrismaVentaRepo implements VentaRepository {
               loteUpdateData.bloquesTajadosDeFabrica = lote.bloquesTajadosDeFabrica - fromFabrica;
               loteUpdateData.bloquesTajados = lote.bloquesTajados - fromInternos;
             } else if ((lote.producto as string) === TipoProducto.DOBLE_CREMA) {
-              // GRANEL DC sale — check origenCorte to determine block deductions
+              // GRANEL DC sale — compute sueltos deltas from CURRENT lote state
               const origenCorte = deduction.origenCorte ?? 'ENTERO';
               const bloquesOriginales = lote.bloquesEnterosOriginal + lote.bloquesTajadosFabricaOriginal;
               const pesoPorBloque = bloquesOriginales > 0
@@ -773,6 +790,7 @@ export class PrismaVentaRepo implements VentaRepository {
 
                 const sueltosEnteroDelta = Math.round((-kgFromSueltos + sobrante) * 1000) / 1000;
                 const newSueltosEntero = new Prisma.Decimal(lote.sueltosEntero).plus(new Prisma.Decimal(sueltosEnteroDelta.toFixed(3)));
+                itemSueltosEnteroDelta = String(sueltosEnteroDelta);
 
                 loteUpdateData.bloquesEnteros = lote.bloquesEnteros - bloquesARomper;
                 loteUpdateData.sueltosEntero = newSueltosEntero;
@@ -799,12 +817,16 @@ export class PrismaVentaRepo implements VentaRepository {
 
                 const sueltosTajadoDelta = Math.round((-kgFromSueltos + sobrante) * 1000) / 1000;
                 const newSueltosTajado = new Prisma.Decimal(lote.sueltosTajado).plus(new Prisma.Decimal(sueltosTajadoDelta.toFixed(3)));
+                itemSueltosTajadoDelta = String(sueltosTajadoDelta);
 
                 loteUpdateData.bloquesTajadosDeFabrica = lote.bloquesTajadosDeFabrica - fromFabrica;
                 loteUpdateData.bloquesTajados = lote.bloquesTajados - fromInternos;
                 loteUpdateData.sueltosTajado = newSueltosTajado;
               }
             }
+
+            editSueltosEnteroDeltas.push(itemSueltosEnteroDelta);
+            editSueltosTajadoDeltas.push(itemSueltosTajadoDelta);
 
             const updateResult = await tx.lote.updateMany({
               where: { id: deduction.loteId, version: deduction.expectedVersion },
@@ -859,7 +881,8 @@ export class PrismaVentaRepo implements VentaRepository {
             createdAt: Date;
           }> = [];
 
-          for (const item of params.newItems) {
+          for (let i = 0; i < params.newItems.length; i++) {
+            const item = params.newItems[i];
             const createdItem = await tx.ventaItem.create({
               data: {
                 ventaId: createdVenta.id,
@@ -880,8 +903,8 @@ export class PrismaVentaRepo implements VentaRepository {
                 precioTajadoBloque: item.precioTajadoBloque ? new Prisma.Decimal(item.precioTajadoBloque.value) : null,
                 origenCorte: item.origenCorte ?? 'ENTERO',
                 origenTajadoGranel: item.origenTajadoGranel ?? null,
-                sueltosEnteroDelta: new Prisma.Decimal(item.sueltosEnteroDelta),
-                sueltosTajadoDelta: new Prisma.Decimal(item.sueltosTajadoDelta),
+                sueltosEnteroDelta: new Prisma.Decimal(editSueltosEnteroDeltas[i] ?? '0'),
+                sueltosTajadoDelta: new Prisma.Decimal(editSueltosTajadoDeltas[i] ?? '0'),
               },
             });
             createdItems.push(createdItem);

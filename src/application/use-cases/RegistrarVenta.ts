@@ -103,8 +103,6 @@ export class RegistrarVenta {
       bloquesTajadosInternosVendidos: number;
       origenCorte?: string;
       origenTajadoGranel?: string;
-      sueltosEnteroDelta?: string;
-      sueltosTajadoDelta?: string;
     }> = [];
     const empaqueDeductions: Array<{ empaqueId: string; quantity: number }> = [];
 
@@ -349,38 +347,7 @@ export class RegistrarVenta {
         costoAplicadoKg = lote.costoRealCalculadoKg.value;
       }
 
-      // 4e. Calculate sueltos deltas for DC GRANEL
-      let sueltosEnteroDelta = '0';
-      let sueltosTajadoDelta = '0';
-      if (lote.producto === TipoProducto.DOBLE_CREMA && ventaTipo === 'GRANEL') {
-        const bloquesOriginales = lote.bloquesEnterosOriginal + lote.bloquesTajadosFabricaOriginal;
-        const pesoPorBloque = bloquesOriginales > 0
-          ? Number(new Dinero(lote.cantidadCompradaKg.value).divide(String(bloquesOriginales)).value)
-          : DOBLE_CREMA_BLOCK_KG;
-        const kgVendidos = Number(itemInput.cantidadKg);
-
-        if (origenCorte === OrigenCorte.ENTERO) {
-          const kgFromSueltos = Math.min(kgVendidos, Number(lote.sueltosEntero.value));
-          const kgFaltantes = Math.round((kgVendidos - kgFromSueltos) * 1000) / 1000;
-          let sobrante = 0;
-          if (kgFaltantes > 0) {
-            const bloquesARomper = Math.ceil(kgFaltantes / pesoPorBloque);
-            sobrante = Math.round((bloquesARomper * pesoPorBloque - kgFaltantes) * 1000) / 1000;
-          }
-          sueltosEnteroDelta = String(Math.round((-kgFromSueltos + sobrante) * 1000) / 1000);
-        } else if (origenCorte === OrigenCorte.TAJADO) {
-          const kgFromSueltos = Math.min(kgVendidos, Number(lote.sueltosTajado.value));
-          const kgFaltantes = Math.round((kgVendidos - kgFromSueltos) * 1000) / 1000;
-          let sobrante = 0;
-          if (kgFaltantes > 0) {
-            const bloquesARomper = Math.ceil(kgFaltantes / pesoPorBloque);
-            sobrante = Math.round((bloquesARomper * pesoPorBloque - kgFaltantes) * 1000) / 1000;
-          }
-          sueltosTajadoDelta = String(Math.round((-kgFromSueltos + sobrante) * 1000) / 1000);
-        }
-      }
-
-      // 4f. Create VentaItem entity
+      // 4e. Create VentaItem entity (sueltos deltas computed inside transaction by repo)
       const ventaItem = new VentaItem({
         loteId: itemInput.loteId,
         ventaTipo,
@@ -399,13 +366,11 @@ export class RegistrarVenta {
         precioTajadoBloque: itemInput.precioTajadoBloque,
         origenCorte: lote.producto === TipoProducto.DOBLE_CREMA && ventaTipo === 'GRANEL' ? origenCorte : undefined,
         origenTajadoGranel: lote.producto === TipoProducto.DOBLE_CREMA && ventaTipo === 'GRANEL' && origenCorte === OrigenCorte.TAJADO ? (itemInput.origenTajadoGranel ?? OrigenTajadoGranel.INTERNO) : undefined,
-        sueltosEnteroDelta,
-        sueltosTajadoDelta,
       });
 
       ventaItems.push(ventaItem);
 
-      // 4f. Prepare lote deduction
+      // 4f. Prepare lote deduction (sueltos deltas computed inside transaction)
       loteDeductions.push({
         loteId: itemInput.loteId,
         cantidadKg: itemInput.cantidadKg,
@@ -417,8 +382,6 @@ export class RegistrarVenta {
         bloquesTajadosInternosVendidos: finalBloquesTajadosInternosVendidos,
         origenCorte: lote.producto === TipoProducto.DOBLE_CREMA && ventaTipo === 'GRANEL' ? origenCorte : undefined,
         origenTajadoGranel: lote.producto === TipoProducto.DOBLE_CREMA && ventaTipo === 'GRANEL' && origenCorte === OrigenCorte.TAJADO ? (itemInput.origenTajadoGranel ?? OrigenTajadoGranel.INTERNO) : undefined,
-        sueltosEnteroDelta,
-        sueltosTajadoDelta,
       });
     }
 
