@@ -391,7 +391,7 @@ export class RegistrarVenta {
       : MetodoPago.EFECTIVO;
 
     // Compute abono default: CREDITO → '0', others → ingresoTotal (fully paid)
-    let abono: string | undefined = input.abono;
+    const abono: string | undefined = input.abono;
     if (!abono && metodoPago !== MetodoPago.CREDITO) {
       // Will default to ingresoTotal inside Venta constructor (needs items computed first)
     }

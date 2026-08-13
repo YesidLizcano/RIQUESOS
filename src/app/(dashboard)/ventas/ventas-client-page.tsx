@@ -22,7 +22,7 @@ import { DeferredMount } from '@/components/deferred-mount';
 import type { VentaResponse, ClienteResponse, LoteResponse, ProveedorResponse } from '@/presentation/dtos';
 import { TipoProducto, MetodoPago } from '@/domain/enums';
 import { tipoProductoLabel, metodoPagoLabel } from '@/domain/labels';
-import { isDobleCrema, formatDobleCremaDetalle, formatDobleCremaGranel } from '@/domain/constants';
+import { isDobleCrema, formatDobleCremaDetalle } from '@/domain/constants';
 import { formatSSKg } from '@/domain/formatters';
 
 const ventaExportMap = [

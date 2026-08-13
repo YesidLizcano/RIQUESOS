@@ -3,7 +3,6 @@ import { prisma } from '../../infrastructure/db';
 import { PrismaVentaRepo } from '../../infrastructure/repositories/PrismaVentaRepo';
 import { Venta } from '../../domain/entities/Venta';
 import { VentaItem } from '../../domain/entities/VentaItem';
-import { ConcurrencyError } from '../../domain/errors/ConcurrencyError';
 
 describe('PrismaVentaRepo — Integration', () => {
   let repo: PrismaVentaRepo;

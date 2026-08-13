@@ -427,7 +427,7 @@ export class EditarVenta {
       ? (input.metodoPago as MetodoPago)
       : MetodoPago.EFECTIVO;
 
-    let abono: string | undefined = input.abono;
+    const abono: string | undefined = input.abono;
     if (!abono && metodoPago !== MetodoPago.CREDITO) {
       // Will default to ingresoTotal inside Venta constructor
     }

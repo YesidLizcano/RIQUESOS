@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import { Venta } from '../../domain/entities/Venta';
 import { VentaItem } from '../../domain/entities/VentaItem';
-import { EstadoLote, TipoProducto, MetodoPago, OrigenCorte, OrigenTajadoGranel } from '../../domain/enums';
+import { EstadoLote, TipoProducto, OrigenCorte, OrigenTajadoGranel } from '../../domain/enums';
 import { DOBLE_CREMA_BLOCK_KG, RECORTES_DC_PERMANENT_LOT_ID } from '../../domain/constants';
 import type { VentaRepository } from '../../domain/ports/VentaRepository';
 import { ConcurrencyError } from '../../domain/errors/ConcurrencyError';
@@ -704,6 +704,23 @@ export class PrismaVentaRepo implements VentaRepository {
           // ============================================
           // PHASE 2: CREATE NEW VENTA
           // ============================================
+
+          // Fix: if the same loteId appears in both reversals and deductions,
+          // the reversal already incremented the version. We must re-read
+          // the updated version for those lotes before applying deductions.
+          const reversedLoteIds = new Set(params.reversals.map((r) => r.loteId));
+          if (reversedLoteIds.size > 0) {
+            const freshLotes = await tx.lote.findMany({
+              where: { id: { in: [...reversedLoteIds] } },
+              select: { id: true, version: true },
+            });
+            const freshVersionMap = new Map(freshLotes.map((l) => [l.id, l.version]));
+            for (const deduction of params.loteDeductions) {
+              if (freshVersionMap.has(deduction.loteId)) {
+                deduction.expectedVersion = freshVersionMap.get(deduction.loteId)!;
+              }
+            }
+          }
 
           // 2a. Apply new lote deductions
           // Track computed sueltos deltas per item (to store on VentaItem)

@@ -5,7 +5,7 @@ import { VentaItem } from '../../domain/entities/VentaItem';
 import { Lote } from '../../domain/entities/Lote';
 import { Cliente } from '../../domain/entities/Cliente';
 import { Empaque } from '../../domain/entities/Empaque';
-import { TipoProducto, TipoCliente, EstadoLote, OrigenCorte, OrigenTajadoGranel, CategoriaInsumo, MetodoPago } from '../../domain/enums';
+import { TipoProducto, TipoCliente, EstadoLote, OrigenCorte, OrigenTajadoGranel, CategoriaInsumo } from '../../domain/enums';
 import { ConcurrencyError } from '../../domain/errors/ConcurrencyError';
 import type { VentaRepository } from '../../domain/ports/VentaRepository';
 import type { LoteRepository } from '../../domain/ports/LoteRepository';

@@ -14,7 +14,6 @@ import { ModificarLote } from '@/application/use-cases/ModificarLote';
 import { MarcarLotePagado } from '@/application/use-cases/MarcarLotePagado';
 import { MarcarFletePagado } from '@/application/use-cases/MarcarFletePagado';
 import { crearLoteSchema, actualizarLoteSchema, crearLotesBatchSchema } from '@/presentation/validations/lote.schema';
-import { eliminarProveedorSchema } from '@/presentation/validations/proveedor.schema';
 import type { CrearLoteRequest, ActualizarLoteRequest, LoteResponse } from '../dtos';
 import { ConcurrencyError } from '@/domain/errors/ConcurrencyError';
 import { MetodoPago, EstadoPagoLote as EstadoPagoLoteEnum } from '@/domain/enums';

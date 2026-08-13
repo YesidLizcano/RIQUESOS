@@ -3,7 +3,7 @@
 import type { TDocumentDefinitions, Content, TableCell } from 'pdfmake/interfaces';
 import { createPdfBuffer, pdfCurrency, pdfDate } from '../pdfmake-config';
 import { createHeader, createFooter, createStyles, reportTableLayout, summaryRow } from './shared';
-import type { DashboardMetricasResponse, DesglosePorProveedorResponse } from '@/presentation/dtos/dashboard.dto';
+import type { DashboardMetricasResponse } from '@/presentation/dtos/dashboard.dto';
 import { isDobleCrema, formatDobleCremaDetalle } from '@/domain/constants';
 import { formatProductName } from '@/domain/formatters';
 import { metodoPagoLabel } from '@/domain/labels';

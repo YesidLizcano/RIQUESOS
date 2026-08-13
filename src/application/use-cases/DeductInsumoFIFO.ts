@@ -39,7 +39,7 @@ export class DeductInsumoFIFO {
       );
     }
 
-    let activeLots = await this.compraRepo.findActiveByEmpaqueId(empaqueId);
+    const activeLots = await this.compraRepo.findActiveByEmpaqueId(empaqueId);
 
     if (activeLots.length === 0 && !empaque.stock.isZero()) {
       // Use current empaque price as fallback (implicit lot)

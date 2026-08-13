@@ -8,7 +8,7 @@ import { decimalSub, formatTajadosBreakdown } from '@/lib/utils';
 import { getPreciosByCliente } from '@/presentation/actions/precios-cliente-proveedor';
 import { toast } from 'sonner';
 import { TipoProducto, TipoCliente } from '@/domain/enums';
-import { MetodoPago, OrigenCorte } from '@/domain/enums';
+import { MetodoPago } from '@/domain/enums';
 import { METODOS_PAGO_ABONO } from '@/domain/constants';
 import { metodoPagoLabel } from '@/domain/labels';
 import { tipoProductoLabel, tipoClienteLabel } from '@/domain/labels';
@@ -2176,7 +2176,7 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
                     const hasEnteroStock = lote.bloquesEnteros > 0 || Number(lote.sueltosEntero) > 0;
                     const hasTajadoInternoStock = lote.bloquesTajados > 0 || Number(lote.sueltosTajado) > 0;
                     const hasTajadoFabricaStock = lote.bloquesTajadosDeFabrica > 0;
-                    const hasTajadoStock = hasTajadoInternoStock || hasTajadoFabricaStock;
+                    const _hasTajadoStock = hasTajadoInternoStock || hasTajadoFabricaStock;
                     const stockEnteroKg = hasEnteroStock ? lote.bloquesEnteros * DOBLE_CREMA_BLOCK_KG + Number(lote.sueltosEntero) : 0;
                     const stockTajadoInternoKg = hasTajadoInternoStock ? lote.bloquesTajados * DOBLE_CREMA_BLOCK_KG + Number(lote.sueltosTajado) : 0;
                     const stockTajadoFabricaKg = hasTajadoFabricaStock ? lote.bloquesTajadosDeFabrica * DOBLE_CREMA_BLOCK_KG : 0;

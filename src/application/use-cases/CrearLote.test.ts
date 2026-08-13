@@ -9,7 +9,6 @@ import type { CompraInsumoRepository } from '../../domain/ports/CompraInsumoRepo
 import { Proveedor } from '../../domain/entities/Proveedor';
 import { Empaque } from '../../domain/entities/Empaque';
 import { CompraInsumo } from '../../domain/entities/CompraInsumo';
-import { Dinero } from '../../domain/value-objects/Dinero';
 import { CategoriaInsumo } from '../../domain/enums';
 
 describe('CrearLote', () => {
