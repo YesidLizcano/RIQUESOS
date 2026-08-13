@@ -14,7 +14,7 @@ import { DeferredMount } from '@/components/deferred-mount';
 import { getLotesByProveedor } from '@/presentation/actions/proveedores';
 import { formatCurrency } from '@/domain/formatters';
 import { tipoProductoLabel, estadoLoteLabel, metodoPagoLabel } from '@/domain/labels';
-import { TipoProducto, EstadoLote, EstadoPagoLote } from '@/domain/enums';
+import { TipoProducto, EstadoLote, EstadoPagoLote, MetodoPago } from '@/domain/enums';
 import { isDobleCrema, bloquesCompletos, DOBLE_CREMA_BLOCK_KG } from '@/domain/constants';
 import type { ProveedorResponse, LoteResponse, LotesByProveedorResponse } from '@/presentation/dtos';
 
@@ -145,7 +145,7 @@ export function HistorialProveedorDialog({ proveedor, open, onOpenChange }: Hist
         const estadoPago = row.getValue('estadoPago') as string;
         const metodoPagoLote = row.original.metodoPagoLote;
         if (estadoPago === EstadoPagoLote.PAGADO) {
-          const label = metodoPagoLabel[metodoPagoLote] ?? metodoPagoLote;
+          const label = metodoPagoLabel[metodoPagoLote as MetodoPago] ?? metodoPagoLote;
           return (
             <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 whitespace-nowrap">
               Pagado ({label})

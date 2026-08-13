@@ -8,6 +8,8 @@ import {
   isDobleCrema,
 } from '@/domain/constants';
 import { formatCurrency, formatProductName, formatSSKg } from '@/domain/formatters';
+import { metodoPagoLabel } from '@/domain/labels';
+import { MetodoPago } from '@/domain/enums';
 
 // ── Style constants (shared with use-export-excel) ──────────────────────────
 
@@ -123,7 +125,7 @@ function buildResumenSheet(wb: Workbook, metricas: DashboardMetricasResponse) {
     { metrica: 'Clientes Activos', valor: p.clientesActivos },
     { metrica: 'Volumen Doble Crema', valor: dcVolume },
     { metrica: 'Volumen Semisalado', valor: ssVolume },
-    { metrica: 'Efectivo', valor: Number(metricas.flujoDinero.efectivo) },
+    { metrica: metodoPagoLabel[MetodoPago.EFECTIVO], valor: Number(metricas.flujoDinero.efectivo) },
     { metrica: 'Bancos / Nequi / Bre-B', valor: Number(metricas.flujoDinero.bancos) },
     { metrica: 'Cuentas por Cobrar', valor: Number(metricas.flujoDinero.cuentasPorCobrar) },
     { metrica: 'Cuentas por Pagar (Tajados)', valor: Number(metricas.cuentasPorPagar.tajadosPendientesPago) },

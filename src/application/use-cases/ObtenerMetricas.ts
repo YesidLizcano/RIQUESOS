@@ -8,7 +8,6 @@ import type { TajadoRepository } from '../../domain/ports/TajadoRepository';
 import type { ClienteRepository } from '../../domain/ports/ClienteRepository';
 import type { VentaItemRepository } from '../../domain/ports/VentaItemRepository';
 import type { ProveedorRepository } from '../../domain/ports/ProveedorRepository';
-import { RECORTES_DC_PERMANENT_LOT_ID } from '../../domain/constants';
 
 export interface MetricasPeriodo {
   ingresoTotal: string;

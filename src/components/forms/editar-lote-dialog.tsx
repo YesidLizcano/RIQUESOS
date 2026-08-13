@@ -4,9 +4,8 @@ import { useState } from 'react';
 import { useRefresh } from '@/components/refresh-context';
 import { modificarLote } from '@/presentation/actions/lotes';
 import { toast } from 'sonner';
-import { DOBLE_CREMA_BLOCK_KG } from '@/domain/constants';
 import { TipoProducto, EstadoPagoLote, MetodoPago } from '@/domain/enums';
-import { tipoProductoLabel, metodoPagoLabel } from '@/domain/labels';
+import { tipoProductoLabel, metodoPagoLabel, estadoPagoLoteLabel } from '@/domain/labels';
 import { useLoteCostCalculator } from '@/hooks/use-lote-cost-calculator';
 import type { LoteResponse } from '@/presentation/dtos';
 import {
@@ -231,7 +230,7 @@ export function EditarLoteDialog({ lote, open, onOpenChange, proveedorNombre }: 
               <Label htmlFor="edit-estadoPago">Estado de pago</Label>
               <Select name="estadoPago" value={estadoPago} onValueChange={(v) => { if (v) { setEstadoPago(v); if (v !== 'PAGADO') setMetodoPagoLote(MetodoPago.EFECTIVO); } }}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Seleccione estado de pago">{estadoPago === EstadoPagoLote.PAGADO ? 'Pagado' : 'Pendiente'}</SelectValue>
+                  <SelectValue placeholder="Seleccione estado de pago">{estadoPagoLoteLabel[estadoPago as EstadoPagoLote] ?? estadoPago}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={EstadoPagoLote.PENDIENTE}>Pendiente</SelectItem>
@@ -244,7 +243,7 @@ export function EditarLoteDialog({ lote, open, onOpenChange, proveedorNombre }: 
                  <Label htmlFor="edit-metodoPagoLote">Método de pago</Label>
                  <Select name="metodoPagoLote" value={metodoPagoLote} onValueChange={(v) => v && setMetodoPagoLote(v)}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar método">{metodoPagoLabel[metodoPagoLote] ?? metodoPagoLote}</SelectValue>
+                       <SelectValue placeholder="Seleccionar método">{metodoPagoLabel[metodoPagoLote as MetodoPago] ?? metodoPagoLote}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                        <SelectItem value={MetodoPago.EFECTIVO}>Efectivo</SelectItem>

@@ -7,16 +7,12 @@ import { createHeader, createFooter, createStyles, reportTableLayout, summaryRow
 import type { VentaResponse, VentaItemResponse } from '@/presentation/dtos/venta.dto';
 import { isDobleCrema, formatDobleCremaGranel } from '@/domain/constants';
 import { formatProductName } from '@/domain/formatters';
+import { metodoPagoLabel } from '@/domain/labels';
+import { MetodoPago } from '@/domain/enums';
 
 /** Map metodoPago enum to display label */
-function metodoPagoLabel(metodo: string): string {
-  const labels: Record<string, string> = {
-    EFECTIVO: 'Efectivo',
-    NEQUI: 'Nequi',
-    BRE_B: 'Bre-B',
-    CREDITO: 'Crédito',
-  };
-  return labels[metodo] ?? metodo;
+function metodoPagoDisplay(metodo: string): string {
+  return metodoPagoLabel[metodo as MetodoPago] ?? metodo;
 }
 
 /** Extract just the date portion from an ISO datetime */
@@ -114,7 +110,7 @@ export async function generateVentasPeriodoPdf(
         { text: pdfDate(extractDate(v.fecha)), style: 'tableCell' },
         { text: v.clienteNombre ?? (v.clienteId ? v.clienteId : 'Ocasional'), style: 'tableCell' },
         { text: v.sedeNombre ?? '—', style: 'tableCell' },
-        { text: metodoPagoLabel(v.metodoPago), style: 'tableCell' },
+        { text: metodoPagoDisplay(v.metodoPago), style: 'tableCell' },
         { text: detalle, style: 'tableCell', fontSize: 8 },
         { text: pdfCurrency(ingreso.toString()), style: 'currency' },
         { text: pdfCurrency(ganancia.toString()), style: 'currency' },
@@ -151,7 +147,7 @@ export async function generateVentasPeriodoPdf(
     // Group by metodoPago
     const byMetodo = new Map<string, { count: number; ingreso: Prisma.Decimal; ganancia: Prisma.Decimal }>();
     for (const v of ventas) {
-      const label = metodoPagoLabel(v.metodoPago);
+      const label = metodoPagoDisplay(v.metodoPago);
       const existing = byMetodo.get(label) ?? { count: 0, ingreso: new Prisma.Decimal(0), ganancia: new Prisma.Decimal(0) };
       existing.count += 1;
       existing.ingreso = existing.ingreso.add(new Prisma.Decimal(v.ingresoTotal));

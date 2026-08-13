@@ -10,7 +10,7 @@ import { tipoClienteLabel } from '@/domain/labels';
 import { History } from 'lucide-react';
 
 export function createClienteColumns(
-  showDeleted?: boolean,
+  _showDeleted?: boolean,
   onViewHistory?: (cliente: ClienteResponse) => void,
 ): ColumnDef<ClienteResponse, unknown>[] {
   return [

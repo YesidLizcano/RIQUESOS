@@ -20,24 +20,17 @@ import { VistaPreviaExcelDialog } from '@/components/dialogs/vista-previa-excel-
 import { RefreshContext } from '@/components/refresh-context';
 import { DeferredMount } from '@/components/deferred-mount';
 import type { VentaResponse, ClienteResponse, LoteResponse, ProveedorResponse } from '@/presentation/dtos';
-import { TipoProducto } from '@/domain/enums';
+import { TipoProducto, MetodoPago } from '@/domain/enums';
+import { tipoProductoLabel, metodoPagoLabel } from '@/domain/labels';
 import { isDobleCrema, formatDobleCremaDetalle, formatDobleCremaGranel } from '@/domain/constants';
 import { formatSSKg } from '@/domain/formatters';
-
-const PRODUCTO_LABELS: Record<string, string> = {
-  DOBLE_CREMA: 'Doble Crema',
-  SEMISALADO: 'Semisalado',
-};
 
 const ventaExportMap = [
   { key: 'fecha', header: 'Fecha', type: 'date' as ColumnType },
   { key: 'clienteNombre', header: 'Cliente' },
   { key: 'sedeNombre', header: 'Sede' },
   { key: 'domiciliario', header: 'Domiciliario' },
-  { key: 'metodoPago', header: 'Método de Pago', format: (v: unknown) => {
-    const labels: Record<string, string> = { EFECTIVO: 'Efectivo', NEQUI: 'Nequi', BRE_B: 'Bre-B', CREDITO: 'Crédito' };
-    return labels[String(v)] ?? String(v);
-  }},
+  { key: 'metodoPago', header: 'Método de Pago', format: (v: unknown) => metodoPagoLabel[v as MetodoPago] ?? String(v) },
   { key: 'cantidadTotalKg', header: 'Cantidad', format: (_v: unknown, row: unknown) => {
     const venta = row as VentaResponse;
     const items = venta.items ?? [];
@@ -130,15 +123,15 @@ interface VentasClientPageProps {
 }
 
 const productoFilterOptions = [
-  { label: 'Doble Crema', value: TipoProducto.DOBLE_CREMA },
-  { label: 'Semisalado', value: TipoProducto.SEMISALADO },
+  { label: tipoProductoLabel[TipoProducto.DOBLE_CREMA], value: TipoProducto.DOBLE_CREMA },
+  { label: tipoProductoLabel[TipoProducto.SEMISALADO], value: TipoProducto.SEMISALADO },
 ];
 
 const metodoPagoFilterOptions = [
-  { label: 'Efectivo', value: 'EFECTIVO' },
-  { label: 'Nequi', value: 'NEQUI' },
-  { label: 'Bre-B', value: 'BRE_B' },
-  { label: 'Crédito', value: 'CREDITO' },
+  { label: metodoPagoLabel[MetodoPago.EFECTIVO], value: MetodoPago.EFECTIVO },
+  { label: metodoPagoLabel[MetodoPago.NEQUI], value: MetodoPago.NEQUI },
+  { label: metodoPagoLabel[MetodoPago.BRE_B], value: MetodoPago.BRE_B },
+  { label: metodoPagoLabel[MetodoPago.CREDITO], value: MetodoPago.CREDITO },
 ];
 
 function formatDisplayDate(isoDate: string): string {

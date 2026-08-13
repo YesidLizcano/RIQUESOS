@@ -15,15 +15,11 @@ import { RefreshContext } from '@/components/refresh-context';
 import { DeferredMount } from '@/components/deferred-mount';
 import type { ClienteResponse } from '@/presentation/dtos';
 import { TipoCliente } from '@/domain/enums';
-
-const TIPO_LABELS: Record<string, string> = {
-  MAYORISTA: 'Mayorista',
-  MINORISTA: 'Minorista',
-};
+import { tipoClienteLabel } from '@/domain/labels';
 
 const clienteExportMap = [
   { key: 'nombre', header: 'Nombre' },
-  { key: 'tipo', header: 'Tipo', format: (v: unknown) => TIPO_LABELS[String(v)] ?? String(v) },
+  { key: 'tipo', header: 'Tipo', format: (v: unknown) => tipoClienteLabel[v as TipoCliente] ?? String(v) },
   { key: 'precioDobleCrema', header: 'Precio Doble Crema', type: 'currency' as ColumnType },
   { key: 'precioSemisalado', header: 'Precio Semisalado', type: 'currency' as ColumnType },
 ];
@@ -33,8 +29,8 @@ interface ClientesClientPageProps {
 }
 
 const tipoFilterOptions = [
-  { label: 'Mayorista', value: TipoCliente.MAYORISTA },
-  { label: 'Minorista', value: TipoCliente.MINORISTA },
+  { label: tipoClienteLabel[TipoCliente.MAYORISTA], value: TipoCliente.MAYORISTA },
+  { label: tipoClienteLabel[TipoCliente.MINORISTA], value: TipoCliente.MINORISTA },
 ];
 
 export function ClientesClientPage({ clientes }: ClientesClientPageProps) {

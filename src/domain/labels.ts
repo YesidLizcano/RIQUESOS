@@ -1,6 +1,6 @@
 // Human-readable labels for domain enums — single source of truth for UI display
 
-import { TipoProducto, TipoCliente, EstadoLote, RolUsuario, CategoriaInsumo, MetodoPago, OrigenCorte } from './enums';
+import { TipoProducto, TipoCliente, EstadoLote, RolUsuario, CategoriaInsumo, MetodoPago, OrigenCorte, EstadoPagoLote, EstadoPagoTajado, OrigenTajadoGranel } from './enums';
 
 export const tipoProductoLabel: Record<TipoProducto, string> = {
   [TipoProducto.DOBLE_CREMA]: 'Doble Crema',
@@ -27,14 +27,29 @@ export const categoriaInsumoLabel: Record<CategoriaInsumo, string> = {
   [CategoriaInsumo.SEPARADOR]: 'Separador',
 };
 
-export const metodoPagoLabel: Record<string, string> = {
+export const metodoPagoLabel: Record<MetodoPago, string> = {
   [MetodoPago.EFECTIVO]: 'Efectivo',
   [MetodoPago.NEQUI]: 'Nequi',
   [MetodoPago.BRE_B]: 'Bre-B',
   [MetodoPago.CREDITO]: 'Crédito',
 };
 
-export const origenCorteLabel: Record<string, string> = {
+export const origenCorteLabel: Record<OrigenCorte, string> = {
   [OrigenCorte.ENTERO]: 'Entero',
   [OrigenCorte.TAJADO]: 'Tajado',
+};
+
+export const estadoPagoLoteLabel: Record<EstadoPagoLote, string> = {
+  [EstadoPagoLote.PENDIENTE]: 'Pendiente',
+  [EstadoPagoLote.PAGADO]: 'Pagado',
+};
+
+export const estadoPagoTajadoLabel: Record<EstadoPagoTajado, string> = {
+  PENDIENTE: 'Pendiente',
+  PAGADO: 'Pagado',
+};
+
+export const origenTajadoGranelLabel: Record<OrigenTajadoGranel, string> = {
+  [OrigenTajadoGranel.INTERNO]: 'Interno',
+  [OrigenTajadoGranel.FABRICA]: 'Fábrica',
 };

@@ -3,9 +3,11 @@
 import type { TDocumentDefinitions, Content, TableCell } from 'pdfmake/interfaces';
 import { createPdfBuffer, pdfCurrency, pdfDate } from '../pdfmake-config';
 import { createHeader, createFooter, createStyles, reportTableLayout, summaryRow } from './shared';
-import type { DashboardMetricasResponse, DesglosePorProductoResponse, DesglosePorProveedorResponse } from '@/presentation/dtos/dashboard.dto';
+import type { DashboardMetricasResponse, DesglosePorProveedorResponse } from '@/presentation/dtos/dashboard.dto';
 import { isDobleCrema, formatDobleCremaDetalle } from '@/domain/constants';
 import { formatProductName } from '@/domain/formatters';
+import { metodoPagoLabel } from '@/domain/labels';
+import { MetodoPago } from '@/domain/enums';
 
 /** Format DC quantity with variety separation, or just kg for non-DC products */
 function formatCantidad(args: {
@@ -186,7 +188,7 @@ export async function generateResultadosPdf(
       { text: 'Monto', style: 'tableHeader', alignment: 'right' },
     ],
     [
-      { text: 'Efectivo' },
+      { text: metodoPagoLabel[MetodoPago.EFECTIVO] },
       { text: safeCurrency(metricas.flujoDinero.efectivo), alignment: 'right' },
     ],
     [

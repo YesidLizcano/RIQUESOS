@@ -1,7 +1,6 @@
 // Use Case: EliminarVenta — atomic deletion with stock reversal
 // Application layer: can import from Domain but NOT from Infrastructure
 import { CategoriaInsumo } from '../../domain/enums';
-import { ConcurrencyError } from '../../domain/errors/ConcurrencyError';
 import type { VentaRepository } from '../../domain/ports/VentaRepository';
 import type { LoteRepository } from '../../domain/ports/LoteRepository';
 import type { EmpaqueRepository } from '../../domain/ports/EmpaqueRepository';

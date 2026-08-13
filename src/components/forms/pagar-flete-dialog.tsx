@@ -21,7 +21,7 @@ import { pagarFlete } from '@/presentation/actions/lotes';
 import { toast } from 'sonner';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { tipoProductoLabel, metodoPagoLabel } from '@/domain/labels';
-import { TipoProducto } from '@/domain/enums';
+import { TipoProducto, MetodoPago } from '@/domain/enums';
 import { LOTE_METODOS_PAGO } from '@/presentation/validations/lote.schema';
 
 type Step = 'form' | 'confirm';
@@ -43,7 +43,7 @@ export function PagarFleteDialog({ loteId, producto, proveedorNombre, estadoPago
 
   const yaPagado = estadoPagoFlete === 'PAGADO';
 
-  const metodoLabel = metodoPagoLabel[metodoPago] ?? metodoPago;
+  const metodoLabel = metodoPagoLabel[metodoPago as MetodoPago] ?? metodoPago;
 
   async function handlePagar() {
     setLoading(true);

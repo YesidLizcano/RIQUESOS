@@ -5,6 +5,7 @@ import { useRefresh } from '@/components/refresh-context';
 import { eliminarVenta, getVentaDetalle } from '@/presentation/actions/ventas';
 import { isDobleCrema, formatDobleCremaGranel } from '@/domain/constants';
 import { metodoPagoLabel } from '@/domain/labels';
+import { MetodoPago } from '@/domain/enums';
 import { ProductoBadge } from '@/components/producto-badge';
 import { usePdfDownload } from '@/hooks/use-pdf-download';
 import type { VentaResponse, ClienteResponse, LoteResponse } from '@/presentation/dtos';
@@ -180,7 +181,7 @@ const displayData = detalle ?? venta;
                   displayData.metodoPago === 'CREDITO' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
                   'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                 }`}>
-                  {metodoPagoLabel[displayData.metodoPago] ?? displayData.metodoPago}{displayData.metodoPago === 'CREDITO' ? ' (Fiado)' : ''}
+                  {metodoPagoLabel[displayData.metodoPago as MetodoPago] ?? displayData.metodoPago}{displayData.metodoPago === 'CREDITO' ? ' (Fiado)' : ''}
                 </span>
               </p>
               {saldoPositivo && (
@@ -210,7 +211,7 @@ const displayData = detalle ?? venta;
                     const producto = item.loteProducto ?? loteProductoMap.get(item.loteId) ?? '';
                     const proveedor = item.loteProveedorNombre ?? loteProveedorNombreMap.get(item.loteId) ?? '';
                     const loteLabel = [proveedor].filter(Boolean).join(' — ');
-                    const lote = loteMap?.get(item.loteId);
+                    const _lote = loteMap?.get(item.loteId);
                     const isDcBloques = item.ventaTipo === 'BLOQUES' && isDobleCrema(producto);
 
                     if (isDcBloques) {
@@ -344,7 +345,7 @@ const displayData = detalle ?? venta;
                             {formatCurrency(abono.monto)}
                           </TableCell>
                           <TableCell className="py-1.5 text-xs">
-                            {metodoPagoLabel[abono.metodoPago] ?? abono.metodoPago}
+                            {metodoPagoLabel[abono.metodoPago as MetodoPago] ?? abono.metodoPago}
                           </TableCell>
                           <TableCell className="py-1.5 text-xs text-muted-foreground">
                             {abono.observacion || '—'}

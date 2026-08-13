@@ -1,6 +1,6 @@
 // Use Case: GestionarProveedores — CRUD for Proveedor
 // Application layer: can import from Domain but NOT from Infrastructure
-import { Proveedor, type ProveedorProps } from '../../domain/entities/Proveedor';
+import { Proveedor } from '../../domain/entities/Proveedor';
 import type { ProveedorRepository } from '../../domain/ports/ProveedorRepository';
 
 export interface CrearProveedorInput {

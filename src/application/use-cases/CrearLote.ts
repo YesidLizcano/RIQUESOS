@@ -1,8 +1,8 @@
 // Use Case: CrearLote — create with cost calculation, block support for Doble Crema
 // Application layer: can import from Domain but NOT from Infrastructure
 import { Lote, type LoteProps } from '../../domain/entities/Lote';
-import { EstadoLote, TipoProducto, EstadoPagoLote, MetodoPago, CategoriaInsumo } from '../../domain/enums';
-import { DOBLE_CREMA_BLOCK_KG, RECORTES_DC_PERMANENT_LOT_ID } from '../../domain/constants';
+import { TipoProducto, EstadoPagoLote, MetodoPago, CategoriaInsumo } from '../../domain/enums';
+import { DOBLE_CREMA_BLOCK_KG } from '../../domain/constants';
 import { Dinero } from '../../domain/value-objects/Dinero';
 import type { LoteRepository } from '../../domain/ports/LoteRepository';
 import type { ProveedorRepository } from '../../domain/ports/ProveedorRepository';

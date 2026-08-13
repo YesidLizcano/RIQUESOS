@@ -14,19 +14,14 @@ import { PagarLoteDialog } from '@/components/forms/pagar-lote-dialog';
 import { ProductoBadge } from '@/components/producto-badge';
 import { Loader2, Wallet } from 'lucide-react';
 import { formatCurrency } from '@/domain/formatters';
-import { tipoProductoLabel } from '@/domain/labels';
-import { TipoProducto, EstadoPagoLote } from '@/domain/enums';
+import { estadoPagoLoteLabel } from '@/domain/labels';
+import { EstadoPagoLote } from '@/domain/enums';
 import type { CuentasPorPagarDetalleListResponse } from '@/presentation/dtos';
 
 interface CuentasPorPagarDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-const ESTADO_PAGO_LABELS: Record<string, string> = {
-  PENDIENTE: 'Pendiente',
-  PAGADO: 'Pagado',
-};
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr);
@@ -146,7 +141,7 @@ export function CuentasPorPagarDialog({ open, onOpenChange }: CuentasPorPagarDia
                                   ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
                                   : 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
                               }`}>
-                                {ESTADO_PAGO_LABELS[lote.estadoPago] ?? lote.estadoPago}
+                                {estadoPagoLoteLabel[lote.estadoPago as EstadoPagoLote] ?? lote.estadoPago}
                               </span>
                             </td>
                             <td className="px-3 py-2 text-center">

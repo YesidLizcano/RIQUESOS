@@ -41,6 +41,8 @@ import {
 } from 'recharts';
 import { useRouter } from 'next/navigation';
 
+import { MetodoPago, TipoProducto } from '@/domain/enums';
+import { metodoPagoLabel, tipoProductoLabel } from '@/domain/labels';
 import { formatCurrency, formatSSKg } from '@/domain/formatters';
 import { formatDobleCremaDetalle } from '@/domain/constants';
 
@@ -60,8 +62,8 @@ const DAILY_SALES_CONFIG: ChartConfig = {
 };
 
 const INVENTARIO_TIPO_CONFIG: ChartConfig = {
-  DOBLE_CREMA: { label: 'Doble Crema', theme: { light: '#8b5cf6', dark: '#a78bfa' } },
-  SEMISALADO: { label: 'Semisalado', theme: { light: '#f59e0b', dark: '#fbbf24' } },
+  DOBLE_CREMA: { label: tipoProductoLabel[TipoProducto.DOBLE_CREMA], theme: { light: '#8b5cf6', dark: '#a78bfa' } },
+  SEMISALADO: { label: tipoProductoLabel[TipoProducto.SEMISALADO], theme: { light: '#f59e0b', dark: '#fbbf24' } },
 };
 
 // --- Empty state component ---
@@ -388,7 +390,7 @@ export function DashboardClientPage({ initialMetricas, initialInicio, initialFin
         <h2 className="text-lg font-semibold tracking-tight">Liquidez</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <MetricCard
-            title="Efectivo"
+            title={metodoPagoLabel[MetodoPago.EFECTIVO]}
             value={`$${Number(metricas.flujoDinero.efectivo).toLocaleString('es-AR')}`}
             description="cobros en efectivo"
             icon={<Banknote className="size-4 text-green-600" />}
@@ -557,7 +559,7 @@ export function DashboardClientPage({ initialMetricas, initialInicio, initialFin
                    const lotesDisplay = `${it.lotes} ${it.lotes === 1 ? 'lote' : 'lotes'}`;
                    return (
                      <div key={it.tipo} className="flex items-center justify-between w-full">
-                       <span>{isDC ? 'Doble Crema' : 'Semisalado'}</span>
+                        <span>{isDC ? tipoProductoLabel[TipoProducto.DOBLE_CREMA] : tipoProductoLabel[TipoProducto.SEMISALADO]}</span>
                       <span className="font-medium">
                         {detail} · {lotesDisplay}
                       </span>

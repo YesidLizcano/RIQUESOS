@@ -7,14 +7,14 @@ import { EditarLoteDialog } from '@/components/forms/editar-lote-dialog';
 import { EntityActions } from '@/components/entity-actions';
 import { eliminarLote, restaurarLote } from '@/presentation/actions/lotes';
 import { ProductoBadge } from '@/components/producto-badge';
-import { bloquesCompletos, isDobleCrema, DOBLE_CREMA_BLOCK_KG, formatDobleCremaStockLabel, formatDobleCremaPurchasedLabel } from '@/domain/constants';
-import { TipoProducto, EstadoLote, EstadoPagoLote } from '@/domain/enums';
+import { isDobleCrema, DOBLE_CREMA_BLOCK_KG, formatDobleCremaStockLabel, formatDobleCremaPurchasedLabel } from '@/domain/constants';
+import { TipoProducto, EstadoLote, EstadoPagoLote, MetodoPago } from '@/domain/enums';
 import { tipoProductoLabel, estadoLoteLabel, metodoPagoLabel } from '@/domain/labels';
 import { ArchiveIcon } from 'lucide-react';
 
 export function createLoteColumns(
   proveedorMap?: Map<string, string>,
-  showDeleted?: boolean,
+  _showDeleted?: boolean,
   onPagar?: (lote: LoteResponse) => void,
   onPagarFlete?: (lote: LoteResponse) => void,
   onCerrar?: (lote: LoteResponse) => void,
@@ -274,7 +274,7 @@ export function createLoteColumns(
         const estadoPago = row.getValue('estadoPago') as string;
         const metodoPagoLote = row.original.metodoPagoLote;
         if (estadoPago === EstadoPagoLote.PAGADO) {
-          const label = metodoPagoLabel[metodoPagoLote] ?? metodoPagoLote;
+          const label = metodoPagoLabel[metodoPagoLote as MetodoPago] ?? metodoPagoLote;
           return (
             <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 whitespace-nowrap">
               Pagado ({label})
@@ -307,7 +307,7 @@ export function createLoteColumns(
         const estadoPagoFlete = row.original.estadoPagoFlete;
         const metodoPagoFlete = row.original.metodoPagoFlete;
         if (estadoPagoFlete === EstadoPagoLote.PAGADO) {
-          const label = metodoPagoLabel[metodoPagoFlete] ?? metodoPagoFlete;
+          const label = metodoPagoLabel[metodoPagoFlete as MetodoPago] ?? metodoPagoFlete;
           return (
             <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 whitespace-nowrap">
               Pagado ({label})

@@ -6,16 +6,12 @@ import { createPdfBuffer, pdfCurrency, pdfDate } from '../pdfmake-config';
 import { createFooter, createStyles, reportTableLayout } from './shared';
 import { isDobleCrema, formatDobleCremaGranel } from '@/domain/constants';
 import { formatProductName } from '@/domain/formatters';
+import { metodoPagoLabel } from '@/domain/labels';
+import { MetodoPago } from '@/domain/enums';
 import type { VentaResponse, VentaItemResponse } from '@/presentation/dtos/venta.dto';
 
-function metodoPagoLabel(metodo: string): string {
-  const labels: Record<string, string> = {
-    EFECTIVO: 'Efectivo',
-    NEQUI: 'Nequi',
-    BRE_B: 'Bre-B',
-    CREDITO: 'Crédito',
-  };
-  return labels[metodo] ?? metodo;
+function metodoPagoDisplay(metodo: string): string {
+  return metodoPagoLabel[metodo as MetodoPago] ?? metodo;
 }
 
 function extractDate(isoDateTime: string): string {
@@ -157,7 +153,7 @@ function generateReciboPdf(venta: VentaResponse, tipo: ReciboTipo, sedeNombre?: 
   // ─── Info section ───
   const clienteNombre = venta.clienteNombre ?? (venta.clienteId ? '—' : 'Ocasional');
   const fechaStr = pdfDate(extractDate(venta.fecha));
-  const metodoStr = metodoPagoLabel(venta.metodoPago) + (venta.metodoPago === 'CREDITO' ? ' (Fiado)' : '');
+  const metodoStr = metodoPagoDisplay(venta.metodoPago) + (venta.metodoPago === 'CREDITO' ? ' (Fiado)' : '');
 
   const infoRows: TableCell[][] = [
     [

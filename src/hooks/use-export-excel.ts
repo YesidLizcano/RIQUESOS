@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import type { Table } from '@tanstack/react-table';
-import type { Column, Worksheet, Workbook } from 'exceljs';
+import type { Worksheet, Workbook } from 'exceljs';
 
 export type ColumnType = 'text' | 'currency' | 'decimal' | 'date' | 'percentage';
 
@@ -162,7 +162,7 @@ function styleDataRows(
 
 /** Add a Totals row with SUM formulas for numeric columns. */
 function addTotalsRow(
-  wb: Workbook,
+  _wb: Workbook,
   ws: Worksheet,
   dataStartRow: number,
   dataEndRow: number,

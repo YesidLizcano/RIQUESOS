@@ -1,7 +1,6 @@
 // Use Case: AutenticarUsuario — verify credentials, return session user
 // Application layer: can import from Domain but NOT from Infrastructure
 import type { UsuarioRepository } from '../../domain/ports/UsuarioRepository';
-import { Usuario } from '../../domain/entities/Usuario';
 
 export interface AuthResult {
   success: boolean;

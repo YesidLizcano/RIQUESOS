@@ -8,7 +8,7 @@ import { EntityActions } from '@/components/entity-actions';
 import { eliminarEmpaque, restaurarEmpaque } from '@/presentation/actions/empaques';
 import { categoriaInsumoLabel } from '@/domain/labels';
 
-export function createEmpaqueColumns(showDeleted?: boolean): ColumnDef<EmpaqueResponse, unknown>[] {
+export function createEmpaqueColumns(_showDeleted?: boolean): ColumnDef<EmpaqueResponse, unknown>[] {
   return [
     {
       accessorKey: 'categoria',

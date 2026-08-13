@@ -1,14 +1,14 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import type { VentaResponse, VentaItemResponse, AbonoMetodoPagoBreakdown } from '@/presentation/dtos';
+import type { VentaResponse, VentaItemResponse } from '@/presentation/dtos';
 import { isDobleCrema, formatDobleCremaGranel } from '@/domain/constants';
 import { metodoPagoLabel } from '@/domain/labels';
+import { MetodoPago } from '@/domain/enums';
 import { formatCurrency } from '@/domain/formatters';
 import { ProductoBadge } from '@/components/producto-badge';
 import { Button } from '@/components/ui/button';
 import { CreditCard } from 'lucide-react';
-import { decimalSub } from '@/lib/utils';
 
 /** Format a single item for display */
 function formatItemSummary(item: VentaItemResponse, producto: string): string {
@@ -189,7 +189,7 @@ export function createVentaColumns(
         const mp = venta.metodoPago ?? 'EFECTIVO';
         const saldo = venta.saldo ?? '0';
         const saldoPositivo = !saldo.startsWith('-') && saldo !== '0' && saldo !== '0.00';
-        const label = metodoPagoLabel[mp] ?? mp;
+        const label = metodoPagoLabel[mp as MetodoPago] ?? mp;
         const colorClass = mp === 'EFECTIVO' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : mp === 'CREDITO' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
         const isSaldado = mp === 'CREDITO' && !saldoPositivo;
 
@@ -205,12 +205,12 @@ export function createVentaColumns(
             const filterMethods = String(metodoPagoFilter).split(',');
             const matchingBreakdown = breakdown.filter(b => filterMethods.includes(b.metodoPago));
             badges = matchingBreakdown.map(b => ({
-              label: `${metodoPagoLabel[b.metodoPago] ?? b.metodoPago} ${b.porcentaje}%`,
+              label: `${metodoPagoLabel[b.metodoPago as MetodoPago] ?? b.metodoPago} ${b.porcentaje}%`,
               detail: `${formatCurrency(b.monto)}`,
             }));
           } else {
             badges = breakdown.map(b => ({
-              label: `${metodoPagoLabel[b.metodoPago] ?? b.metodoPago} ${b.porcentaje}%`,
+              label: `${metodoPagoLabel[b.metodoPago as MetodoPago] ?? b.metodoPago} ${b.porcentaje}%`,
             }));
           }
         }

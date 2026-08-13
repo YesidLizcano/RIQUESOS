@@ -16,7 +16,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Loader2, ArchiveIcon } from 'lucide-react';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 
 interface CerrarLoteDialogProps {
   lote: LoteResponse;

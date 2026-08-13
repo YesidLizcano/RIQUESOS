@@ -192,7 +192,7 @@ export function AbonoPagoDialog({ ventaId, ingresoTotal, abonoActual, clienteNom
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{formatCurrency(Number(abono.monto))}</span>
                     <span className="text-xs text-muted-foreground">
-                      {metodoPagoLabels[abono.metodoPago] || abono.metodoPago}
+                      {metodoPagoLabels[abono.metodoPago as MetodoPago] || abono.metodoPago}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -233,7 +233,7 @@ export function AbonoPagoDialog({ ventaId, ingresoTotal, abonoActual, clienteNom
               <Label>Método de Pago</Label>
               <Select value={metodoPago} onValueChange={(v) => { if (v !== null) setMetodoPago(v); }}>
                 <SelectTrigger>
-                  <SelectValue>{metodoPagoLabels[metodoPago] ?? metodoPago}</SelectValue>
+                  <SelectValue>{metodoPagoLabels[metodoPago as MetodoPago] ?? metodoPago}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(metodoPagoLabels)

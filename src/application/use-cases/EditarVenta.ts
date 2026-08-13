@@ -5,7 +5,7 @@ import { VentaItem } from '../../domain/entities/VentaItem';
 import { Lote } from '../../domain/entities/Lote';
 import { Dinero } from '../../domain/value-objects/Dinero';
 import { Kilogramo } from '../../domain/value-objects/Kilogramo';
-import { TipoProducto, TipoCliente, CategoriaInsumo, MetodoPago, OrigenCorte, OrigenTajadoGranel, type MetodoPagoAbono } from '../../domain/enums';
+import { TipoProducto, TipoCliente, CategoriaInsumo, MetodoPago, OrigenCorte, OrigenTajadoGranel } from '../../domain/enums';
 import { DOBLE_CREMA_BLOCK_KG, METODOS_PAGO_ABONO } from '../../domain/constants';
 import { PrecioClienteProveedor } from '../../domain/entities/PrecioClienteProveedor';
 import { Cliente } from '../../domain/entities/Cliente';
@@ -58,7 +58,7 @@ export class EditarVenta {
     if (!oldResult) {
       throw new Error(`Venta not found: ${input.ventaId}`);
     }
-    const { venta: oldVenta, items: oldItems } = oldResult;
+    const { items: oldItems } = oldResult;
 
     // ==================================================
     // PHASE 1: Prepare reversals from old venta items

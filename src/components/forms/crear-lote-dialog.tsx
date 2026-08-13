@@ -6,7 +6,7 @@ import { crearLotes } from '@/presentation/actions/lotes';
 import { getEmpaques } from '@/presentation/actions/empaques';
 import { toast } from 'sonner';
 import { TipoProducto, EstadoPagoLote, MetodoPago } from '@/domain/enums';
-import { tipoProductoLabel, metodoPagoLabel } from '@/domain/labels';
+import { tipoProductoLabel, metodoPagoLabel, estadoPagoLoteLabel } from '@/domain/labels';
 import { DOBLE_CREMA_BLOCK_KG, isDobleCrema } from '@/domain/constants';
 import type { ProveedorResponse } from '@/presentation/dtos';
 import {
@@ -80,7 +80,6 @@ function calcDCPreview(item: LoteItem, proratedFlete: number) {
   const totalBloques = enteros + tajados;
   const precioEntero = parseFloat(item.precioPorBloqueEntero) || 0;
   const precioTajado = parseFloat(item.precioPorBloqueTajado) || precioEntero;
-  const cantidadKg = totalBloques * DOBLE_CREMA_BLOCK_KG;
 
   if (totalBloques === 0 || precioEntero === 0) return null;
 
@@ -333,7 +332,7 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
             <Label htmlFor="estadoPago">Estado de pago</Label>
             <Select value={estadoPago} onValueChange={(v) => { if (v) { setEstadoPago(v); if (v !== 'PAGADO') setMetodoPagoLote(MetodoPago.EFECTIVO); } }}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Seleccione estado de pago">{estadoPago === EstadoPagoLote.PAGADO ? 'Pagado' : 'Pendiente'}</SelectValue>
+                <SelectValue placeholder="Seleccione estado de pago">{estadoPagoLoteLabel[estadoPago as EstadoPagoLote] ?? estadoPago}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={EstadoPagoLote.PENDIENTE}>Pendiente</SelectItem>
@@ -345,7 +344,7 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
                 <Label htmlFor="metodoPagoLote" className="mt-2">Método de pago</Label>
                 <Select value={metodoPagoLote} onValueChange={(v) => v && setMetodoPagoLote(v)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar método">{metodoPagoLabel[metodoPagoLote] ?? metodoPagoLote}</SelectValue>
+                    <SelectValue placeholder="Seleccionar método">{metodoPagoLabel[metodoPagoLote as MetodoPago] ?? metodoPagoLote}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={MetodoPago.EFECTIVO}>Efectivo</SelectItem>
@@ -361,7 +360,7 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
             <Label htmlFor="estadoPagoFlete">Estado de pago del flete</Label>
             <Select value={estadoPagoFlete} onValueChange={(v) => { if (v) { setEstadoPagoFlete(v); if (v !== 'PAGADO') setMetodoPagoFlete(MetodoPago.EFECTIVO); } }}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Seleccione estado de pago del flete">{estadoPagoFlete === EstadoPagoLote.PAGADO ? 'Pagado' : 'Pendiente'}</SelectValue>
+                <SelectValue placeholder="Seleccione estado de pago del flete">{estadoPagoLoteLabel[estadoPagoFlete as EstadoPagoLote] ?? estadoPagoFlete}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={EstadoPagoLote.PENDIENTE}>Pendiente</SelectItem>
@@ -373,7 +372,7 @@ export function CrearLoteDialog({ proveedores }: CrearLoteDialogProps) {
                 <Label htmlFor="metodoPagoFlete" className="mt-2">Método de pago del flete</Label>
                 <Select value={metodoPagoFlete} onValueChange={(v) => v && setMetodoPagoFlete(v)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar método">{metodoPagoLabel[metodoPagoFlete] ?? metodoPagoFlete}</SelectValue>
+                    <SelectValue placeholder="Seleccionar método">{metodoPagoLabel[metodoPagoFlete as MetodoPago] ?? metodoPagoFlete}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={MetodoPago.EFECTIVO}>Efectivo</SelectItem>

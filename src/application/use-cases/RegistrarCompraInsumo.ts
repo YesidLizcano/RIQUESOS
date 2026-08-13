@@ -1,7 +1,6 @@
 // Use Case: RegistrarCompraInsumo — register an insumo purchase and update empaque stock atomically
 // Application layer: can import from Domain but NOT from Infrastructure
 import { CompraInsumo } from '../../domain/entities/CompraInsumo';
-import { CategoriaInsumo } from '../../domain/enums';
 import type { CompraInsumoRepository } from '../../domain/ports/CompraInsumoRepository';
 import type { EmpaqueRepository } from '../../domain/ports/EmpaqueRepository';
 

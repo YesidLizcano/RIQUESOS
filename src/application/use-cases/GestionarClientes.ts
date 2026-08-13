@@ -1,8 +1,7 @@
 // Use Case: GestionarClientes — CRUD + pricing
 // Application layer: can import from Domain but NOT from Infrastructure
-import { Cliente, type ClienteProps } from '../../domain/entities/Cliente';
+import { Cliente } from '../../domain/entities/Cliente';
 import { TipoCliente, TipoProducto } from '../../domain/enums';
-import { Dinero } from '../../domain/value-objects/Dinero';
 import type { ClienteRepository } from '../../domain/ports/ClienteRepository';
 
 export interface CrearClienteInput {

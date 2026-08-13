@@ -8,7 +8,7 @@ import { eliminarProveedor, restaurarProveedor } from '@/presentation/actions/pr
 import { Package } from 'lucide-react';
 
 export function createProveedorColumns(
-  showDeleted?: boolean,
+  _showDeleted?: boolean,
   onVerLotes?: (proveedor: ProveedorResponse) => void
 ): ColumnDef<ProveedorResponse, unknown>[] {
   return [

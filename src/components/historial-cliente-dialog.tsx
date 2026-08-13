@@ -6,9 +6,9 @@ import { obtenerSedesPorCliente } from '@/presentation/actions/sedes';
 import type { HistorialClienteResponse } from '@/presentation/actions/clientes';
 import type { ClienteResponse, VentaResponse, SedeResponse } from '@/presentation/dtos';
 import { metodoPagoLabel } from '@/domain/labels';
-import { formatCurrency, formatProductName, formatSSKg } from '@/domain/formatters';
+import { MetodoPago } from '@/domain/enums';
+import { formatCurrency, formatProductName } from '@/domain/formatters';
 import { formatDobleCremaDetalle, formatDobleCremaGranel, isDobleCrema } from '@/domain/constants';
-import { decimalSub } from '@/lib/utils';
 import { TipoCliente } from '@/domain/enums';
 import { tipoClienteLabel } from '@/domain/labels';
 import type { VentaItemResponse } from '@/presentation/dtos';
@@ -195,7 +195,7 @@ export function HistorialClienteDialog({
         ws.addRow({
           fecha: `${d}/${m}/${y}`,
           sede: v.sedeNombre ?? '',
-          metodoPago: metodoPagoLabel[v.metodoPago] ?? v.metodoPago,
+          metodoPago: metodoPagoLabel[v.metodoPago as MetodoPago] ?? v.metodoPago,
           detalle,
           ingresoTotal: Number(v.ingresoTotal),
           gananciaBruta: Number(v.gananciaBruta),
@@ -388,7 +388,7 @@ export function HistorialClienteDialog({
                                 venta.metodoPago === 'CREDITO' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
                                 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                               }`}>
-                                {metodoPagoLabel[venta.metodoPago] ?? venta.metodoPago}
+                                {metodoPagoLabel[venta.metodoPago as MetodoPago] ?? venta.metodoPago}
                               </Badge>
                             </TableCell>
                              <TableCell className="py-1.5 text-xs">

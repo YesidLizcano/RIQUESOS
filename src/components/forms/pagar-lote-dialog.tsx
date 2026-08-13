@@ -42,7 +42,7 @@ export function PagarLoteDialog({ loteId, producto, proveedorNombre, estadoPago,
 
   const yaPagado = estadoPago === 'PAGADO';
 
-  const metodoLabel = metodoPagoLabel[metodoPago] ?? metodoPago;
+  const metodoLabel = metodoPagoLabel[metodoPago as MetodoPago] ?? metodoPago;
 
   async function handlePagar() {
     setLoading(true);

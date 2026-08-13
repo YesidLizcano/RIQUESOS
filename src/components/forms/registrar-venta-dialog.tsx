@@ -2,16 +2,15 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useRefresh } from '@/components/refresh-context';
-import { registrarVenta, eliminarVenta, editarVenta } from '@/presentation/actions/ventas';
+import { registrarVenta, editarVenta } from '@/presentation/actions/ventas';
 import { obtenerSedesPorCliente } from '@/presentation/actions/sedes';
 import { decimalSub, formatTajadosBreakdown } from '@/lib/utils';
 import { getPreciosByCliente } from '@/presentation/actions/precios-cliente-proveedor';
 import { toast } from 'sonner';
 import { TipoProducto, TipoCliente } from '@/domain/enums';
 import { MetodoPago, OrigenCorte } from '@/domain/enums';
-import { MetodoPagoAbono } from '@/domain/enums';
 import { METODOS_PAGO_ABONO } from '@/domain/constants';
-import { metodoPagoLabel, origenCorteLabel } from '@/domain/labels';
+import { metodoPagoLabel } from '@/domain/labels';
 import { tipoProductoLabel, tipoClienteLabel } from '@/domain/labels';
 import { DOBLE_CREMA_BLOCK_KG, isDobleCrema } from '@/domain/constants';
 import type { ClienteResponse, LoteResponse, VentaResponse, VentaTipo } from '@/presentation/dtos';
@@ -38,7 +37,6 @@ import {
 import { PlusIcon, TrashIcon, Pencil, CheckIcon, ArrowLeftIcon, Loader2, AlertTriangleIcon, UserPlus } from 'lucide-react';
 import { EditarClienteDialog } from '@/components/forms/editar-cliente-dialog';
 import { crearCliente } from '@/presentation/actions/clientes';
-import { crearClienteSchema } from '@/presentation/validations/cliente.schema';
 import { Badge } from '@/components/ui/badge';
 import { ProductoBadge } from '@/components/producto-badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -193,7 +191,7 @@ function SummaryStep({ summary, clienteLabel, domiciliario, valorDomicilio, cost
             metodoPago === 'CREDITO' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
             'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
           }`}>
-            {metodoPagoLabel[metodoPago] ?? metodoPago}{metodoPago === 'CREDITO' ? ' (Fiado)' : ''}
+            {metodoPagoLabel[metodoPago as MetodoPago] ?? metodoPago}{metodoPago === 'CREDITO' ? ' (Fiado)' : ''}
           </span>
         </p>
         {metodoPago === 'CREDITO' && (
@@ -204,7 +202,7 @@ function SummaryStep({ summary, clienteLabel, domiciliario, valorDomicilio, cost
             {metodoPagoAbono && (
               <>
                 {' '}
-                <span className="text-xs text-muted-foreground">({metodoPagoLabel[metodoPagoAbono]})</span>
+                 <span className="text-xs text-muted-foreground">({metodoPagoLabel[metodoPagoAbono as MetodoPago]})</span>
               </>
             )}
             {' | '}
@@ -646,7 +644,9 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
   // Fetch proveedor-specific prices for MAYORISTA clients
   useEffect(() => {
     if (clienteId && isMayorista) {
-      getPreciosByCliente(clienteId).then((precios) => {
+      getPreciosByCliente(clienteId).then((result) => {
+        if ('error' in result) return;
+        const precios = result;
         const map = new Map<string, { precioEntero: string; precioTajado: string; valorDomicilio: string; costoDomiciliario: string }>();
         for (const p of precios) {
           map.set(p.proveedorId, { precioEntero: p.precioEntero, precioTajado: p.precioTajado, valorDomicilio: p.valorDomicilio, costoDomiciliario: p.costoDomiciliario });
@@ -1734,7 +1734,6 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
         const kgEntero = Number(item.cantidadKgEntero) || 0;
         const kgTajadoInterno = Number(item.cantidadKgTajadoInterno) || 0;
         const kgTajadoFabrica = Number(item.cantidadKgTajadoFabrica) || 0;
-        const kgTajado = kgTajadoInterno + kgTajadoFabrica;
         const hasEnteroStock = lote.bloquesEnteros > 0 || Number(lote.sueltosEntero) > 0;
         const hasTajadoInternoStock = lote.bloquesTajados > 0 || Number(lote.sueltosTajado) > 0;
         const hasTajadoFabricaStock = lote.bloquesTajadosDeFabrica > 0;
@@ -2593,10 +2592,10 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
             <Label>Método de Pago</Label>
             <div className="flex flex-wrap gap-2">
               {[
-                { value: 'EFECTIVO', label: 'Efectivo', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' },
-                { value: 'NEQUI', label: 'Nequi', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
-                { value: 'BRE_B', label: 'Bre-B', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
-                { value: 'CREDITO', label: 'Crédito (Fiado)', color: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' },
+                { value: MetodoPago.EFECTIVO, label: metodoPagoLabel[MetodoPago.EFECTIVO], color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' },
+                { value: MetodoPago.NEQUI, label: metodoPagoLabel[MetodoPago.NEQUI], color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
+                { value: MetodoPago.BRE_B, label: metodoPagoLabel[MetodoPago.BRE_B], color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
+                { value: MetodoPago.CREDITO, label: `${metodoPagoLabel[MetodoPago.CREDITO]} (Fiado)`, color: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' },
               ].map((option) => (
                 <Button
                   key={option.value}
@@ -2654,7 +2653,7 @@ export function RegistrarVentaDialog({ clientes, lotes, proveedorMap, ventaToEdi
                     size="sm"
                     onClick={() => setMetodoPagoAbono(mpa)}
                   >
-                    {metodoPagoLabel[mpa]}
+                    {metodoPagoLabel[mpa as MetodoPago]}
                   </Button>
                 ))}
               </div>

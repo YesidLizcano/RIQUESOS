@@ -17,21 +17,12 @@ import { VistaPreviaExcelDialog } from '@/components/dialogs/vista-previa-excel-
 import { RefreshContext } from '@/components/refresh-context';
 import { DeferredMount } from '@/components/deferred-mount';
 import type { LoteResponse, ProveedorResponse } from '@/presentation/dtos';
-import { TipoProducto, EstadoLote } from '@/domain/enums';
+import { TipoProducto, EstadoLote, EstadoPagoLote } from '@/domain/enums';
+import { tipoProductoLabel, estadoLoteLabel, estadoPagoLoteLabel } from '@/domain/labels';
 import { isDobleCrema, formatDobleCremaStockLabel, formatDobleCremaPurchasedLabel } from '@/domain/constants';
 
-const ESTADO_LABELS: Record<string, string> = {
-  ACTIVO: 'Activo',
-  AGOTADO: 'Agotado',
-};
-
-const PRODUCTO_LABELS: Record<string, string> = {
-  DOBLE_CREMA: 'Doble Crema',
-  SEMISALADO: 'Semisalado',
-};
-
 const loteExportMap = [
-  { key: 'producto', header: 'Producto', format: (v: unknown) => PRODUCTO_LABELS[v as string] ?? v },
+  { key: 'producto', header: 'Producto', format: (v: unknown) => tipoProductoLabel[v as TipoProducto] ?? String(v) },
   { key: 'proveedorNombre', header: 'Proveedor' },
   { key: 'cantidadCompradaKg', header: 'Cant. Comprada', type: 'decimal' as ColumnType, format: (_v: unknown, row: unknown) => {
     const lote = row as LoteResponse;
@@ -70,7 +61,7 @@ const loteExportMap = [
     }
     return Number(lote.stockDisponibleKg);
   }},
-  { key: 'estado', header: 'Estado', format: (v: unknown) => ESTADO_LABELS[v as string] ?? v },
+  { key: 'estado', header: 'Estado', format: (v: unknown) => estadoLoteLabel[v as EstadoLote] ?? String(v) },
   { key: 'fechaIngreso', header: 'Fecha Ingreso', type: 'date' as ColumnType },
 ];
 
@@ -81,18 +72,18 @@ interface LotesClientPageProps {
 }
 
 const productoFilterOptions = [
-  { label: 'Doble Crema', value: TipoProducto.DOBLE_CREMA },
-  { label: 'Semisalado', value: TipoProducto.SEMISALADO },
+  { label: tipoProductoLabel[TipoProducto.DOBLE_CREMA], value: TipoProducto.DOBLE_CREMA },
+  { label: tipoProductoLabel[TipoProducto.SEMISALADO], value: TipoProducto.SEMISALADO },
 ];
 
 const estadoFilterOptions = [
-  { label: 'Activo', value: EstadoLote.ACTIVO },
-  { label: 'Agotado', value: EstadoLote.AGOTADO },
+  { label: estadoLoteLabel[EstadoLote.ACTIVO], value: EstadoLote.ACTIVO },
+  { label: estadoLoteLabel[EstadoLote.AGOTADO], value: EstadoLote.AGOTADO },
 ];
 
 const estadoPagoFilterOptions = [
-  { label: 'Pendiente', value: 'PENDIENTE' },
-  { label: 'Pagado', value: 'PAGADO' },
+  { label: estadoPagoLoteLabel[EstadoPagoLote.PENDIENTE], value: EstadoPagoLote.PENDIENTE },
+  { label: estadoPagoLoteLabel[EstadoPagoLote.PAGADO], value: EstadoPagoLote.PAGADO },
 ];
 
 export function LotesClientPage({ lotes, proveedores, initialEstadoPago }: LotesClientPageProps) {
